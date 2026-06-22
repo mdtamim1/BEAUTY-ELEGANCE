@@ -214,13 +214,6 @@ export default function StorefrontLayout() {
         <header className="store-header">
           <div className="store-header-inner">
             <div className="store-header-logo-row">
-              <button 
-                className="store-mobile-menu-btn" 
-                onClick={() => setMobileMenuOpen(true)}
-                title="Open Menu"
-              >
-                <Menu size={22} />
-              </button>
               <Link to="/" className="store-logo">
                 <div className="store-logo-icon"><Zap size={22} /></div>
                 <div className="store-logo-text">{branding.logoTextPrimary}<span>{branding.logoTextSecondary}</span></div>
@@ -282,6 +275,13 @@ export default function StorefrontLayout() {
               <button className="store-header-btn" title="Cart" onClick={() => setCartOpen(true)}>
                 <ShoppingCart size={20} />
                 {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
+              </button>
+              <button 
+                className="store-header-btn store-mobile-menu-btn" 
+                onClick={() => setMobileMenuOpen(true)}
+                title="Open Menu"
+              >
+                <Menu size={22} />
               </button>
             </div>
           </div>
