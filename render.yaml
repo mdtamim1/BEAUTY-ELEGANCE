@@ -9,10 +9,6 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATABASE_PATH
-        value: /var/data/database.sqlite
+        value: ./database/database.sqlite
       - key: JWT_SECRET
         generateValue: true
-    disk:
-      name: db-storage
-      mountPath: /var/data
-      sizeGB: 1
