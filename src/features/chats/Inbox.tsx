@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Send, MessageSquare, ShieldCheck, Clock, User, AlertCircle, RefreshCw } from 'lucide-react';
+import { Search, Send, MessageSquare, ShieldCheck, Clock, User, AlertCircle, RefreshCw, Plus } from 'lucide-react';
 import { fetchChatHistory, markCustomerChatAsRead } from '../../services/api';
 
 interface ChatMessage {
@@ -227,6 +227,50 @@ export default function Inbox() {
     setReplyText('');
   };
 
+  const handleAdminImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedCustomerId) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      const selectedGroup = chatGroups.find(g => g.customerId === selectedCustomerId);
+      const customerName = selectedGroup ? selectedGroup.customerName : 'Customer';
+
+      const newReply: ChatMessage = {
+        id: `msg-reply-${Date.now()}`,
+        customerId: selectedCustomerId,
+        customerName,
+        sender: 'admin',
+        message: base64String,
+        timestamp: new Date().toISOString(),
+        read: true
+      };
+
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify({
+          type: 'message',
+          customerId: selectedCustomerId,
+          customerName,
+          sender: 'admin',
+          message: base64String
+        }));
+      } else {
+        const storedChats = localStorage.getItem('storefront_chats');
+        let allChats: ChatMessage[] = [];
+        if (storedChats) {
+          try {
+            allChats = JSON.parse(storedChats);
+          } catch (e) {}
+        }
+        const updated = [...allChats, newReply];
+        syncChatData(updated);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Get active conversation messages
   const activeMessages = chats.filter(m => m.customerId === selectedCustomerId);
 
@@ -266,14 +310,15 @@ export default function Inbox() {
         gap: '24px', 
         height: 'calc(100vh - 200px)', 
         minHeight: '500px',
-        background: 'white',
-        border: '1px solid var(--sf-border)',
-        borderRadius: 'var(--sf-radius-lg)',
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border-primary)',
+        borderRadius: 'var(--radius-xl)',
+        backdropFilter: 'blur(20px)',
         overflow: 'hidden'
       }}>
         {/* Left list panel */}
-        <div style={{ borderRight: '1px solid var(--sf-border)', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '16px', borderBottom: '1px solid var(--sf-border)' }}>
+        <div style={{ borderRight: '1px solid var(--border-primary)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '16px', borderBottom: '1px solid var(--border-primary)' }}>
             <div style={{ position: 'relative' }}>
               <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
               <input 
@@ -300,13 +345,13 @@ export default function Inbox() {
                   onClick={() => setSelectedCustomerId(group.customerId)}
                   style={{ 
                     padding: '16px', 
-                    borderBottom: '1px solid var(--sf-border)', 
+                    borderBottom: '1px solid var(--border-primary)', 
                     cursor: 'pointer',
-                    background: selectedCustomerId === group.customerId ? '#f1f5f9' : 'none',
+                    background: selectedCustomerId === group.customerId ? 'rgba(99, 102, 241, 0.15)' : 'none',
                     transition: 'background 0.2s',
                     position: 'relative'
                   }}
-                  onMouseEnter={e => { if (selectedCustomerId !== group.customerId) e.currentTarget.style.background = '#f8fafc'; }}
+                  onMouseEnter={e => { if (selectedCustomerId !== group.customerId) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'; }}
                   onMouseLeave={e => { if (selectedCustomerId !== group.customerId) e.currentTarget.style.background = 'none'; }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -325,7 +370,7 @@ export default function Inbox() {
                           textOverflow: 'ellipsis',
                           marginTop: '2px'
                         }}>
-                          {group.lastMessage}
+                          {group.lastMessage.startsWith('data:image/') ? '📷 Image' : group.lastMessage}
                         </div>
                       </div>
                     </div>
@@ -363,7 +408,7 @@ export default function Inbox() {
           {selectedCustomerId ? (
             <>
               {/* Header */}
-              <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--sf-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--gradient-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 800, color: 'white' }}>
                     {chatGroups.find(g => g.customerId === selectedCustomerId)?.customerName.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase()}
@@ -380,7 +425,7 @@ export default function Inbox() {
               </div>
 
               {/* Messages scrolling area */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', background: '#f8fafc' }}>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', background: 'rgba(8, 11, 22, 0.4)' }}>
                 {activeMessages.map((msg, idx) => {
                   const isAdmin = msg.sender === 'admin';
                   return (
@@ -399,13 +444,21 @@ export default function Inbox() {
                           borderRadius: '16px',
                           borderTopRightRadius: isAdmin ? '2px' : '16px',
                           borderTopLeftRadius: isAdmin ? '16px' : '2px',
-                          background: isAdmin ? 'var(--gradient-primary)' : 'white',
+                          background: isAdmin ? 'var(--gradient-primary)' : 'var(--bg-tertiary)',
                           color: isAdmin ? 'white' : 'var(--text-primary)',
-                          border: isAdmin ? 'none' : '1px solid var(--sf-border)',
-                          boxShadow: 'var(--sf-shadow-sm)'
+                          border: isAdmin ? 'none' : '1px solid var(--border-primary)',
+                          boxShadow: 'var(--shadow-sm)'
                         }}
                       >
-                        <div style={{ fontSize: 'var(--text-sm)', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{msg.message}</div>
+                        {msg.message.startsWith('data:image/') ? (
+                          <img 
+                            src={msg.message} 
+                            alt="Sent attachment" 
+                            style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', display: 'block' }} 
+                          />
+                        ) : (
+                          <div style={{ fontSize: 'var(--text-sm)', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{msg.message}</div>
+                        )}
                         <div style={{ 
                           fontSize: '10px', 
                           textAlign: 'right', 
@@ -423,7 +476,16 @@ export default function Inbox() {
               </div>
 
               {/* Reply box editor */}
-              <form onSubmit={handleSendReply} style={{ padding: '16px 24px', borderTop: '1px solid var(--sf-border)', display: 'flex', gap: '12px' }}>
+              <form onSubmit={handleSendReply} style={{ padding: '16px 24px', borderTop: '1px solid var(--border-primary)', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '44px', height: '44px', borderRadius: '8px', border: '1.5px solid var(--border-primary)', cursor: 'pointer', color: 'var(--text-secondary)', transition: 'background 0.2s', backgroundColor: 'transparent' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                  <Plus size={20} />
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleAdminImageUpload} 
+                    style={{ display: 'none' }} 
+                  />
+                </label>
                 <input 
                   type="text" 
                   className="form-input" 

@@ -30,9 +30,34 @@ import { initChatSocket } from './websocket/chatSocket';
 
 dotenv.config();
 
+import { rateLimit } from 'express-rate-limit';
+
 const app = express();
 const server = createServer(app);
 const PORT = process.env.PORT || 5000;
+
+// --- Rate Limiting Config ---
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 200, // Limit each IP to 200 requests per 15 minutes
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: {
+    status: 'error',
+    message: 'Too many requests from this IP, please try again after 15 minutes'
+  }
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 20, // Limit each IP to 20 login/auth attempts per 15 minutes
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: {
+    status: 'error',
+    message: 'Too many login attempts from this IP, please try again after 15 minutes'
+  }
+});
 
 // --- Middleware ---
 app.use(cors({
@@ -55,6 +80,12 @@ app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Apply rate limiters
+app.use('/api/', apiLimiter);
+app.use('/api/v1/auth', authLimiter);
+app.use('/api/v1/customers/login-gmail', authLimiter);
+app.use('/api/v1/customers/login', authLimiter);
 
 // --- Health Check ---
 app.get('/api/health', (_req, res) => {

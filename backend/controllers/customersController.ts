@@ -147,103 +147,124 @@ export const loginCustomer = (req: Request, res: Response) => {
   });
 };
 
-// Login/Register with Gmail (Simulate)
-export const loginGmailCustomer = (req: Request, res: Response) => {
-  const { email, name } = req.body;
+// Login/Register with Gmail (Real Verification)
+export const loginGmailCustomer = async (req: Request, res: Response) => {
+  const { idToken } = req.body;
 
-  if (!email || !name) {
-    return res.status(400).json({ status: 'error', message: 'Email and Name are required' });
+  if (!idToken) {
+    return res.status(400).json({ status: 'error', message: 'Google ID Token is required' });
   }
 
-  db.get('SELECT * FROM customers WHERE email = ?', [email], (err, existing: any) => {
-    if (err) {
-      console.error('Error with Gmail customer:', err);
-      return res.status(500).json({ status: 'error', message: 'Database error' });
+  try {
+    // Call Google's tokeninfo API to verify the ID token
+    const googleResponse = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+    if (!googleResponse.ok) {
+      return res.status(400).json({ status: 'error', message: 'গুগল টোকেন ভেরিফিকেশন ব্যর্থ হয়েছে' });
     }
 
-    if (existing) {
-      // Fetch addresses
-      db.all(
-        'SELECT * FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, created_at DESC',
-        [existing.id],
-        (err, rows: any[]) => {
-          const addresses = (rows || []).map(r => ({
-            id: r.id,
-            label: r.label,
-            name: r.name,
-            phone: r.phone,
-            address: r.address,
-            isDefault: r.is_default === 1
-          }));
+    const payload: any = await googleResponse.json();
+    const googleClientId = '284151905011-fs0mh1j6rdug41p2hk882bjl1vq9nmb2.apps.googleusercontent.com';
+    
+    // Safety check: ensure token was intended for our Web Client ID
+    if (payload.aud !== googleClientId) {
+      return res.status(400).json({ status: 'error', message: 'Invalid token audience' });
+    }
 
-          const fullName = `${existing.first_name} ${existing.last_name}`.trim();
-          const token = jwt.sign(
-            { id: existing.id, email: existing.email, role: 'customer', name: fullName },
-            JWT_SECRET,
-            { expiresIn: '30d' }
-          );
+    const email = payload.email;
+    const name = payload.name || email.split('@')[0];
 
-          res.json({
-            status: 'success',
-            data: {
-              token,
-              customer: {
-                id: existing.id,
-                name: fullName,
-                email: existing.email,
-                phone: existing.phone || '',
-                createdAt: existing.created_at,
-                avatar: fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase(),
-                isGmail: true,
-                addresses
+    db.get('SELECT * FROM customers WHERE email = ?', [email], (err, existing: any) => {
+      if (err) {
+        console.error('Error with Gmail customer:', err);
+        return res.status(500).json({ status: 'error', message: 'Database error' });
+      }
+
+      if (existing) {
+        // Fetch addresses
+        db.all(
+          'SELECT * FROM customer_addresses WHERE customer_id = ? ORDER BY is_default DESC, created_at DESC',
+          [existing.id],
+          (err, rows: any[]) => {
+            const addresses = (rows || []).map(r => ({
+              id: r.id,
+              label: r.label,
+              name: r.name,
+              phone: r.phone,
+              address: r.address,
+              isDefault: r.is_default === 1
+            }));
+
+            const fullName = `${existing.first_name} ${existing.last_name}`.trim();
+            const token = jwt.sign(
+              { id: existing.id, email: existing.email, role: 'customer', name: fullName },
+              JWT_SECRET,
+              { expiresIn: '30d' }
+            );
+
+            res.json({
+              status: 'success',
+              data: {
+                token,
+                customer: {
+                  id: existing.id,
+                  name: fullName,
+                  email: existing.email,
+                  phone: existing.phone || '',
+                  createdAt: existing.created_at,
+                  avatar: fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase(),
+                  isGmail: true,
+                  addresses
+                }
               }
-            }
-          });
-        }
-      );
-    } else {
-      // Create new Gmail customer
-      const { first_name, last_name } = parseName(name);
-      const customerId = `cust-${Date.now()}`;
-      // Set dummy password hash
-      const dummyHash = 'gmail_oauth_dummy';
-
-      db.run(
-        `INSERT INTO customers (id, first_name, last_name, email, password_hash, phone)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [customerId, first_name, last_name, email, dummyHash, ''],
-        function(err) {
-          if (err) {
-            console.error('Error creating Gmail customer:', err);
-            return res.status(500).json({ status: 'error', message: 'Database write failed' });
+            });
           }
+        );
+      } else {
+        // Create new Gmail customer
+        const { first_name, last_name } = parseName(name);
+        const customerId = `cust-${Date.now()}`;
+        const dummyHash = 'gmail_oauth_dummy';
 
-          const token = jwt.sign(
-            { id: customerId, email, role: 'customer', name },
-            JWT_SECRET,
-            { expiresIn: '30d' }
-          );
-
-          res.json({
-            status: 'success',
-            data: {
-              token,
-              customer: {
-                id: customerId,
-                name,
-                email,
-                phone: '',
-                createdAt: new Date().toISOString(),
-                avatar: name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase(),
-                isGmail: true,
-                addresses: []
-              }
+        db.run(
+          `INSERT INTO customers (id, first_name, last_name, email, password_hash, phone)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [customerId, first_name, last_name, email, dummyHash, ''],
+          function(err) {
+            if (err) {
+              console.error('Error creating Gmail customer:', err);
+              return res.status(500).json({ status: 'error', message: 'Database write failed' });
             }
-          });
-        }
-      );
-    }
-  });
+
+            const token = jwt.sign(
+              { id: customerId, email, role: 'customer', name },
+              JWT_SECRET,
+              { expiresIn: '30d' }
+            );
+
+            res.json({
+              status: 'success',
+              data: {
+                token,
+                customer: {
+                  id: customerId,
+                  name,
+                  email,
+                  phone: '',
+                  createdAt: new Date().toISOString(),
+                  avatar: name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase(),
+                  isGmail: true,
+                  addresses: []
+                }
+              }
+            });
+          }
+        );
+      }
+    });
+  } catch (error) {
+    console.error('Google verification request error:', error);
+    return res.status(500).json({ status: 'error', message: 'সার্ভার ভেরিফিকেশন ব্যর্থ হয়েছে' });
+  }
 };
 
 // Get Customer Profile details

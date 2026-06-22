@@ -61,6 +61,10 @@ export default function CustomerAccount() {
   const [authSuccess, setAuthSuccess] = useState('');
   const [showGoogleAccounts, setShowGoogleAccounts] = useState(false);
 
+  // Floating 3D Chat State
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
   // Dashboard state
   const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'chat'>('profile');
   const [orders, setOrders] = useState<OrderItem[]>([]);
@@ -169,6 +173,47 @@ export default function CustomerAccount() {
       setProfileError('');
     }
   }, [customer]);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!customer) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      
+      const newMessage: ChatMessage = {
+        id: `msg-${Date.now()}`,
+        customerId: customer.id,
+        customerName: customer.name,
+        sender: 'customer',
+        message: base64String,
+        timestamp: new Date().toISOString(),
+        read: false
+      };
+
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify({
+          type: 'message',
+          customerId: customer.id,
+          customerName: customer.name,
+          sender: 'customer',
+          message: base64String
+        }));
+      } else {
+        const storedChats = localStorage.getItem('storefront_chats');
+        let allChats: ChatMessage[] = [];
+        if (storedChats) {
+          try {
+            allChats = JSON.parse(storedChats);
+          } catch (e) {}
+        }
+        syncChatData([...allChats, newMessage]);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleProfileUpdate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -330,6 +375,36 @@ export default function CustomerAccount() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, activeTab]);
 
+  // Initialize and render Google Identity Services Button
+  useEffect(() => {
+    if (!customer) {
+      const initGsi = () => {
+        // @ts-ignore
+        if (window.google?.accounts?.id) {
+          // @ts-ignore
+          window.google.accounts.id.initialize({
+            client_id: "284151905011-fs0mh1j6rdug41p2hk882bjl1vq9nmb2.apps.googleusercontent.com",
+            callback: (response: any) => {
+              loginWithGmail(response.credential);
+            }
+          });
+          const btnElem = document.getElementById("google-signin-btn");
+          if (btnElem) {
+            // @ts-ignore
+            window.google.accounts.id.renderButton(
+              btnElem,
+              { theme: "outline", size: "large", width: btnElem.clientWidth || 396 }
+            );
+          }
+        }
+      };
+
+      initGsi();
+      const timer = setTimeout(initGsi, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [customer]);
+
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
@@ -358,10 +433,7 @@ export default function CustomerAccount() {
     }
   };
 
-  const handleGmailLoginSimulate = async (email: string, name: string) => {
-    await loginWithGmail(email, name);
-    setShowGoogleAccounts(false);
-  };
+
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -505,47 +577,16 @@ export default function CustomerAccount() {
               <span style={{ position: 'relative', zIndex: 2, background: 'white', padding: '0 12px', fontSize: '0.75rem', color: 'var(--sf-text-tertiary)', fontWeight: 600 }}>অথবা</span>
             </div>
 
-            <button 
-              onClick={() => setShowGoogleAccounts(!showGoogleAccounts)}
-              style={{ width: '100%', height: '44px', background: 'white', color: 'var(--sf-text-primary)', border: '1.5px solid var(--sf-border)', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
-            >
-              <svg viewBox="0 0 24 24" width="18" height="18" style={{ marginRight: '4px' }}>
-                <path fill="#EA4335" d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.67 1.54 14.98 1 12 1 7.35 1 3.37 3.65 1.4 7.56l3.85 2.99c.92-2.73 3.47-4.51 6.75-4.51z"/>
-                <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.36H12v4.51h6.43c-.28 1.44-1.09 2.67-2.31 3.49l3.58 2.78c2.1-1.94 3.79-5.11 3.79-8.42z"/>
-                <path fill="#FBBC05" d="M5.25 14.56c-.24-.72-.38-1.5-.38-2.31s.14-1.59.38-2.31L1.4 6.95C.51 8.75 0 10.77 0 12s.51 3.25 1.4 5.05l3.85-2.99z"/>
-                <path fill="#34A853" d="M12 23c3.24 0 5.97-1.07 7.96-2.91l-3.58-2.78c-.99.66-2.26 1.06-4.38 1.06-3.28 0-5.83-1.78-6.75-4.51L1.4 17.05C3.37 20.35 7.35 23 12 23z"/>
-              </svg>
-              Gmail দিয়ে লগইন করুন
-            </button>
-
-            {showGoogleAccounts && (
-              <div style={{ position: 'absolute', top: '100%', left: 0, width: '100%', background: 'white', border: '1px solid var(--sf-border)', borderRadius: '12px', boxShadow: 'var(--sf-shadow-xl)', zIndex: 100, marginTop: '8px', padding: '12px', boxSizing: 'border-box' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--sf-text-tertiary)', marginBottom: '8px', padding: '0 8px' }}>Google অ্যাকাউন্ট বেছে নিন:</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {[
-                    { email: 'momin.vip@gmail.com', name: 'Kazi Momin' },
-                    { email: 'tasnia.shampoo@gmail.com', name: 'Tasnia Alam' },
-                    { email: 'sayed.buyer@gmail.com', name: 'Abu Sayed' }
-                  ].map((acc, idx) => (
-                    <button 
-                      key={idx}
-                      onClick={() => handleGmailLoginSimulate(acc.email, acc.name)}
-                      style={{ width: '100%', padding: '10px 8px', background: 'none', border: 'none', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '10px', transition: 'background 0.2s' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'var(--sf-bg-light)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                    >
-                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700 }}>
-                        {acc.name.split(' ').map(n => n[0]).join('')}
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--sf-text-primary)' }}>{acc.name}</div>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--sf-text-tertiary)' }}>{acc.email}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            <div 
+              id="google-signin-btn" 
+              style={{ 
+                width: '100%', 
+                display: 'flex', 
+                justifyContent: 'center', 
+                marginTop: '8px', 
+                minHeight: '44px' 
+              }} 
+            />
           </div>
 
           <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '0.85rem', color: 'var(--sf-text-secondary)' }}>
@@ -597,12 +638,6 @@ export default function CustomerAccount() {
             style={{ width: '100%', padding: '12px 16px', background: activeTab === 'orders' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'orders' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
           >
             <ShoppingBag size={18} /> আমার অর্ডারসমূহ ({orders.length})
-          </button>
-          <button 
-            onClick={() => { setActiveTab('chat'); setSelectedOrder(null); }}
-            style={{ width: '100%', padding: '12px 16px', background: activeTab === 'chat' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'chat' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
-          >
-            <MessageSquare size={18} /> কাস্টমার চ্যাট সাপোর্ট
           </button>
         </div>
 
@@ -1090,6 +1125,166 @@ export default function CustomerAccount() {
         </div>
       )}
 
+      {/* Floating 3D Chat Button & Popup */}
+      {customer && (
+        <>
+          <button 
+            onClick={() => setIsChatOpen(!isChatOpen)}
+            style={{
+              position: 'fixed',
+              bottom: '24px',
+              right: '24px',
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, var(--sf-accent) 0%, var(--sf-accent-hover) 100%)',
+              color: 'white',
+              border: 'none',
+              boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4), inset 0 -4px 0 rgba(0, 0, 0, 0.2), inset 0 2px 0 rgba(255, 255, 255, 0.3)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              transition: 'transform 0.2s, box-shadow 0.2s',
+            }}
+            title="কাস্টমার চ্যাট সাপোর্ট"
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'translateY(-2px) scale(1.05)';
+              e.currentTarget.style.boxShadow = '0 12px 40px rgba(99, 102, 241, 0.5), inset 0 -4px 0 rgba(0, 0, 0, 0.2), inset 0 2px 0 rgba(255, 255, 255, 0.4)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'translateY(0) scale(1)';
+              e.currentTarget.style.boxShadow = '0 8px 32px rgba(99, 102, 241, 0.4), inset 0 -4px 0 rgba(0, 0, 0, 0.2), inset 0 2px 0 rgba(255, 255, 255, 0.3)';
+            }}
+          >
+            <MessageSquare size={26} />
+          </button>
+
+          {isChatOpen && (
+            <div 
+              className="chat-popup-widget"
+              style={{
+                position: 'fixed',
+                bottom: '96px',
+                right: '24px',
+                width: '380px',
+                height: '520px',
+                backgroundColor: 'white',
+                borderRadius: '16px',
+                boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)',
+                border: '1px solid var(--sf-border)',
+                display: 'flex',
+                flexDirection: 'column',
+                zIndex: 1000,
+                overflow: 'hidden',
+              }}
+            >
+              {/* Header */}
+              <div style={{ padding: '16px', background: 'linear-gradient(135deg, var(--sf-accent) 0%, var(--sf-accent-hover) 100%)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255, 255, 255, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700 }}>
+                    {customer.name.split(' ').map((n: string) => n[0]).join('').slice(0,2).toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>কাস্টমার চ্যাট সাপোর্ট</div>
+                    <div style={{ fontSize: '0.72rem', opacity: 0.85, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80' }} /> Support Agent Online
+                    </div>
+                  </div>
+                </div>
+                <button onClick={() => setIsChatOpen(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', padding: '4px' }}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Messages */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', background: '#f8fafc' }}>
+                {chatMessages.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--sf-text-tertiary)', margin: 'auto' }}>
+                    <MessageSquare size={40} style={{ opacity: 0.15, marginBottom: '12px' }} />
+                    <p style={{ fontWeight: 600, color: 'var(--sf-text-secondary)', fontSize: '0.85rem' }}>আপনার কোনো মেসেজ নেই</p>
+                    <p style={{ fontSize: '0.75rem', marginTop: '4px' }}>অর্ডার বা কোনো পণ্য নিয়ে যেকোনো প্রশ্ন করতে নিচে মেসেজ পাঠান।</p>
+                  </div>
+                ) : (
+                  chatMessages.map((msg, idx) => {
+                    const isAdmin = msg.sender === 'admin';
+                    return (
+                      <div 
+                        key={idx} 
+                        style={{ 
+                          display: 'flex', 
+                          justifyContent: isAdmin ? 'flex-start' : 'flex-end', 
+                          width: '100%' 
+                        }}
+                      >
+                        <div 
+                          style={{ 
+                            maxWidth: '75%', 
+                            padding: '10px 14px', 
+                            borderRadius: '14px', 
+                            borderTopLeftRadius: isAdmin ? '2px' : '14px',
+                            borderBottomRightRadius: isAdmin ? '14px' : '2px',
+                            background: isAdmin ? '#e2e8f0' : 'linear-gradient(135deg, var(--sf-accent) 0%, var(--sf-accent-hover) 100%)', 
+                            color: isAdmin ? '#1e293b' : 'white',
+                            boxShadow: 'var(--sf-shadow-sm)',
+                            position: 'relative'
+                          }}
+                        >
+                          {msg.message.startsWith('data:image/') ? (
+                            <img 
+                              src={msg.message} 
+                              alt="Sent image" 
+                              style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', display: 'block' }} 
+                            />
+                          ) : (
+                            <div style={{ fontSize: '0.82rem', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{msg.message}</div>
+                          )}
+                          <div 
+                            style={{ 
+                              fontSize: '0.6rem', 
+                              textAlign: 'right', 
+                              marginTop: '4px', 
+                              opacity: 0.6,
+                              color: isAdmin ? '#64748b' : 'white'
+                            }}
+                          >
+                            {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Form with image upload button */}
+              <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '8px', borderTop: '1px solid var(--sf-border)', padding: '12px 16px', background: 'white', alignItems: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', borderRadius: '10px', border: '1.5px solid var(--sf-border)', cursor: 'pointer', color: 'var(--sf-text-secondary)', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+                  <Plus size={20} />
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleImageUpload} 
+                    style={{ display: 'none' }} 
+                  />
+                </label>
+                <input 
+                  type="text" 
+                  value={inputMessage} 
+                  onChange={e => setInputMessage(e.target.value)} 
+                  placeholder="মেসেজ লিখুন..." 
+                  style={{ flex: 1, height: '40px', border: '1.5px solid var(--sf-border)', borderRadius: '10px', padding: '0 12px', outline: 'none', fontSize: '0.85rem', backgroundColor: '#ffffff', color: '#0f172a' }}
+                />
+                <button type="submit" style={{ width: '40px', height: '40px', background: 'var(--sf-accent)', color: 'white', border: 'none', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <Send size={16} />
+                </button>
+              </form>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
