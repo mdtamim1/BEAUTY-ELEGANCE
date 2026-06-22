@@ -1,10 +1,9 @@
 import type { Order } from '../types';
 
 const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const isVitePort = window.location.port === '5173' || window.location.port === '5175' || window.location.port === '5174';
 
-const API_BASE = isLocalDev && isVitePort
-  ? 'http://localhost:5000/api/v1'
+const API_BASE = isLocalDev
+  ? `${window.location.protocol}//${window.location.hostname}:5000/api/v1`
   : 'https://beauty-elegance-admin.onrender.com/api/v1';
 
 // Build helper for authorization token header injection

@@ -76,7 +76,33 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://accounts.google.com"],
+      connectSrc: [
+        "'self'",
+        "https://beauty-elegance-admin.onrender.com",
+        "http://localhost:5000",
+        "ws:",
+        "wss:"
+      ],
+      imgSrc: [
+        "'self'",
+        "data:",
+        "https://picsum.photos",
+        "https://*.picsum.photos",
+        "https://images.unsplash.com",
+        "https://*.unsplash.com"
+      ],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      frameSrc: ["'self'", "https://accounts.google.com"]
+    }
+  },
+  crossOriginEmbedderPolicy: false
+}));
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));

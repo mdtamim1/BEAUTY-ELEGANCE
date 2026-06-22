@@ -10,13 +10,13 @@ export function convertToBengaliDigits(numStr: string): string {
 export function replaceContactInfo(text: string, contactInfo: { phoneNumber: string; whatsappNumber: string; email: string; messengerUrl: string }): string {
   if (!text || !contactInfo) return text;
   
-  let formattedPhone = contactInfo.phoneNumber || '';
-  let formattedPhoneBengali = convertToBengaliDigits(formattedPhone);
+  const formattedPhone = contactInfo.phoneNumber || '';
+  const formattedPhoneBengali = convertToBengaliDigits(formattedPhone);
   
-  let formattedWhatsapp = contactInfo.whatsappNumber || '';
-  let formattedWhatsappBengali = convertToBengaliDigits(formattedWhatsapp);
+  const formattedWhatsapp = contactInfo.whatsappNumber || '';
+  const formattedWhatsappBengali = convertToBengaliDigits(formattedWhatsapp);
 
-  let email = contactInfo.email || '';
+  const email = contactInfo.email || '';
 
   let result = text;
   

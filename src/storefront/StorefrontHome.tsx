@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useOutletContext, Link, useLocation } from 'react-router-dom';
 import { Truck, Shield, RotateCcw, Headphones, Star, Heart, ShoppingCart, Zap,
   Smartphone, Shirt, Home as HomeIcon, Dumbbell, Sparkles, BookOpen,
@@ -34,9 +34,14 @@ export default function StorefrontHome() {
   const { addToCart, toggleWishlist, wishlist, searchQuery } = useOutletContext<any>();
   const [config] = useStorefrontConfig();
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [shuffledProducts, setShuffledProducts] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const location = useLocation();
+
+  // Shuffle products randomly on component mount or products update
+  const shuffledProducts = useMemo(() => {
+    const publishedProducts = config.products.filter(p => p.published);
+    return [...publishedProducts].sort(() => Math.random() - 0.5);
+  }, [config.products]);
 
   const filteredProducts = shuffledProducts.filter(p => {
     if (selectedCategory !== 'All' && p.category !== selectedCategory) return false;
@@ -51,13 +56,6 @@ export default function StorefrontHome() {
     }
     return true;
   });
-
-  // Shuffle products randomly on component mount or products update
-  useEffect(() => {
-    const publishedProducts = config.products.filter(p => p.published);
-    const shuffled = [...publishedProducts].sort(() => Math.random() - 0.5);
-    setShuffledProducts(shuffled);
-  }, [config.products]);
 
   useEffect(() => {
     if (location.hash) {
@@ -179,17 +177,14 @@ export default function StorefrontHome() {
       {(() => {
         if (!activePromoSection || !activePromoSection.timerEndDate) return null;
         
-        let promoSlug = 'offers';
         const labelLower = (activePromoSection.label || '').toLowerCase();
-        if (labelLower === 'offers' || labelLower === 'offer') {
-          promoSlug = 'offers';
-        } else if (labelLower === 'new arrivals' || labelLower === 'new arrival') {
-          promoSlug = 'new-arrivals';
-        } else if (labelLower === 'popular order' || labelLower === 'popular') {
-          promoSlug = 'popular-order';
-        } else {
-          promoSlug = activePromoSection.url.split('/').pop()?.replace('#', '') || 'offers';
-        }
+        const promoSlug = (labelLower === 'offers' || labelLower === 'offer')
+          ? 'offers'
+          : (labelLower === 'new arrivals' || labelLower === 'new arrival')
+          ? 'new-arrivals'
+          : (labelLower === 'popular order' || labelLower === 'popular')
+          ? 'popular-order'
+          : activePromoSection.url.split('/').pop()?.replace('#', '') || 'offers';
 
         return (
           <section className="store-section teaser-campaign-section">
