@@ -1,0 +1,1095 @@
+import { useState, useEffect, useRef } from 'react';
+import { useCustomerAuth } from '../context/CustomerAuthContext';
+import { useOutletContext, Link, useNavigate } from 'react-router-dom';
+import { 
+  User, Mail, Phone, Calendar, ShoppingBag, MessageSquare, LogOut, 
+  Lock, ArrowRight, ShieldCheck, MapPin, Truck, CheckCircle2, 
+  Clock, AlertCircle, HelpCircle, Send, Plus, ArrowLeft, RefreshCw,
+  Trash2, Edit, X
+} from 'lucide-react';
+import { fetchOrdersFromBackend, fetchChatHistory } from '../services/api';
+import { generateOrders as getOrders } from '../mock/data';
+import './storefront-account.css';
+
+interface OrderItem {
+  id: number | string;
+  customer: string;
+  email: string;
+  phone: string;
+  amount: number;
+  status: string;
+  items: number;
+  date: string;
+  paymentMethod: string;
+  courier?: string;
+  city?: string;
+  address?: string;
+}
+
+interface ChatMessage {
+  id: string;
+  customerId: string;
+  customerName: string;
+  sender: 'customer' | 'admin';
+  message: string;
+  timestamp: string;
+  read: boolean;
+}
+
+export default function CustomerAccount() {
+  const { 
+    customer, 
+    login, 
+    register, 
+    loginWithGmail, 
+    logout, 
+    updateCustomerProfile,
+    addCustomerAddress,
+    updateCustomerAddress,
+    deleteCustomerAddress,
+    setDefaultCustomerAddress
+  } = useCustomerAuth();
+  const navigate = useNavigate();
+
+  // Auth UI Form states
+  const [isRegister, setIsRegister] = useState(false);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authName, setAuthName] = useState('');
+  const [authPhone, setAuthPhone] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [authSuccess, setAuthSuccess] = useState('');
+  const [showGoogleAccounts, setShowGoogleAccounts] = useState(false);
+
+  // Dashboard state
+  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'chat'>('profile');
+  const [orders, setOrders] = useState<OrderItem[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
+
+  // Chat/Messaging State
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const socketRef = useRef<WebSocket | null>(null);
+
+  // Profile edit states
+  const [profileName, setProfileName] = useState(customer?.name || '');
+  const [profilePhone, setProfilePhone] = useState(customer?.phone || '');
+  const [profileAddress, setProfileAddress] = useState(customer?.address || '');
+  const [profileSuccess, setProfileSuccess] = useState('');
+  const [profileError, setProfileError] = useState('');
+
+  // Saved Address Form/Modal states
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<any | null>(null);
+  const [addressLabel, setAddressLabel] = useState('বাসা (Home)');
+  const [addressName, setAddressName] = useState('');
+  const [addressPhone, setAddressPhone] = useState('');
+  const [addressDetail, setAddressDetail] = useState('');
+  const [addressIsDefault, setAddressIsDefault] = useState(false);
+  const [addressError, setAddressError] = useState('');
+
+  const resetAddressForm = () => {
+    setEditingAddress(null);
+    setAddressLabel('বাসা (Home)');
+    setAddressName('');
+    setAddressPhone('');
+    setAddressDetail('');
+    setAddressIsDefault(false);
+    setAddressError('');
+    setIsAddressModalOpen(false);
+  };
+
+  const openAddAddressModal = () => {
+    resetAddressForm();
+    setAddressName(customer?.name || '');
+    setAddressPhone(customer?.phone || '');
+    setIsAddressModalOpen(true);
+  };
+
+  const openEditAddressModal = (addr: any) => {
+    setEditingAddress(addr);
+    setAddressLabel(addr.label);
+    setAddressName(addr.name);
+    setAddressPhone(addr.phone);
+    setAddressDetail(addr.address);
+    setAddressIsDefault(!!addr.isDefault);
+    setAddressError('');
+    setIsAddressModalOpen(true);
+  };
+
+  const handleAddressSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddressError('');
+
+    if (!addressLabel.trim()) {
+      setAddressError('লেবেল (যেমন: বাসা, অফিস) খালি রাখা যাবে না।');
+      return;
+    }
+    if (!addressName.trim()) {
+      setAddressError('নাম খালি রাখা যাবে না।');
+      return;
+    }
+    if (!addressPhone.trim()) {
+      setAddressError('মোবাইল নম্বর খালি রাখা যাবে না।');
+      return;
+    }
+    if (!addressDetail.trim()) {
+      setAddressError('বিস্তারিত ঠিকানা খালি রাখা যাবে না।');
+      return;
+    }
+
+    const addrData = {
+      label: addressLabel.trim(),
+      name: addressName.trim(),
+      phone: addressPhone.trim(),
+      address: addressDetail.trim(),
+      isDefault: addressIsDefault
+    };
+
+    try {
+      if (editingAddress) {
+        updateCustomerAddress(editingAddress.id, addrData);
+      } else {
+        addCustomerAddress(addrData);
+      }
+      resetAddressForm();
+    } catch (err) {
+      setAddressError('ঠিকানা সংরক্ষণ করতে সমস্যা হয়েছে।');
+    }
+  };
+
+  useEffect(() => {
+    if (customer) {
+      setProfileName(customer.name || '');
+      setProfilePhone(customer.phone || '');
+      setProfileAddress(customer.address || '');
+      setProfileSuccess('');
+      setProfileError('');
+    }
+  }, [customer]);
+
+  const handleProfileUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    setProfileError('');
+    setProfileSuccess('');
+
+    if (!profileName.trim()) {
+      setProfileError('নাম খালি রাখা যাবে না।');
+      return;
+    }
+    if (!profilePhone.trim()) {
+      setProfileError('মোবাইল নম্বর খালি রাখা যাবে না।');
+      return;
+    }
+
+    try {
+      updateCustomerProfile({
+        name: profileName.trim(),
+        phone: profilePhone.trim(),
+        address: profileAddress.trim()
+      });
+      setProfileSuccess('আপনার প্রোফাইল তথ্য সফলভাবে আপডেট করা হয়েছে!');
+    } catch (err) {
+      setProfileError('প্রোফাইল আপডেট করতে সমস্যা হয়েছে।');
+    }
+  };
+
+  // Load orders
+  const loadCustomerOrders = async () => {
+    if (!customer) return;
+    setLoadingOrders(true);
+    try {
+      // Fetch from backend
+      const backendOrders = await fetchOrdersFromBackend();
+      // Combine with local mock fallback
+      const allOrders = backendOrders || getOrders() || [];
+      
+      // Filter matching this customer's email or phone
+      const matched = allOrders.filter((o: any) => 
+        (o.email && o.email.toLowerCase() === customer.email.toLowerCase()) || 
+        (o.phone && customer.phone && o.phone.replace(/[^0-9]/g, '') === customer.phone.replace(/[^0-9]/g, ''))
+      );
+      
+      setOrders(matched as any[]);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  // Sync state & localStorage
+  const syncChatData = (updated: ChatMessage[]) => {
+    localStorage.setItem('storefront_chats', JSON.stringify(updated));
+    window.dispatchEvent(new Event('storage'));
+    
+    if (customer) {
+      const filtered = updated.filter(m => m.customerId === customer.id);
+      setChatMessages(filtered);
+    }
+  };
+
+  const loadChatsLocal = () => {
+    if (!customer) return;
+    const stored = localStorage.getItem('storefront_chats');
+    if (stored) {
+      try {
+        const allChats: ChatMessage[] = JSON.parse(stored);
+        const filtered = allChats.filter(m => m.customerId === customer.id);
+        setChatMessages(filtered);
+      } catch (e) {}
+    }
+  };
+
+  useEffect(() => {
+    if (customer) {
+      loadCustomerOrders();
+
+      const initializeChat = async () => {
+        // 1. Fetch history from SQLite Database
+        const history = await fetchChatHistory();
+        if (history && history.length > 0) {
+          syncChatData(history);
+        } else {
+          loadChatsLocal();
+        }
+
+        // 2. Open WebSocket
+        const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const wsHost = isLocalDev ? 'localhost:5000' : window.location.host;
+        const wsUrl = `${wsProto}//${wsHost}/ws/chat`;
+
+        try {
+          const ws = new WebSocket(wsUrl);
+          socketRef.current = ws;
+
+          ws.onopen = () => {
+            console.log('⚡ Storefront support chat WebSocket connection open.');
+          };
+
+          ws.onmessage = (event) => {
+            try {
+              const payload = JSON.parse(event.data);
+              if (payload.type === 'message') {
+                const newMsg: ChatMessage = payload.data;
+                
+                const stored = localStorage.getItem('storefront_chats');
+                let chatsList: ChatMessage[] = [];
+                if (stored) {
+                  try {
+                    chatsList = JSON.parse(stored);
+                  } catch (e) {}
+                }
+                
+                if (!chatsList.some(m => m.id === newMsg.id)) {
+                  const updated = [...chatsList, newMsg];
+                  syncChatData(updated);
+                }
+              }
+            } catch (e) {
+              console.error('Error parsing WebSocket message content:', e);
+            }
+          };
+
+          ws.onerror = (err) => {
+            console.warn('Storefront WebSocket connection error. Using local storage fallback polling.', err);
+          };
+
+          ws.onclose = () => {
+            console.warn('Storefront WebSocket connection closed. Using local storage fallback polling.');
+          };
+        } catch (err) {
+          console.warn('Storefront WebSocket setup failed. Using local storage fallback polling.', err);
+        }
+      };
+
+      initializeChat();
+
+      // Fallback polling just in case WebSocket is down
+      const timer = setInterval(() => {
+        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+          return;
+        }
+        loadChatsLocal();
+      }, 3000);
+
+      return () => {
+        clearInterval(timer);
+        if (socketRef.current) {
+          socketRef.current.close();
+        }
+      };
+    }
+  }, [customer]);
+
+  // Scroll chat to bottom
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages, activeTab]);
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    setAuthSuccess('');
+
+    if (isRegister) {
+      if (!authName || !authEmail || !authPassword || !authPhone) {
+        setAuthError('দয়া করে সবগুলো ঘর পূরণ করুন।');
+        return;
+      }
+      const res = await register(authName, authEmail, authPassword, authPhone);
+      if (!res.success) {
+        setAuthError(res.error || 'নিবন্ধন ব্যর্থ হয়েছে।');
+      } else {
+        setAuthSuccess('অ্যাকাউন্ট তৈরি সফল হয়েছে!');
+      }
+    } else {
+      if (!authEmail || !authPassword) {
+        setAuthError('ইমেইল ও পাসওয়ার্ড প্রদান করুন।');
+        return;
+      }
+      const res = await login(authEmail, authPassword);
+      if (!res.success) {
+        setAuthError(res.error || 'লগইন ব্যর্থ হয়েছে।');
+      }
+    }
+  };
+
+  const handleGmailLoginSimulate = async (email: string, name: string) => {
+    await loginWithGmail(email, name);
+    setShowGoogleAccounts(false);
+  };
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customer || !inputMessage.trim()) return;
+
+    const newMessage: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      customerId: customer.id,
+      customerName: customer.name,
+      sender: 'customer',
+      message: inputMessage.trim(),
+      timestamp: new Date().toISOString(),
+      read: false
+    };
+
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
+        type: 'message',
+        customerId: customer.id,
+        customerName: customer.name,
+        sender: 'customer',
+        message: inputMessage.trim()
+      }));
+    } else {
+      // Fallback local storage update
+      const storedChats = localStorage.getItem('storefront_chats');
+      let allChats: ChatMessage[] = [];
+      if (storedChats) {
+        try {
+          allChats = JSON.parse(storedChats);
+        } catch (e) {}
+      }
+
+      const updatedChats = [...allChats, newMessage];
+      syncChatData(updatedChats);
+
+      // Trigger dummy auto-reply for demo if no admin replies in 4s (just for visual delight when offline)
+      setTimeout(() => {
+        const stored = localStorage.getItem('storefront_chats');
+        if (stored) {
+          const chats: ChatMessage[] = JSON.parse(stored);
+          const lastMsg = chats.filter(m => m.customerId === customer.id).pop();
+          if (lastMsg && lastMsg.sender === 'customer') {
+            const autoReply: ChatMessage = {
+              id: `msg-reply-${Date.now()}`,
+              customerId: customer.id,
+              customerName: customer.name,
+              sender: 'admin',
+              message: `ধন্যবাদ ${customer.name}! আমরা আপনার মেসেজটি পেয়েছি। আমাদের কাস্টমার প্রতিনিধি শীঘ্রই যোগাযোগ করবে।`,
+              timestamp: new Date().toISOString(),
+              read: false
+            };
+            syncChatData([...chats, autoReply]);
+          }
+        }
+      }, 4000);
+    }
+    
+    setInputMessage('');
+  };
+
+  // Order tracking status helper
+  const getTrackingSteps = (status: string) => {
+    const steps = [
+      { key: 'placed', label: 'অর্ডার প্লেসড', desc: 'অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে', icon: Clock },
+      { key: 'processing', label: 'প্রসেসিং', desc: 'প্যাকেজিং ও ভেরিফিকেশন চলছে', icon: RefreshCw },
+      { key: 'shipped', label: 'কুরিয়ারে পাঠানো হয়েছে', desc: 'পণ্যটি কুরিয়ারে হস্তান্তর করা হয়েছে', icon: Truck },
+      { key: 'delivered', label: 'ডেলিভার্ড', desc: 'অর্ডারটি আপনার কাছে পৌঁছে গেছে', icon: CheckCircle2 }
+    ];
+
+    const lowerStatus = status.toLowerCase();
+    let activeIndex = 0;
+    if (lowerStatus === 'processing') activeIndex = 1;
+    else if (lowerStatus === 'shipped' || lowerStatus === 'shipping') activeIndex = 2;
+    else if (lowerStatus === 'delivered' || lowerStatus === 'completed') activeIndex = 3;
+
+    return { steps, activeIndex };
+  };
+
+  if (!customer) {
+    return (
+      <div className="account-auth-container" style={{ maxWidth: '460px', margin: '60px auto', padding: '0 16px' }}>
+        <div style={{ background: 'white', padding: '32px', borderRadius: 'var(--sf-radius-lg)', border: '1px solid var(--sf-border)', boxShadow: 'var(--sf-shadow-md)' }}>
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <div style={{ width: '48px', height: '48px', background: 'var(--sf-bg-light)', color: 'var(--sf-accent)', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+              <User size={24} />
+            </div>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--sf-text-primary)' }}>
+              {isRegister ? 'নতুন অ্যাকাউন্ট তৈরি করুন' : 'কাস্টমার অ্যাকাউন্টে লগইন'}
+            </h2>
+            <p style={{ fontSize: '0.85rem', color: 'var(--sf-text-tertiary)', marginTop: '4px' }}>
+              {isRegister ? 'সহজ ট্র্যাকিং ও চ্যাট সাপোর্ট পেতে অ্যাকাউন্ট তৈরি করুন' : 'অর্ডার ট্র্যাক এবং কাস্টমার সাপোর্টে যোগাযোগ করতে লগইন করুন'}
+            </p>
+          </div>
+
+          {authError && (
+            <div style={{ background: '#fee2e2', color: '#ef4444', padding: '10px 12px', borderRadius: '8px', fontSize: '0.82rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AlertCircle size={16} /> {authError}
+            </div>
+          )}
+
+          {authSuccess && (
+            <div style={{ background: '#f0fdf4', color: '#16a34a', padding: '10px 12px', borderRadius: '8px', fontSize: '0.82rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <CheckCircle2 size={16} /> {authSuccess}
+            </div>
+          )}
+
+          <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {isRegister && (
+              <>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--sf-text-secondary)', marginBottom: '6px' }}>আপনার নাম *</label>
+                  <input type="text" required value={authName} onChange={e => setAuthName(e.target.value)} style={{ width: '100%', height: '42px', border: '1px solid var(--sf-border)', borderRadius: '8px', padding: '0 12px', outline: 'none', backgroundColor: '#ffffff', color: '#0f172a' }} placeholder="যেমন: মো: রহিম" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--sf-text-secondary)', marginBottom: '6px' }}>মোবাইল নম্বর *</label>
+                  <input type="tel" required value={authPhone} onChange={e => setAuthPhone(e.target.value)} style={{ width: '100%', height: '42px', border: '1px solid var(--sf-border)', borderRadius: '8px', padding: '0 12px', outline: 'none', backgroundColor: '#ffffff', color: '#0f172a' }} placeholder="যেমন: ০১৭XXXXXXXX" />
+                </div>
+              </>
+            )}
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--sf-text-secondary)', marginBottom: '6px' }}>ইমেইল ঠিকানা *</label>
+              <input type="email" required value={authEmail} onChange={e => setAuthEmail(e.target.value)} style={{ width: '100%', height: '42px', border: '1px solid var(--sf-border)', borderRadius: '8px', padding: '0 12px', outline: 'none', backgroundColor: '#ffffff', color: '#0f172a' }} placeholder="যেমন: example@gmail.com" />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--sf-text-secondary)', marginBottom: '6px' }}>পাসওয়ার্ড *</label>
+              <input type="password" required value={authPassword} onChange={e => setAuthPassword(e.target.value)} style={{ width: '100%', height: '42px', border: '1px solid var(--sf-border)', borderRadius: '8px', padding: '0 12px', outline: 'none', backgroundColor: '#ffffff', color: '#0f172a' }} placeholder="পাসওয়ার্ড দিন" />
+            </div>
+
+            <button type="submit" style={{ width: '100%', height: '44px', background: 'var(--sf-text-primary)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '8px' }}>
+              {isRegister ? 'অ্যাকাউন্ট তৈরি করুন' : 'লগইন করুন'} <ArrowRight size={16} />
+            </button>
+          </form>
+
+          {/* Gmail Login Option */}
+          <div style={{ position: 'relative', marginTop: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '16px 0', position: 'relative' }}>
+              <div style={{ position: 'absolute', width: '100%', height: '1px', background: 'var(--sf-border)', zIndex: 1 }} />
+              <span style={{ position: 'relative', zIndex: 2, background: 'white', padding: '0 12px', fontSize: '0.75rem', color: 'var(--sf-text-tertiary)', fontWeight: 600 }}>অথবা</span>
+            </div>
+
+            <button 
+              onClick={() => setShowGoogleAccounts(!showGoogleAccounts)}
+              style={{ width: '100%', height: '44px', background: 'white', color: 'var(--sf-text-primary)', border: '1.5px solid var(--sf-border)', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" style={{ marginRight: '4px' }}>
+                <path fill="#EA4335" d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.67 1.54 14.98 1 12 1 7.35 1 3.37 3.65 1.4 7.56l3.85 2.99c.92-2.73 3.47-4.51 6.75-4.51z"/>
+                <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.36H12v4.51h6.43c-.28 1.44-1.09 2.67-2.31 3.49l3.58 2.78c2.1-1.94 3.79-5.11 3.79-8.42z"/>
+                <path fill="#FBBC05" d="M5.25 14.56c-.24-.72-.38-1.5-.38-2.31s.14-1.59.38-2.31L1.4 6.95C.51 8.75 0 10.77 0 12s.51 3.25 1.4 5.05l3.85-2.99z"/>
+                <path fill="#34A853" d="M12 23c3.24 0 5.97-1.07 7.96-2.91l-3.58-2.78c-.99.66-2.26 1.06-4.38 1.06-3.28 0-5.83-1.78-6.75-4.51L1.4 17.05C3.37 20.35 7.35 23 12 23z"/>
+              </svg>
+              Gmail দিয়ে লগইন করুন
+            </button>
+
+            {showGoogleAccounts && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, width: '100%', background: 'white', border: '1px solid var(--sf-border)', borderRadius: '12px', boxShadow: 'var(--sf-shadow-xl)', zIndex: 100, marginTop: '8px', padding: '12px', boxSizing: 'border-box' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--sf-text-tertiary)', marginBottom: '8px', padding: '0 8px' }}>Google অ্যাকাউন্ট বেছে নিন:</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {[
+                    { email: 'momin.vip@gmail.com', name: 'Kazi Momin' },
+                    { email: 'tasnia.shampoo@gmail.com', name: 'Tasnia Alam' },
+                    { email: 'sayed.buyer@gmail.com', name: 'Abu Sayed' }
+                  ].map((acc, idx) => (
+                    <button 
+                      key={idx}
+                      onClick={() => handleGmailLoginSimulate(acc.email, acc.name)}
+                      style={{ width: '100%', padding: '10px 8px', background: 'none', border: 'none', borderRadius: '8px', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '10px', transition: 'background 0.2s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--sf-bg-light)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                    >
+                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700 }}>
+                        {acc.name.split(' ').map(n => n[0]).join('')}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--sf-text-primary)' }}>{acc.name}</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--sf-text-tertiary)' }}>{acc.email}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '0.85rem', color: 'var(--sf-text-secondary)' }}>
+            {isRegister ? (
+              <>
+                অলরেডি একটি অ্যাকাউন্ট আছে?{' '}
+                <button onClick={() => { setIsRegister(false); setAuthError(''); }} style={{ background: 'none', border: 'none', color: 'var(--sf-accent)', fontWeight: 700, cursor: 'pointer', padding: 0 }}>
+                  লগইন করুন
+                </button>
+              </>
+            ) : (
+              <>
+                কোনো অ্যাকাউন্ট নেই?{' '}
+                <button onClick={() => { setIsRegister(true); setAuthError(''); }} style={{ background: 'none', border: 'none', color: 'var(--sf-accent)', fontWeight: 700, cursor: 'pointer', padding: 0 }}>
+                  অ্যাকাউন্ট তৈরি করুন
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="account-container">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+        <div>
+          <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--sf-text-primary)' }}>কাস্টমার পোর্টাল</h2>
+          <p style={{ fontSize: '0.88rem', color: 'var(--sf-text-tertiary)' }}>স্বাগতম, {customer.name}!</p>
+        </div>
+        <button onClick={logout} className="store-btn" style={{ height: '40px', background: 'white', border: '1.5px solid var(--sf-border)', color: '#ef4444', borderRadius: '8px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem', padding: '0 16px' }}>
+          <LogOut size={16} /> লগআউট করুন
+        </button>
+      </div>
+
+      <div className="store-products-layout">
+        
+        {/* Navigation Sidebar */}
+        <div className="account-sidebar">
+          <button 
+            onClick={() => { setActiveTab('profile'); setSelectedOrder(null); }}
+            style={{ width: '100%', padding: '12px 16px', background: activeTab === 'profile' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'profile' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+          >
+            <User size={18} /> প্রোফাইল তথ্য
+          </button>
+          <button 
+            onClick={() => { setActiveTab('orders'); setSelectedOrder(null); }}
+            style={{ width: '100%', padding: '12px 16px', background: activeTab === 'orders' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'orders' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+          >
+            <ShoppingBag size={18} /> আমার অর্ডারসমূহ ({orders.length})
+          </button>
+          <button 
+            onClick={() => { setActiveTab('chat'); setSelectedOrder(null); }}
+            style={{ width: '100%', padding: '12px 16px', background: activeTab === 'chat' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'chat' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+          >
+            <MessageSquare size={18} /> কাস্টমার চ্যাট সাপোর্ট
+          </button>
+        </div>
+
+        {/* Tab Contents */}
+        <div className="account-content-card">
+          
+          {/* PROFILE TAB */}
+          {activeTab === 'profile' && (
+            <div>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '20px', borderBottom: '1px solid var(--sf-border)', paddingBottom: '10px' }}>প্রোফাইল বিবরণী</h3>
+              
+              <div className="profile-badge-row">
+                <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--sf-accent) 0%, var(--sf-accent-hover) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 800, color: 'white' }}>
+                  {customer.avatar || 'C'}
+                </div>
+                <div>
+                  <h4 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--sf-text-primary)' }}>{customer.name}</h4>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
+                    <span style={{ background: 'var(--sf-bg-light)', color: 'var(--sf-accent)', fontSize: '0.75rem', fontWeight: 700, padding: '4px 8px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                      {customer.isGmail ? 'Gmail Account' : 'Verified Customer'}
+                    </span>
+                    <span style={{ background: 'rgba(16, 185, 129, 0.1)', color: 'var(--sf-success)', fontSize: '0.75rem', fontWeight: 700, padding: '4px 8px', borderRadius: '4px' }}>
+                      সদস্যপদ: {new Date(customer.createdAt).toLocaleDateString('bn-BD', { year: 'numeric', month: 'long' })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {profileSuccess && (
+                <div style={{ background: '#f0fdf4', color: '#16a34a', padding: '12px', borderRadius: '8px', fontSize: '0.88rem', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+                  <CheckCircle2 size={16} /> {profileSuccess}
+                </div>
+              )}
+
+              {profileError && (
+                <div style={{ background: '#fee2e2', color: '#ef4444', padding: '12px', borderRadius: '8px', fontSize: '0.88rem', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+                  <AlertCircle size={16} /> {profileError}
+                </div>
+              )}
+
+              <form onSubmit={handleProfileUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--sf-text-secondary)', marginBottom: '6px' }}>পূর্ণ নাম *</label>
+                    <input 
+                      type="text" 
+                      required 
+                      value={profileName} 
+                      onChange={e => setProfileName(e.target.value)} 
+                      style={{ width: '100%', height: '42px', border: '1px solid var(--sf-border)', borderRadius: '8px', padding: '0 12px', outline: 'none', background: 'var(--sf-bg-light)', color: 'var(--sf-text-primary)' }} 
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--sf-text-secondary)', marginBottom: '6px' }}>ইমেইল (পরিবর্তনযোগ্য নয়)</label>
+                    <input 
+                      type="email" 
+                      disabled 
+                      value={customer.email} 
+                      style={{ width: '100%', height: '42px', border: '1px solid var(--sf-border)', borderRadius: '8px', padding: '0 12px', outline: 'none', background: '#e2e8f0', color: 'var(--sf-text-secondary)', cursor: 'not-allowed' }} 
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--sf-text-secondary)', marginBottom: '6px' }}>মোবাইল নম্বর *</label>
+                    <input 
+                      type="tel" 
+                      required 
+                      value={profilePhone} 
+                      onChange={e => setProfilePhone(e.target.value)} 
+                      style={{ width: '100%', height: '42px', border: '1px solid var(--sf-border)', borderRadius: '8px', padding: '0 12px', outline: 'none', background: 'var(--sf-bg-light)', color: 'var(--sf-text-primary)' }} 
+                      placeholder="যেমন: ০১৭XXXXXXXX"
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--sf-text-secondary)', marginBottom: '6px' }}>রেজিস্ট্রেশন তারিখ</label>
+                    <input 
+                      type="text" 
+                      disabled 
+                      value={new Date(customer.createdAt).toLocaleDateString('bn-BD', { year: 'numeric', month: 'long', day: 'numeric' })} 
+                      style={{ width: '100%', height: '42px', border: '1px solid var(--sf-border)', borderRadius: '8px', padding: '0 12px', outline: 'none', background: '#e2e8f0', color: 'var(--sf-text-secondary)', cursor: 'not-allowed' }} 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--sf-text-secondary)', marginBottom: '6px' }}>ডেলিভারি ঠিকানা</label>
+                  <textarea 
+                    value={profileAddress} 
+                    onChange={e => setProfileAddress(e.target.value)} 
+                    style={{ width: '100%', minHeight: '80px', border: '1px solid var(--sf-border)', borderRadius: '8px', padding: '10px 12px', outline: 'none', background: 'var(--sf-bg-light)', color: 'var(--sf-text-primary)', resize: 'vertical', fontFamily: 'inherit' }} 
+                    placeholder="বাসা/হোল্ডিং নং, রোড নং, এলাকা, থানা ও জেলা বিস্তারিত লিখুন"
+                  />
+                </div>
+
+                <button 
+                  type="submit" 
+                  style={{ height: '44px', background: 'var(--sf-text-primary)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '0 24px', alignSelf: 'flex-start', transition: 'background 0.2s' }}
+                >
+                  তথ্য সংরক্ষণ করুন (Save Profile)
+                </button>
+              </form>
+
+              {/* SAVED ADDRESSES SECTION */}
+              <div className="addresses-section">
+                <div className="addresses-section-header">
+                  <h4 className="addresses-section-title">
+                    <MapPin size={18} /> সংরক্ষিত ডেলিভারি ঠিকানা (Saved Addresses)
+                  </h4>
+                  <button 
+                    onClick={openAddAddressModal} 
+                    className="address-action-btn set-default"
+                    style={{ width: 'auto', padding: '0 16px', height: '36px' }}
+                  >
+                    <Plus size={14} /> নতুন যোগ করুন
+                  </button>
+                </div>
+
+                {!customer.addresses || customer.addresses.length === 0 ? (
+                  <div className="address-empty-state">
+                    <MapPin size={40} style={{ opacity: 0.3 }} />
+                    <p style={{ fontWeight: 600, margin: 0 }}>আপনার কোনো ঠিকানা সংরক্ষিত নেই।</p>
+                    <p style={{ fontSize: '0.8rem', margin: 0 }}>ভবিষ্যতে দ্রুত অর্ডার করতে এখানে আপনার ঠিকানাগুলো সংরক্ষণ করে রাখতে পারেন।</p>
+                  </div>
+                ) : (
+                  <div className="address-grid">
+                    {customer.addresses.map((addr) => (
+                      <div key={addr.id} className={`address-card ${addr.isDefault ? 'default-address' : ''}`}>
+                        <div>
+                          <div className="address-card-header">
+                            <span className="address-label">{addr.label}</span>
+                            {addr.isDefault && (
+                              <span className="address-default-badge">
+                                <CheckCircle2 size={12} /> ডিফল্ট
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="address-card-body" style={{ marginTop: '12px' }}>
+                            <div className="address-user-name">{addr.name}</div>
+                            <div className="address-user-phone">📞 {addr.phone}</div>
+                            <div className="address-details">{addr.address}</div>
+                          </div>
+                        </div>
+
+                        <div className="address-card-actions">
+                          {!addr.isDefault && (
+                            <button 
+                              onClick={() => setDefaultCustomerAddress(addr.id)} 
+                              className="address-action-btn set-default"
+                              title="Set as Default"
+                            >
+                              ডিফল্ট করুন
+                            </button>
+                          )}
+                          <button 
+                            onClick={() => openEditAddressModal(addr)} 
+                            className="address-action-btn"
+                          >
+                            <Edit size={12} /> এডিট
+                          </button>
+                          <button 
+                            onClick={() => deleteCustomerAddress(addr.id)} 
+                            className="address-action-btn delete"
+                          >
+                            <Trash2 size={12} /> ডিলিট
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+            </div>
+          )}
+
+          {/* ORDERS TAB */}
+          {activeTab === 'orders' && (
+            <div>
+              {!selectedOrder ? (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--sf-border)', paddingBottom: '10px' }}>
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>আমার অর্ডার ইতিহাস</h3>
+                    <button onClick={loadCustomerOrders} disabled={loadingOrders} style={{ background: 'none', border: 'none', color: 'var(--sf-accent)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem' }}>
+                      <RefreshCw size={14} className={loadingOrders ? 'animate-spin' : ''} /> রিফ্রেশ করুন
+                    </button>
+                  </div>
+
+                  {loadingOrders ? (
+                    <div style={{ textAlign: 'center', padding: '40px 0' }}>লোডিং হচ্ছে...</div>
+                  ) : orders.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--sf-text-tertiary)' }}>
+                      <ShoppingBag size={48} style={{ opacity: 0.2, marginBottom: '12px' }} />
+                      <p style={{ fontWeight: 600 }}>আপনার কোনো অর্ডার পাওয়া যায়নি।</p>
+                      <p style={{ fontSize: '0.8rem', marginTop: '4px' }}>অর্ডারের সময় যে ইমেইল/ফোন দিয়েছিলেন তা প্রোফাইলের সাথে ম্যাচ করতে হবে।</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {orders.map((order, idx) => (
+                        <div key={idx} style={{ border: '1px solid var(--sf-border)', borderRadius: '12px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', transition: 'box-shadow 0.2s' }} onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--sf-shadow-sm)'} onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
+                          <div>
+                            <div style={{ fontWeight: 700, color: 'var(--sf-text-primary)', fontSize: '0.95rem' }}>অর্ডার নং: #{order.id}</div>
+                            <div style={{ fontSize: '0.78rem', color: 'var(--sf-text-tertiary)', marginTop: '2px' }}>তারিখ: {new Date(order.date).toLocaleDateString()}</div>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--sf-text-secondary)', marginTop: '6px' }}>মূল্য: ৳{order.amount} ({order.items} টি প্রোডাক্ট)</div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span style={{ 
+                              padding: '6px 12px', 
+                              borderRadius: '20px', 
+                              fontSize: '0.78rem', 
+                              fontWeight: 700,
+                              background: order.status === 'Delivered' || order.status === 'Completed' ? '#d1fae5' : order.status === 'Shipped' || order.status === 'Shipping' ? '#dbeafe' : '#fef3c7',
+                              color: order.status === 'Delivered' || order.status === 'Completed' ? '#065f46' : order.status === 'Shipped' || order.status === 'Shipping' ? '#1e40af' : '#92400e'
+                            }}>
+                              {order.status === 'Delivered' || order.status === 'Completed' ? 'ডেলিভার্ড' : order.status === 'Shipped' || order.status === 'Shipping' ? 'কুরিয়ারে পাঠানো হয়েছে' : order.status === 'Processing' ? 'প্রসেসিং' : 'অপেক্ষমান'}
+                            </span>
+                            <button onClick={() => setSelectedOrder(order)} className="store-btn" style={{ height: '36px', background: 'var(--sf-text-primary)', color: 'white', border: 'none', borderRadius: '8px', padding: '0 12px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
+                              অর্ডার ট্র্যাক করুন
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* ORDER TIMELINE DETAILS */
+                <div>
+                  <button onClick={() => setSelectedOrder(null)} style={{ background: 'none', border: 'none', color: 'var(--sf-text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', marginBottom: '20px', padding: 0 }}>
+                    <ArrowLeft size={16} /> অর্ডারের তালিকায় ফিরে যান
+                  </button>
+
+                  <div style={{ border: '1px solid var(--sf-border)', borderRadius: '16px', padding: '24px', background: 'var(--sf-bg-light)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', borderBottom: '1px solid var(--sf-border)', paddingBottom: '16px', marginBottom: '24px' }}>
+                      <div>
+                        <h4 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>অর্ডার ট্র্যাকিং বিবরণী</h4>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--sf-text-tertiary)', marginTop: '4px' }}>অর্ডার নং: <strong>#{selectedOrder.id}</strong> | তারিখ: {new Date(selectedOrder.date).toLocaleString()}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--sf-text-tertiary)' }}>মোট মূল্য</div>
+                        <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--sf-text-primary)', marginTop: '2px' }}>৳{selectedOrder.amount}</div>
+                      </div>
+                    </div>
+
+                    {/* Timeline Graph */}
+                    <div style={{ position: 'relative', padding: '10px 0 20px 20px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                      
+                      {/* Timeline Vertical Progress bar background line */}
+                      <div style={{ position: 'absolute', left: '30px', top: '15px', bottom: '45px', width: '3px', background: 'var(--sf-border)', zIndex: 1 }} />
+                      
+                      {/* Timeline Vertical Active bar line */}
+                      <div style={{ 
+                        position: 'absolute', 
+                        left: '30px', 
+                        top: '15px', 
+                        height: `${(getTrackingSteps(selectedOrder.status).activeIndex / 3) * 100}%`,
+                        maxHeight: 'calc(100% - 60px)',
+                        width: '3px', 
+                        background: 'linear-gradient(to bottom, var(--sf-accent), var(--sf-success))', 
+                        zIndex: 2,
+                        transition: 'height 0.5s ease'
+                      }} />
+
+                      {getTrackingSteps(selectedOrder.status).steps.map((step, idx) => {
+                        const activeIndex = getTrackingSteps(selectedOrder.status).activeIndex;
+                        const isDone = idx <= activeIndex;
+                        const StepIcon = step.icon;
+                        return (
+                          <div key={idx} style={{ display: 'flex', gap: '20px', position: 'relative', zIndex: 5 }}>
+                            <div style={{ 
+                              width: '24px', 
+                              height: '24px', 
+                              borderRadius: '50%', 
+                              background: isDone ? 'var(--sf-success)' : 'white', 
+                              border: `2px solid ${isDone ? 'var(--sf-success)' : 'var(--sf-border)'}`,
+                              color: isDone ? 'white' : 'var(--sf-text-tertiary)',
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              boxShadow: '0 0 0 4px white',
+                              transition: 'all 0.3s'
+                            }}>
+                              {isDone ? <CheckCircle2 size={14} /> : <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--sf-text-tertiary)' }} />}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: isDone ? 'var(--sf-text-primary)' : 'var(--sf-text-tertiary)' }}>{step.label}</div>
+                              <div style={{ fontSize: '0.8rem', color: 'var(--sf-text-tertiary)', marginTop: '2px' }}>{step.desc}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div style={{ borderTop: '1px solid var(--sf-border)', paddingTop: '20px', marginTop: '10px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                      <div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--sf-text-tertiary)' }}>কুরিয়ার সার্ভিস</div>
+                        <div style={{ fontWeight: 700, fontSize: '0.9rem', marginTop: '2px', color: 'var(--sf-text-primary)' }}>
+                          {selectedOrder.courier || 'Pathao Courier'}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--sf-text-tertiary)' }}>ডেলিভারি ঠিকানা</div>
+                        <div style={{ fontWeight: 700, fontSize: '0.9rem', marginTop: '2px', color: 'var(--sf-text-primary)' }}>
+                          {selectedOrder.address || 'Dhaka, Bangladesh'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* CHAT TAB */}
+          {activeTab === 'chat' && (
+            <div style={{ display: 'flex', flexDirection: 'column', height: '480px' }}>
+              <div style={{ borderBottom: '1px solid var(--sf-border)', paddingBottom: '12px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>হেল্প ও কাস্টমার সাপোর্ট চ্যাট</h3>
+                <span style={{ fontSize: '0.72rem', color: '#16a34a', background: '#f0fdf4', padding: '4px 8px', borderRadius: '4px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#16a34a', display: 'inline-block' }} /> Support Agent Online
+                </span>
+              </div>
+
+              {/* Message scroll container */}
+              <div style={{ flex: 1, overflowY: 'auto', paddingRight: '8px', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
+                {chatMessages.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--sf-text-tertiary)', margin: 'auto' }}>
+                    <MessageSquare size={48} style={{ opacity: 0.15, marginBottom: '12px' }} />
+                    <p style={{ fontWeight: 600 }}>আপনার কোনো মেসেজ নেই</p>
+                    <p style={{ fontSize: '0.78rem', marginTop: '4px' }}>অর্ডার বা কোনো পণ্য নিয়ে যেকোনো প্রশ্ন করতে নিচে মেসেজ পাঠান।</p>
+                  </div>
+                ) : (
+                  chatMessages.map((msg, idx) => {
+                    const isAdmin = msg.sender === 'admin';
+                    return (
+                      <div 
+                        key={idx} 
+                        style={{ 
+                          display: 'flex', 
+                          justifyContent: isAdmin ? 'flex-start' : 'flex-end', 
+                          width: '100%' 
+                        }}
+                      >
+                        <div 
+                          style={{ 
+                            maxWidth: '75%', 
+                            padding: '12px 16px', 
+                            borderRadius: '16px', 
+                            borderTopLeftRadius: isAdmin ? '2px' : '16px',
+                            borderBottomRightRadius: isAdmin ? '16px' : '2px',
+                            background: isAdmin ? '#f1f5f9' : 'linear-gradient(135deg, var(--sf-accent) 0%, var(--sf-accent-hover) 100%)', 
+                            color: isAdmin ? 'var(--sf-text-primary)' : 'white',
+                            boxShadow: 'var(--sf-shadow-sm)',
+                            position: 'relative'
+                          }}
+                        >
+                          <div style={{ fontSize: '0.88rem', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{msg.message}</div>
+                          <div 
+                            style={{ 
+                              fontSize: '0.65rem', 
+                              textAlign: 'right', 
+                              marginTop: '6px', 
+                              opacity: 0.6,
+                              color: isAdmin ? 'var(--sf-text-tertiary)' : 'white'
+                            }}
+                          >
+                            {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Message Editor */}
+              <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '8px', borderTop: '1px solid var(--sf-border)', paddingTop: '16px' }}>
+                <input 
+                  type="text" 
+                  value={inputMessage} 
+                  onChange={e => setInputMessage(e.target.value)} 
+                  placeholder="আপনার মেসেজটি এখানে লিখুন..." 
+                  style={{ flex: 1, height: '44px', border: '1.5px solid var(--sf-border)', borderRadius: '12px', padding: '0 16px', outline: 'none', fontSize: '0.88rem', backgroundColor: '#ffffff', color: '#0f172a' }}
+                />
+                <button type="submit" style={{ width: '44px', height: '44px', background: 'var(--sf-accent)', color: 'white', border: 'none', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'background 0.2s' }}>
+                  <Send size={18} />
+                </button>
+              </form>
+            </div>
+          )}
+
+        </div>
+      </div>
+
+      {/* ADDRESS MODAL */}
+      {isAddressModalOpen && (
+        <div className="address-modal-overlay" onClick={resetAddressForm}>
+          <div className="address-modal" onClick={e => e.stopPropagation()}>
+            <div className="address-modal-header">
+              <h3 className="address-modal-title">
+                {editingAddress ? 'সংরক্ষিত ঠিকানা এডিট করুন' : 'নতুন ডেলিভারি ঠিকানা যোগ করুন'}
+              </h3>
+              <button className="address-modal-close-btn" onClick={resetAddressForm}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {addressError && (
+              <div style={{ background: '#fee2e2', color: '#ef4444', padding: '10px 12px', borderRadius: '8px', fontSize: '0.82rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <AlertCircle size={16} /> {addressError}
+              </div>
+            )}
+
+            <form onSubmit={handleAddressSubmit} className="address-form">
+              <div>
+                <label className="address-form-label">ঠিকানার লেবেল (Label) <span>*</span></label>
+                <input 
+                  type="text" 
+                  required 
+                  value={addressLabel} 
+                  onChange={e => setAddressLabel(e.target.value)} 
+                  className="address-form-input" 
+                  placeholder="যেমন: বাসা, অফিস, দোকান" 
+                />
+              </div>
+
+              <div>
+                <label className="address-form-label">কাস্টমারের নাম (Full Name) <span>*</span></label>
+                <input 
+                  type="text" 
+                  required 
+                  value={addressName} 
+                  onChange={e => setAddressName(e.target.value)} 
+                  className="address-form-input" 
+                  placeholder="ডেলিভারি গ্রহীতার নাম" 
+                />
+              </div>
+
+              <div>
+                <label className="address-form-label">মোবাইল নম্বর (Phone Number) <span>*</span></label>
+                <input 
+                  type="tel" 
+                  required 
+                  value={addressPhone} 
+                  onChange={e => setAddressPhone(e.target.value)} 
+                  className="address-form-input" 
+                  placeholder="যেমন: ০১৭XXXXXXXX" 
+                />
+              </div>
+
+              <div>
+                <label className="address-form-label">বিস্তারিত ঠিকানা (Detailed Address) <span>*</span></label>
+                <textarea 
+                  required 
+                  value={addressDetail} 
+                  onChange={e => setAddressDetail(e.target.value)} 
+                  className="address-form-textarea" 
+                  placeholder="বাসা/হোল্ডিং নং, রোড নং, এলাকা, থানা ও জেলা বিস্তারিত লিখুন"
+                />
+              </div>
+
+              <div className="address-form-checkbox-row" onClick={() => setAddressIsDefault(!addressIsDefault)}>
+                <input 
+                  type="checkbox" 
+                  checked={addressIsDefault} 
+                  onChange={() => {}} 
+                  className="address-form-checkbox" 
+                />
+                <span className="address-form-checkbox-label">এটি আমার ডিফল্ট ডেলিভারি ঠিকানা হিসেবে সেট করুন</span>
+              </div>
+
+              <div className="address-form-actions">
+                <button type="button" onClick={resetAddressForm} className="address-btn-cancel">
+                  বাতিল করুন
+                </button>
+                <button type="submit" className="address-btn-save">
+                  সংরক্ষণ করুন
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
