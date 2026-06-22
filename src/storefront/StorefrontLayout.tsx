@@ -76,6 +76,7 @@ export default function StorefrontLayout() {
   }));
 
   const [cartOpen, setCartOpen] = useState(false);
+  const [wishlistOpen, setWishlistOpen] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [wishlist, setWishlist] = useState<number[]>([]);
@@ -261,7 +262,11 @@ export default function StorefrontLayout() {
               >
                 <Search size={20} />
               </button>
-              <button className="store-header-btn" title="Wishlist">
+              <button 
+                className="store-header-btn" 
+                title="Wishlist"
+                onClick={() => setWishlistOpen(true)}
+              >
                 <Heart size={20} />
                 {wishlist.length > 0 && <span className="cart-count">{wishlist.length}</span>}
               </button>
@@ -414,6 +419,65 @@ export default function StorefrontLayout() {
                 </Link>
               </div>
             )}
+          </div>
+        </>
+      )}
+
+      {/* ---- Wishlist Sidebar ---- */}
+      {wishlistOpen && (
+        <>
+          <div className="wishlist-overlay" onClick={() => setWishlistOpen(false)} />
+          <div className="wishlist-sidebar">
+            <div className="wishlist-header">
+              <h3>My Wishlist ({wishlist.length})</h3>
+              <button className="store-header-btn" onClick={() => setWishlistOpen(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="wishlist-items">
+              {wishlist.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--sf-text-tertiary)' }}>
+                  <Heart size={48} style={{ marginBottom: '16px', opacity: 0.3 }} />
+                  <p style={{ fontWeight: 600, color: 'var(--sf-text-secondary)' }}>Your wishlist is empty</p>
+                  <p style={{ fontSize: '0.85rem', marginTop: '4px' }}>Add items you love to your wishlist</p>
+                </div>
+              ) : (
+                config.products
+                  .filter(product => wishlist.some(id => String(id) === String(product.id)))
+                  .map((product) => (
+                    <div key={product.id} className="wishlist-item">
+                      <img src={product.image} alt={product.name} className="wishlist-item-image" />
+                      <div className="wishlist-item-info">
+                        <Link 
+                          to={`/product/${product.id}`} 
+                          className="wishlist-item-name"
+                          onClick={() => setWishlistOpen(false)}
+                        >
+                          {product.name}
+                        </Link>
+                        <div className="wishlist-item-price">৳{product.price.toFixed(2)}</div>
+                        <div className="wishlist-item-actions">
+                          <button 
+                            className="wishlist-add-cart-btn"
+                            onClick={() => {
+                              addToCart(product);
+                            }}
+                          >
+                            Add to Cart
+                          </button>
+                          <button 
+                            className="wishlist-remove-btn"
+                            onClick={() => toggleWishlist(product.id)}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+              )}
+            </div>
           </div>
         </>
       )}
