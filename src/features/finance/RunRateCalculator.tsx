@@ -777,7 +777,7 @@ export default function RunRateCalculator() {
                   <span>Required Annual Growth (Simple):</span>
                   <span style={{ fontWeight: 700, color: 'var(--accent-primary-hover)' }}>{calculations.requiredGrowthRateSimple.toFixed(2)}%</span>
                 </div>
-                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'flex', justifycontent: 'space-between' }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between' }}>
                   <span>Compounding Monthly Growth Rate (g):</span>
                   <span style={{ fontWeight: 700, color: 'var(--accent-primary-hover)' }}>{calculations.monthlyCompoundingRate.toFixed(3)}% / mo</span>
                 </div>
