@@ -127,7 +127,16 @@ export default function Checkout() {
     };
 
     // Safely attempt backend sync
-    await sendOrderToBackend(orderData);
+    const success = await sendOrderToBackend(orderData);
+    if (!success) {
+      try {
+        const pending = JSON.parse(localStorage.getItem('pending_sync_orders') || '[]');
+        pending.push(orderData);
+        localStorage.setItem('pending_sync_orders', JSON.stringify(pending));
+      } catch (err) {
+        console.error('Failed to queue offline order:', err);
+      }
+    }
 
     // Save locally for redundancy & to ensure local Admin panel functions properly
     addOrder(orderData);

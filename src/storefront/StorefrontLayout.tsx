@@ -88,6 +88,50 @@ export default function StorefrontLayout() {
     }
   }, [mobileSearchOpen]);
 
+  // Background Auto-Sync for Offline Orders
+  useEffect(() => {
+    const syncOfflineOrders = async () => {
+      const pending = localStorage.getItem('pending_sync_orders');
+      if (!pending) return;
+
+      try {
+        const orders = JSON.parse(pending);
+        if (Array.isArray(orders) && orders.length > 0) {
+          console.log(`Found ${orders.length} offline orders pending sync...`);
+          const remaining: any[] = [];
+          
+          // Dynamically import the api helper to prevent static dependency cycle
+          const { sendOrderToBackend } = await import('../services/api');
+
+          for (const order of orders) {
+            const success = await sendOrderToBackend(order);
+            if (!success) {
+              remaining.push(order);
+            }
+          }
+
+          if (remaining.length > 0) {
+            localStorage.setItem('pending_sync_orders', JSON.stringify(remaining));
+          } else {
+            localStorage.removeItem('pending_sync_orders');
+            console.log('All offline orders successfully synced to backend!');
+          }
+        }
+      } catch (e) {
+        console.error('Failed to sync offline orders:', e);
+      }
+    };
+
+    // Run sync on mount, and then periodically check every 30 seconds
+    const timeout = setTimeout(syncOfflineOrders, 5000);
+    const interval = setInterval(syncOfflineOrders, 30000);
+
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(interval);
+    };
+  }, []);
+
   const clearCart = () => setCart([]);
 
   const addToCart = (product: any) => {
