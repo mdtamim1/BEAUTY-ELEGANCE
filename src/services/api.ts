@@ -5,7 +5,7 @@ const isVitePort = window.location.port === '5173' || window.location.port === '
 
 const API_BASE = isLocalDev && isVitePort
   ? 'http://localhost:5000/api/v1'
-  : '/api/v1';
+  : 'https://beauty-elegance-admin.onrender.com/api/v1';
 
 // Build helper for authorization token header injection
 const getAuthHeaders = (): Record<string, string> => {

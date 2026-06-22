@@ -37,10 +37,16 @@ const PORT = process.env.PORT || 5000;
 // --- Middleware ---
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || /^http:\/\/localhost(:\d+)?$/.test(origin)) {
+    if (
+      !origin || 
+      /^http:\/\/localhost(:\d+)?$/.test(origin) || 
+      origin.includes('beauty-elegance-ec88f') ||
+      origin.includes('web.app') ||
+      origin.includes('firebaseapp.com')
+    ) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error('Not allowed by CORS: ' + origin));
     }
   },
   credentials: true
