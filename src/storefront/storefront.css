@@ -180,7 +180,7 @@
 .store-header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   flex-shrink: 0;
 }
 
@@ -2558,7 +2558,7 @@
   .store-header-actions {
     display: flex !important;
     align-items: center !important;
-    gap: 8px !important;
+    gap: 2px !important;
     flex-shrink: 0;
     order: 2 !important;
   }
