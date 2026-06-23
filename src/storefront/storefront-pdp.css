@@ -1252,8 +1252,8 @@
 
 /* On Desktop: keep bottom bar hidden if desired, or show it. Let's make body margin-bottom on mobile to avoid overlapping content */
 @media (max-width: 768px) {
-  body {
-    padding-bottom: 64px;
+  .pdp-mobile-sticky-bar {
+    bottom: 68px; /* Sit above the global bottom nav bar */
   }
   .pdp-actions, .pdp-contact-actions {
     display: none !important;

@@ -26,6 +26,7 @@ import customerRoutes from './routes/customers';
 import dashboardRoutes from './routes/dashboard';
 import settingsRoutes from './routes/settings';
 import chatRoutes from './routes/chats';
+import aiRoutes from './routes/ai';
 import { initChatSocket } from './websocket/chatSocket';
 
 dotenv.config();
@@ -59,6 +60,17 @@ const authLimiter = rateLimit({
   }
 });
 
+const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 30, // Limit each IP to 30 AI chat requests per 15 minutes
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: {
+    status: 'error',
+    message: 'Too many AI requests. Please wait a few minutes before trying again.'
+  }
+});
+
 // --- Middleware ---
 app.use(cors({
   origin: (origin, callback) => {
@@ -86,7 +98,8 @@ app.use(helmet({
         "https://beauty-elegance-admin.onrender.com",
         "http://localhost:5000",
         "ws:",
-        "wss:"
+        "wss:",
+        "https://generativelanguage.googleapis.com"
       ],
       imgSrc: [
         "'self'",
@@ -112,6 +125,7 @@ app.use('/api/', apiLimiter);
 app.use('/api/v1/auth', authLimiter);
 app.use('/api/v1/customers/login-gmail', authLimiter);
 app.use('/api/v1/customers/login', authLimiter);
+app.use('/api/v1/ai', aiLimiter);
 
 // --- Health Check ---
 app.get('/api/health', (_req, res) => {
@@ -126,6 +140,7 @@ app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/chats', chatRoutes);
+app.use('/api/v1/ai', aiRoutes);
 
 // Fallback stubs for other routes to prevent breaks
 app.use('/api/v1/customers', customerRoutes);

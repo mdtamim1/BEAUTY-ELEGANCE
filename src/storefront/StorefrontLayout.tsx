@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, Heart, User, Zap, X, Minus, Plus, Phone, Mail, Menu } from 'lucide-react';
+import { Search, ShoppingCart, Heart, User, Zap, X, Minus, Plus, Phone, Mail, Menu, Home } from 'lucide-react';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import './storefront.css';
 import { replaceContactInfo } from '../utils/storefrontUtils';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
+import AiChatWidget from './AiChatWidget';
 
 interface CartItem {
   product: any;
@@ -256,7 +257,7 @@ export default function StorefrontLayout() {
                 <Search size={20} />
               </button>
               <button 
-                className="store-header-btn" 
+                className="store-header-btn store-desktop-only" 
                 title="Wishlist"
                 onClick={() => setWishlistOpen(true)}
               >
@@ -264,7 +265,7 @@ export default function StorefrontLayout() {
                 {wishlist.length > 0 && <span className="cart-count">{wishlist.length}</span>}
               </button>
               <button 
-                className="store-header-btn" 
+                className="store-header-btn store-desktop-only" 
                 title="Account"
                 onClick={() => navigate('/account')}
                 style={{ position: 'relative' }}
@@ -272,7 +273,7 @@ export default function StorefrontLayout() {
                 <User size={20} />
                 {customer && <span className="customer-active-dot" style={{ position: 'absolute', top: '8px', right: '8px', width: '8px', height: '8px', background: '#16a34a', borderRadius: '50%', border: '2px solid white' }} />}
               </button>
-              <button className="store-header-btn" title="Cart" onClick={() => setCartOpen(true)}>
+              <button className="store-header-btn store-desktop-only" title="Cart" onClick={() => setCartOpen(true)}>
                 <ShoppingCart size={20} />
                 {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
               </button>
@@ -525,6 +526,58 @@ export default function StorefrontLayout() {
           </div>
         </>
       )}
+
+      {/* ---- Premium Bottom Navigation Bar (Mobile) ---- */}
+      <nav className="store-bottom-nav">
+        <Link to="/" className="bottom-nav-item">
+          <div className="bottom-nav-icon">
+            <Home size={22} />
+          </div>
+          <span>হোম</span>
+        </Link>
+        <button 
+          className={`bottom-nav-item ${wishlist.length > 0 ? 'has-badge' : ''}`}
+          onClick={() => setWishlistOpen(true)}
+        >
+          <div className="bottom-nav-icon">
+            <Heart size={22} />
+            {wishlist.length > 0 && <span className="bottom-nav-badge">{wishlist.length}</span>}
+          </div>
+          <span>উইশলিস্ট</span>
+        </button>
+        <button 
+          className={`bottom-nav-item bottom-nav-cart-item ${cartCount > 0 ? 'has-badge' : ''}`}
+          onClick={() => setCartOpen(true)}
+        >
+          <div className="bottom-nav-cart-bubble">
+            <ShoppingCart size={24} />
+            {cartCount > 0 && <span className="bottom-nav-cart-count">{cartCount}</span>}
+          </div>
+          <span>কার্ট</span>
+        </button>
+        <button 
+          className="bottom-nav-item"
+          onClick={() => navigate('/account')}
+        >
+          <div className="bottom-nav-icon">
+            <User size={22} />
+            {customer && <span className="bottom-nav-active-dot" />}
+          </div>
+          <span>একাউন্ট</span>
+        </button>
+        <button 
+          className="bottom-nav-item"
+          onClick={() => setMobileMenuOpen(true)}
+        >
+          <div className="bottom-nav-icon">
+            <Menu size={22} />
+          </div>
+          <span>মেনু</span>
+        </button>
+      </nav>
+
+      {/* ---- AI Chat Assistant Widget ---- */}
+      <AiChatWidget />
     </div>
   );
 }

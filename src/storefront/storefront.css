@@ -3164,4 +3164,222 @@
   }
 }
 
+/* ============================================
+   PREMIUM BOTTOM NAVIGATION BAR (Mobile)
+   ============================================ */
 
+/* Default: hidden on desktop */
+.store-bottom-nav {
+  display: none;
+}
+
+/* Mobile: show bottom nav */
+@media (max-width: 768px) {
+  /* Hide header action buttons on mobile (Wishlist, Account, Cart) — they go to bottom nav */
+  .store-header-btn.store-desktop-only {
+    display: none !important;
+  }
+
+  /* Hide header hamburger menu button — it's now in bottom nav */
+  .store-mobile-menu-btn {
+    display: none !important;
+  }
+
+  /* Add bottom padding to storefront so content doesn't get hidden behind bottom nav */
+  .storefront {
+    padding-bottom: 72px;
+  }
+
+  /* Show the premium bottom nav bar */
+  .store-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 68px;
+    z-index: 200;
+    align-items: stretch;
+    justify-content: space-around;
+    padding: 0 4px;
+    /* Glassmorphism */
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-top: 1px solid rgba(226, 232, 240, 0.6);
+    box-shadow:
+      0 -4px 24px rgba(0, 0, 0, 0.06),
+      0 -1px 6px rgba(0, 0, 0, 0.03);
+    /* Smooth entrance */
+    animation: bottomNavSlideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes bottomNavSlideUp {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  /* Each nav item */
+  .bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    gap: 2px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px 2px;
+    text-decoration: none;
+    color: #64748b;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .bottom-nav-item span {
+    font-size: 0.65rem;
+    font-weight: 600;
+    line-height: 1;
+    margin-top: 1px;
+    transition: color 0.25s;
+  }
+
+  .bottom-nav-item:active {
+    transform: scale(0.92);
+  }
+
+  .bottom-nav-item:hover,
+  .bottom-nav-item:focus-visible {
+    color: var(--sf-accent);
+  }
+
+  /* Nav icon container */
+  .bottom-nav-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 30px;
+    border-radius: 14px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .bottom-nav-item:hover .bottom-nav-icon,
+  .bottom-nav-item:focus-visible .bottom-nav-icon {
+    background: var(--sf-accent-light);
+    color: var(--sf-accent);
+  }
+
+  /* Badge for wishlist, etc. */
+  .bottom-nav-badge {
+    position: absolute;
+    top: -2px;
+    right: -4px;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    font-size: 9px;
+    font-weight: 800;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    border: 2px solid white;
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+    animation: badgePop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes badgePop {
+    from { transform: scale(0); }
+    to { transform: scale(1); }
+  }
+
+  /* ---- Elevated Cart Bubble (Center Item) ---- */
+  .bottom-nav-cart-item {
+    position: relative;
+    margin-top: -18px;
+  }
+
+  .bottom-nav-cart-bubble {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow:
+      0 4px 14px rgba(99, 102, 241, 0.35),
+      0 2px 6px rgba(99, 102, 241, 0.2),
+      inset 0 1px 1px rgba(255, 255, 255, 0.25);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .bottom-nav-cart-item:active .bottom-nav-cart-bubble {
+    transform: scale(0.9);
+  }
+
+  .bottom-nav-cart-item:hover .bottom-nav-cart-bubble {
+    box-shadow:
+      0 6px 20px rgba(99, 102, 241, 0.45),
+      0 3px 10px rgba(99, 102, 241, 0.25),
+      inset 0 1px 1px rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+  }
+
+  .bottom-nav-cart-count {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: white;
+    font-size: 10px;
+    font-weight: 800;
+    min-width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5px;
+    border: 2.5px solid white;
+    box-shadow: 0 2px 8px rgba(249, 115, 22, 0.35);
+    animation: badgePop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .bottom-nav-cart-item span {
+    margin-top: 3px;
+    color: var(--sf-accent);
+    font-weight: 700;
+  }
+
+  /* Active green dot for logged-in user */
+  .bottom-nav-active-dot {
+    position: absolute;
+    top: 0;
+    right: 2px;
+    width: 8px;
+    height: 8px;
+    background: #16a34a;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 1px 4px rgba(22, 163, 106, 0.4);
+  }
+
+}
