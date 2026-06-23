@@ -80,6 +80,7 @@ function initializeDatabase() {
         email TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
         phone TEXT,
+        address TEXT,
         avatar_url TEXT,
         segment TEXT DEFAULT 'New',
         status TEXT DEFAULT 'active',
@@ -136,6 +137,9 @@ function initializeDatabase() {
       // ignore error if column already exists
     });
     db.run("ALTER TABLE products ADD COLUMN specs TEXT", (err) => {
+      // ignore error if column already exists
+    });
+    db.run("ALTER TABLE customers ADD COLUMN address TEXT", (err) => {
       // ignore error if column already exists
     });
 

@@ -38,6 +38,10 @@ export default function Checkout() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
   
+  const [nameEdited, setNameEdited] = useState(false);
+  const [phoneEdited, setPhoneEdited] = useState(false);
+  const [addressEdited, setAddressEdited] = useState(false);
+  
   const deliveryCharge = shippingLocation === 'dhaka' 
     ? config.delivery.insideDhakaPrice 
     : config.delivery.outsideDhakaPrice;
@@ -54,26 +58,31 @@ export default function Checkout() {
       if (customer.addresses && customer.addresses.length > 0) {
         const defaultAddr = customer.addresses.find(a => a.isDefault) || customer.addresses[0];
         if (defaultAddr) {
-          setSelectedAddressId(defaultAddr.id);
-          setCustomerName(defaultAddr.name);
-          setCustomerPhone(defaultAddr.phone);
-          setCustomerAddress(defaultAddr.address);
+          if (!selectedAddressId) {
+            setSelectedAddressId(defaultAddr.id);
+          }
+          if (!nameEdited) setCustomerName(defaultAddr.name);
+          if (!phoneEdited) setCustomerPhone(defaultAddr.phone);
+          if (!addressEdited) setCustomerAddress(defaultAddr.address);
           return;
         }
       }
       
       // Fallback if no saved address array is found
-      if (!customerName) setCustomerName(customer.name || '');
-      if (!customerPhone && customer.phone) setCustomerPhone(customer.phone);
-      if (!customerAddress && customer.address) setCustomerAddress(customer.address);
+      if (!nameEdited) setCustomerName(customer.name || '');
+      if (!phoneEdited) setCustomerPhone(customer.phone || '');
+      if (!addressEdited) setCustomerAddress(customer.address || '');
     }
-  }, [customer]);
+  }, [customer, nameEdited, phoneEdited, addressEdited]);
 
   const handleSelectAddress = (addr: any) => {
     setSelectedAddressId(addr.id);
     setCustomerName(addr.name);
     setCustomerPhone(addr.phone);
     setCustomerAddress(addr.address);
+    setNameEdited(true);
+    setPhoneEdited(true);
+    setAddressEdited(true);
   };
 
   const handleQuantityChange = (productId: number, delta: number) => {
@@ -262,17 +271,17 @@ export default function Checkout() {
           <div className="form-grid">
             <div className="form-group full-width">
               <label className="form-label">আপনার নাম (Full Name) <span>*</span></label>
-              <input type="text" className="form-input" placeholder="আপনার নাম লিখুন" required value={customerName} onChange={(e) => { setCustomerName(e.target.value); setSelectedAddressId(''); }} />
+              <input type="text" className="form-input" placeholder="আপনার নাম লিখুন" required value={customerName} onChange={(e) => { setCustomerName(e.target.value); setNameEdited(true); setSelectedAddressId(''); }} />
             </div>
             
             <div className="form-group full-width">
               <label className="form-label">মোবাইল নম্বর (Phone Number) <span>*</span></label>
-              <input type="tel" className="form-input" placeholder="যেমন: ০১৭XXXXXXXX" required value={customerPhone} onChange={(e) => { setCustomerPhone(e.target.value); setSelectedAddressId(''); }} />
+              <input type="tel" className="form-input" placeholder="যেমন: ০১৭XXXXXXXX" required value={customerPhone} onChange={(e) => { setCustomerPhone(e.target.value); setPhoneEdited(true); setSelectedAddressId(''); }} />
             </div>
 
             <div className="form-group full-width">
               <label className="form-label">সম্পূর্ণ ডেলিভারি ঠিকানা (Detailed Address) <span>*</span></label>
-              <input type="text" className="form-input" placeholder="বাসা/হোল্ডিং নং, রোড নং, এলাকা, থানা ও জেলা লিখুন" required value={customerAddress} onChange={(e) => { setCustomerAddress(e.target.value); setSelectedAddressId(''); }} />
+              <input type="text" className="form-input" placeholder="বাসা/হোল্ডিং নং, রোড নং, এলাকা, থানা ও জেলা লিখুন" required value={customerAddress} onChange={(e) => { setCustomerAddress(e.target.value); setAddressEdited(true); setSelectedAddressId(''); }} />
             </div>
 
             <div className="form-group full-width">

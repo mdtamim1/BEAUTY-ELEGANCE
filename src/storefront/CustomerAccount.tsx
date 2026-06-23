@@ -996,7 +996,48 @@ export default function CustomerAccount() {
                             position: 'relative'
                           }}
                         >
-                          <div style={{ fontSize: '0.88rem', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{msg.message}</div>
+                          {msg.message.startsWith('PRODUCT_SHARE:') ? (
+                            (() => {
+                              try {
+                                const productInfo = JSON.parse(msg.message.substring(14));
+                                return (
+                                  <Link 
+                                    to={`/product/${productInfo.id}`} 
+                                    style={{ 
+                                      display: 'flex', 
+                                      flexDirection: 'column', 
+                                      gap: '8px', 
+                                      textDecoration: 'none', 
+                                      color: 'inherit',
+                                      background: isAdmin ? 'rgba(0, 0, 0, 0.03)' : 'rgba(255, 255, 255, 0.1)',
+                                      borderRadius: '12px',
+                                      padding: '10px',
+                                      width: '200px',
+                                      border: '1px solid var(--sf-border)',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    <img 
+                                      src={productInfo.image} 
+                                      alt={productInfo.name} 
+                                      style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '8px' }} 
+                                    />
+                                    <div style={{ fontWeight: 700, fontSize: '0.75rem', marginTop: '2px', color: isAdmin ? 'var(--sf-text-primary)' : 'white', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                      {productInfo.name}
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                                      <span style={{ fontWeight: 800, fontSize: '0.85rem', color: isAdmin ? 'var(--sf-text-primary)' : 'white' }}>৳{productInfo.price}</span>
+                                      <span style={{ fontSize: '9px', background: 'rgba(255, 255, 255, 0.2)', color: isAdmin ? 'var(--sf-text-primary)' : 'white', padding: '1px 5px', borderRadius: '4px' }}>প্রোডাক্ট লিংক</span>
+                                    </div>
+                                  </Link>
+                                );
+                              } catch (e) {
+                                return <div style={{ fontSize: '0.88rem', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{msg.message}</div>;
+                              }
+                            })()
+                          ) : (
+                            <div style={{ fontSize: '0.88rem', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{msg.message}</div>
+                          )}
                           <div 
                             style={{ 
                               fontSize: '0.65rem', 
@@ -1237,6 +1278,45 @@ export default function CustomerAccount() {
                               alt="Sent image" 
                               style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', display: 'block' }} 
                             />
+                          ) : msg.message.startsWith('PRODUCT_SHARE:') ? (
+                            (() => {
+                              try {
+                                const productInfo = JSON.parse(msg.message.substring(14));
+                                return (
+                                  <Link 
+                                    to={`/product/${productInfo.id}`} 
+                                    style={{ 
+                                      display: 'flex', 
+                                      flexDirection: 'column', 
+                                      gap: '8px', 
+                                      textDecoration: 'none', 
+                                      color: 'inherit',
+                                      background: isAdmin ? 'rgba(0, 0, 0, 0.03)' : 'rgba(255, 255, 255, 0.1)',
+                                      borderRadius: '12px',
+                                      padding: '10px',
+                                      width: '200px',
+                                      border: '1px solid var(--sf-border)',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    <img 
+                                      src={productInfo.image} 
+                                      alt={productInfo.name} 
+                                      style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '8px' }} 
+                                    />
+                                    <div style={{ fontWeight: 700, fontSize: '0.75rem', marginTop: '2px', color: isAdmin ? 'var(--sf-text-primary)' : 'white', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                      {productInfo.name}
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                                      <span style={{ fontWeight: 800, fontSize: '0.85rem', color: isAdmin ? 'var(--sf-text-primary)' : 'white' }}>৳{productInfo.price}</span>
+                                      <span style={{ fontSize: '9px', background: 'rgba(255, 255, 255, 0.2)', color: isAdmin ? 'var(--sf-text-primary)' : 'white', padding: '1px 5px', borderRadius: '4px' }}>প্রোডাক্ট লিংক</span>
+                                    </div>
+                                  </Link>
+                                );
+                              } catch (e) {
+                                return <div style={{ fontSize: '0.82rem', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{msg.message}</div>;
+                              }
+                            })()
                           ) : (
                             <div style={{ fontSize: '0.82rem', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{msg.message}</div>
                           )}

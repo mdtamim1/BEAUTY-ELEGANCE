@@ -67,6 +67,7 @@ export const registerCustomer = (req: Request, res: Response) => {
                 name,
                 email,
                 phone: phone || '',
+                address: '',
                 createdAt: new Date().toISOString(),
                 addresses: []
               }
@@ -135,6 +136,7 @@ export const loginCustomer = (req: Request, res: Response) => {
                 name: fullName,
                 email: customer.email,
                 phone: customer.phone || '',
+                address: customer.address || '',
                 createdAt: customer.created_at,
                 avatar: fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase(),
                 addresses
@@ -210,6 +212,7 @@ export const loginGmailCustomer = async (req: Request, res: Response) => {
                   name: fullName,
                   email: existing.email,
                   phone: existing.phone || '',
+                  address: existing.address || '',
                   createdAt: existing.created_at,
                   avatar: fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase(),
                   isGmail: true,
@@ -250,6 +253,7 @@ export const loginGmailCustomer = async (req: Request, res: Response) => {
                   name,
                   email,
                   phone: '',
+                  address: '',
                   createdAt: new Date().toISOString(),
                   avatar: name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase(),
                   isGmail: true,
@@ -297,6 +301,7 @@ export const getCustomerProfile = (req: any, res: Response) => {
             name: fullName,
             email: customer.email,
             phone: customer.phone || '',
+            address: customer.address || '',
             createdAt: customer.created_at,
             avatar: fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase(),
             addresses
@@ -320,16 +325,15 @@ export const updateCustomerProfile = (req: any, res: Response) => {
 
   db.run(
     `UPDATE customers 
-     SET first_name = ?, last_name = ?, phone = ? 
+     SET first_name = ?, last_name = ?, phone = ?, address = ? 
      WHERE id = ?`,
-    [first_name, last_name, phone || '', customerId],
+    [first_name, last_name, phone || '', address || '', customerId],
     function(err) {
       if (err) {
         console.error('Error updating customer profile:', err);
         return res.status(500).json({ status: 'error', message: 'Update failed' });
       }
 
-      // Also update standard main address in customers table if desired, or let customer_addresses handle it
       res.json({
         status: 'success',
         message: 'Profile updated successfully'

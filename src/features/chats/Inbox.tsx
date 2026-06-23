@@ -370,7 +370,7 @@ export default function Inbox() {
                           textOverflow: 'ellipsis',
                           marginTop: '2px'
                         }}>
-                          {group.lastMessage.startsWith('data:image/') ? '📷 Image' : group.lastMessage}
+                          {group.lastMessage.startsWith('data:image/') ? '📷 Image' : group.lastMessage.startsWith('PRODUCT_SHARE:') ? '🛒 Shared Product' : group.lastMessage}
                         </div>
                       </div>
                     </div>
@@ -456,6 +456,46 @@ export default function Inbox() {
                             alt="Sent attachment" 
                             style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', display: 'block' }} 
                           />
+                        ) : msg.message.startsWith('PRODUCT_SHARE:') ? (
+                          (() => {
+                            try {
+                              const productInfo = JSON.parse(msg.message.substring(14));
+                              return (
+                                <a 
+                                  href={`/product/${productInfo.id}`} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  style={{ 
+                                    display: 'flex', 
+                                    flexDirection: 'column', 
+                                    gap: '8px', 
+                                    textDecoration: 'none', 
+                                    color: 'inherit',
+                                    background: isAdmin ? 'rgba(255, 255, 255, 0.1)' : 'var(--bg-primary)',
+                                    borderRadius: '12px',
+                                    padding: '12px',
+                                    width: '220px',
+                                    border: '1px solid var(--border-primary)'
+                                  }}
+                                >
+                                  <img 
+                                    src={productInfo.image} 
+                                    alt={productInfo.name} 
+                                    style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '8px' }} 
+                                  />
+                                  <div style={{ fontWeight: 700, fontSize: 'var(--text-xs)', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                                    {productInfo.name}
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                                    <span style={{ fontWeight: 800, fontSize: 'var(--text-sm)', color: isAdmin ? 'white' : 'var(--text-primary)' }}>৳{productInfo.price}</span>
+                                    <span style={{ fontSize: '10px', background: 'rgba(99, 102, 241, 0.2)', color: '#818cf8', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>Product Link</span>
+                                  </div>
+                                </a>
+                              );
+                            } catch (e) {
+                              return <div style={{ fontSize: 'var(--text-sm)', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{msg.message}</div>;
+                            }
+                          })()
                         ) : (
                           <div style={{ fontSize: 'var(--text-sm)', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{msg.message}</div>
                         )}
