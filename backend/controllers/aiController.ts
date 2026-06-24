@@ -129,55 +129,85 @@ export const chatWithAI = async (req: Request, res: Response) => {
       parts: [{ text: message.trim() }]
     });
 
-    // Call Gemini API
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`;
+    // Call Gemini API — try multiple models as fallback if quota is exceeded
+    const models = [
+      'gemini-2.5-flash',
+      'gemini-3.5-flash',
+      'gemini-2.5-flash-lite',
+      'gemini-2.0-flash-lite',
+    ];
 
-    const geminiResponse = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: {
-          parts: [{ text: systemPrompt }]
-        },
-        contents,
-        generationConfig: {
-          temperature: 0.7,
-          topP: 0.9,
-          topK: 40,
-          maxOutputTokens: 1024,
-        },
-        safetySettings: [
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        ]
-      })
-    });
+    let lastError = '';
 
-    if (!geminiResponse.ok) {
-      const errorData = await geminiResponse.text();
-      console.error('Gemini API error:', geminiResponse.status, errorData);
-      return res.status(502).json({ status: 'error', message: 'AI service temporarily unavailable' });
-    }
+    for (const model of models) {
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-    const data = await geminiResponse.json();
+      try {
+        const geminiResponse = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            system_instruction: {
+              parts: [{ text: systemPrompt }]
+            },
+            contents,
+            generationConfig: {
+              temperature: 0.7,
+              topP: 0.9,
+              topK: 40,
+              maxOutputTokens: 1024,
+            },
+            safetySettings: [
+              { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+            ]
+          })
+        });
 
-    // Extract the response text
-    const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (geminiResponse.status === 429) {
+          console.warn(`Model ${model} quota exceeded, trying next model...`);
+          lastError = `Quota exceeded for ${model}`;
+          continue; // Try next model
+        }
 
-    if (!aiText) {
-      console.error('No AI response text found:', JSON.stringify(data));
-      return res.status(502).json({ status: 'error', message: 'AI could not generate a response' });
-    }
+        if (!geminiResponse.ok) {
+          const errorData = await geminiResponse.text();
+          console.error(`Gemini API error (${model}):`, geminiResponse.status, errorData);
+          lastError = `API error ${geminiResponse.status} for ${model}`;
+          continue; // Try next model
+        }
 
-    res.json({
-      status: 'success',
-      data: {
-        reply: aiText,
-        role: 'model'
+        const data = await geminiResponse.json();
+        const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!aiText) {
+          console.error(`No AI response text from ${model}:`, JSON.stringify(data));
+          lastError = `Empty response from ${model}`;
+          continue; // Try next model
+        }
+
+        // Success! Return the response
+        console.log(`AI response generated successfully using model: ${model}`);
+        return res.json({
+          status: 'success',
+          data: {
+            reply: aiText,
+            role: 'model'
+          }
+        });
+
+      } catch (fetchError: any) {
+        console.error(`Fetch error for model ${model}:`, fetchError.message);
+        lastError = fetchError.message;
+        continue; // Try next model
       }
-    });
+    }
+
+    // All models failed
+    console.error('All Gemini models failed. Last error:', lastError);
+    return res.status(502).json({ status: 'error', message: 'AI service temporarily unavailable. Please try again later.' });
 
   } catch (error: any) {
     console.error('AI Chat Error:', error);
