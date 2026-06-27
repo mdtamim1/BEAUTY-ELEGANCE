@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Search, ShoppingCart, Heart, User, Zap, X, Minus, Plus, Phone, Mail, Menu, Home } from 'lucide-react';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import './storefront.css';
@@ -17,6 +17,8 @@ export default function StorefrontLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const { customer } = useCustomerAuth();
+  const location = useLocation();
+  const isHomePage = location.pathname === '/';
 
   // Filter enabled announcements
   const announcements = config.announcements.filter(a => a.enabled);
@@ -188,7 +190,7 @@ export default function StorefrontLayout() {
 
   return (
     <div className="storefront">
-      <div className="store-sticky-header-container">
+      <div className={`store-sticky-header-container ${isHomePage ? 'homepage-transparent-header' : ''}`}>
         {/* ---- Announcement Bar ---- */}
         {announcements.length > 0 && (
           <div className="announcement-bar">
