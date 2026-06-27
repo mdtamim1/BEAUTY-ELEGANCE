@@ -826,18 +826,19 @@
   width: 40px;
   height: 40px;
   border-radius: var(--sf-radius-full);
-  background: var(--sf-accent);
-  color: white;
-  border: none;
+  background: #000000;
+  color: #ffffff;
+  border: 2px solid #000000;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .product-card-cart-btn:hover {
-  background: var(--sf-accent-hover);
+  background: #ffffff;
+  color: #000000;
   transform: scale(1.1);
 }
 

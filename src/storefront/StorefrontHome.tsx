@@ -138,10 +138,14 @@ export default function StorefrontHome() {
               <div 
                 key={banner.id} 
                 className={`fullscreen-slide ${banner.image ? 'has-image' : ''}`} 
-                style={{ background: banner.gradient }}
+                style={{ 
+                  background: banner.image 
+                    ? `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.75)), url(${banner.image}) center/cover no-repeat`
+                    : banner.gradient 
+                }}
               >
                 <div className="fullscreen-slide-inner">
-                  <div className="slide-content-left">
+                  <div className="slide-content-left" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
                     <span className="slide-badge">
                       <Zap size={14} /> {banner.tag}
                     </span>
@@ -164,18 +168,7 @@ export default function StorefrontHome() {
                     </div>
                   </div>
                   <div className="slide-visual-right">
-                    {banner.image ? (
-                      <>
-                        <img 
-                          src={banner.image} 
-                          alt={banner.title} 
-                          className="slide-custom-image" 
-                        />
-                        {banner.offer && (
-                          <div className="slide-visual-badge absolute-badge">{banner.offer}</div>
-                        )}
-                      </>
-                    ) : (
+                    {!banner.image && (
                       <>
                         <div className="slide-glowing-circle" />
                         <div className="slide-visual-badge">{banner.offer}</div>

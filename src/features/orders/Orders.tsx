@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ShoppingCart, Search, Plus, Download, Eye, RotateCcw, Truck, Clock, CheckCircle, XCircle, RefreshCw, FileText } from 'lucide-react';
 import { generateOrders, updateOrderStatus, addOrder, formatCurrency, formatDate, formatTime, timeAgo } from '../../mock/data';
-import { fetchOrdersFromBackend, updateOrderStatusInBackend, createOrderFromAdminInBackend, updateOrderInBackend } from '../../services/api';
+import { fetchOrdersFromBackend, updateOrderStatusInBackend, createOrderFromAdminInBackend, updateOrderInBackend, validateCouponCode } from '../../services/api';
 
 const DEMO_PRODUCTS = [
   { sku: 'ST-EPB-001', name: 'Wireless Earbuds Pro Max', price: 129.99 },
@@ -70,6 +70,30 @@ export default function Orders() {
   const [formPaidAmount, setFormPaidAmount] = useState(0);
   const [formProducts, setFormProducts] = useState<any[]>([]);
 
+  // Coupon states
+  const [couponCodeInput, setCouponCodeInput] = useState('');
+  const [couponMsg, setCouponMsg] = useState('');
+
+  const handleApplyAdminCoupon = async () => {
+    if (!couponCodeInput.trim()) return;
+    setCouponMsg('Validating...');
+    const res = await validateCouponCode(couponCodeInput.trim());
+    if (res.status === 'success' && res.data) {
+      const coupon = res.data;
+      const subtotal = formProducts.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+      let disc = 0;
+      if (coupon.type === 'percentage') {
+        disc = parseFloat(((subtotal * coupon.value) / 100).toFixed(2));
+      } else {
+        disc = coupon.value;
+      }
+      setFormDiscount(disc);
+      setCouponMsg(`Applied! ৳${disc} discount.`);
+    } else {
+      setCouponMsg(res.message || 'Invalid coupon code');
+    }
+  };
+
   const [productSearch, setProductSearch] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -94,6 +118,8 @@ export default function Orders() {
     setFormDiscount(0);
     setFormPaidAmount(0);
     setFormProducts([]);
+    setCouponCodeInput('');
+    setCouponMsg('');
     setModalOpen(true);
   };
 
@@ -119,6 +145,8 @@ export default function Orders() {
     setFormDiscount(order.discount || 0);
     setFormPaidAmount(order.paidAmount || 0);
     setFormProducts(order.productsList || []);
+    setCouponCodeInput('');
+    setCouponMsg('');
     setModalOpen(true);
   };
 
@@ -992,6 +1020,30 @@ export default function Orders() {
                       <span style={{ fontSize: '13px', color: '#94a3b8' }}>Delivery Charge</span>
                       <input type="number" value={formDeliveryCharge} onChange={(e) => setFormDeliveryCharge(parseFloat(e.target.value) || 0)} style={{ width: '80px', background: '#1f2937', border: '1px solid #1e293b', color: '#fff', textAlign: 'right', padding: '4px 8px', borderRadius: '4px' }} />
                     </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '13px', color: '#94a3b8' }}>Apply Coupon</span>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <input 
+                          type="text" 
+                          placeholder="Code" 
+                          value={couponCodeInput} 
+                          onChange={(e) => setCouponCodeInput(e.target.value)} 
+                          style={{ width: '80px', background: '#1f2937', border: '1px solid #1e293b', color: '#fff', textAlign: 'right', padding: '4px 8px', borderRadius: '4px', fontSize: '12px' }} 
+                        />
+                        <button 
+                          type="button" 
+                          onClick={handleApplyAdminCoupon} 
+                          style={{ background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}
+                        >
+                          Apply
+                        </button>
+                      </div>
+                    </div>
+                    {couponMsg && (
+                      <div style={{ fontSize: '11px', color: couponMsg.includes('Applied') ? '#10b981' : '#ef4444', textAlign: 'right', marginTop: '-6px' }}>
+                        {couponMsg}
+                      </div>
+                    )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '13px', color: '#94a3b8' }}>Discount</span>
                       <input type="number" value={formDiscount} onChange={(e) => setFormDiscount(parseFloat(e.target.value) || 0)} style={{ width: '80px', background: '#1f2937', border: '1px solid #1e293b', color: '#fff', textAlign: 'right', padding: '4px 8px', borderRadius: '4px' }} />

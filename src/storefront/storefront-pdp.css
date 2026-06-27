@@ -227,20 +227,37 @@
   flex: 2;
   height: 56px;
   font-size: 1.1rem;
+  background: #000000 !important;
+  color: #ffffff !important;
+  border: 2px solid #000000 !important;
+  border-radius: var(--sf-radius-full);
+  font-weight: 700;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: none !important;
+}
+
+.pdp-add-to-cart:hover {
+  background: #ffffff !important;
+  color: #000000 !important;
+  transform: translateY(-2px);
 }
 
 .pdp-buy-now {
   flex: 1;
   height: 56px;
-  background: var(--sf-text-primary);
-  color: white;
-  border: none;
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 2px solid #000000 !important;
   font-weight: 700;
   border-radius: var(--sf-radius-full);
+  font-size: 1.1rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .pdp-buy-now:hover {
-  background: var(--sf-text-secondary);
+  background: #000000 !important;
+  color: #ffffff !important;
+  transform: translateY(-2px);
 }
 
 .pdp-action-icons {
