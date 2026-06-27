@@ -17,8 +17,6 @@ export default function StorefrontLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const { customer } = useCustomerAuth();
-  const location = useLocation();
-  const isHomePage = location.pathname === '/';
 
   // Filter enabled announcements
   const announcements = config.announcements.filter(a => a.enabled);
@@ -190,7 +188,7 @@ export default function StorefrontLayout() {
 
   return (
     <div className="storefront">
-      <div className={`store-sticky-header-container ${isHomePage ? 'homepage-transparent-header' : ''}`}>
+      <div className="store-sticky-header-container">
         {/* ---- Announcement Bar ---- */}
         {announcements.length > 0 && (
           <div className="announcement-bar">

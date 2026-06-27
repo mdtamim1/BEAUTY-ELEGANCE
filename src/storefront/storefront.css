@@ -2439,46 +2439,6 @@
   z-index: 110;
   width: 100%;
 }
-
-.homepage-transparent-header {
-  position: absolute !important;
-  top: 0 !important;
-  left: 0;
-  right: 0;
-  background: transparent !important;
-  border-bottom: none !important;
-  z-index: 110;
-}
-
-.homepage-transparent-header .store-header {
-  background: transparent !important;
-  border-bottom: none !important;
-  box-shadow: none !important;
-}
-
-/* Make logo text and menu links white for contrast against cover banner photo */
-.homepage-transparent-header .store-logo-text {
-  color: #ffffff !important;
-}
-
-.homepage-transparent-header .store-logo-text span {
-  color: #ffffff !important;
-}
-
-.homepage-transparent-header .store-header-btn {
-  color: #ffffff !important;
-}
-
-.homepage-transparent-header .store-nav-link {
-  color: #ffffff !important;
-}
-
-.homepage-transparent-header .store-logo-icon {
-  background: rgba(255, 255, 255, 0.15) !important;
-  border: 1px solid rgba(255, 255, 255, 0.25) !important;
-  backdrop-filter: blur(8px);
-}
-
 .store-header {
   position: relative !important;
   top: auto !important;
