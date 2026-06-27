@@ -498,8 +498,8 @@
 
 .checkout-address-card.selected {
   border-color: var(--sf-accent);
-  background: rgba(99, 102, 241, 0.03);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  background: var(--sf-accent-light);
+  box-shadow: none;
 }
 
 .checkout-address-card-header {

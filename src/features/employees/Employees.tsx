@@ -1,14 +1,22 @@
-import { useState } from 'react';
-import { UserCog, Shield, Activity, Plus, Key, Edit, Trash2, X, ShieldAlert } from 'lucide-react';
-import { generateEmployees, saveEmployees, timeAgo } from '../../mock/data';
+import { useState, useEffect } from 'react';
+import { UserCog, Shield, Plus, Edit, Trash2, X, Mail, Check, AlertCircle, Copy, Link } from 'lucide-react';
+import { 
+  fetchEmployees, 
+  updateEmployee, 
+  deleteEmployee, 
+  fetchRoles, 
+  createRole, 
+  updateRole, 
+  deleteRole, 
+  fetchInvitations, 
+  inviteEmployee, 
+  deleteInvitation 
+} from '../../services/api';
 
 const roleColors: Record<string, string> = {
   'Super Admin': 'badge-purple',
   'Admin': 'badge-primary',
-  'Manager': 'badge-info',
-  'Staff': 'badge-success',
-  'Support Agent': 'badge-warning',
-  'Delivery Agent': 'badge-secondary',
+  'Moderator': 'badge-info',
 };
 
 const statusColors: Record<string, string> = {
@@ -17,126 +25,283 @@ const statusColors: Record<string, string> = {
   suspended: 'status-dot busy',
 };
 
-const availablePermissions = [
-  { id: 'dashboard', label: 'Dashboard Overview' },
-  { id: 'analytics', label: 'Advanced Analytics' },
-  { id: 'orders', label: 'Order Processing' },
-  { id: 'products', label: 'Product Control Center' },
-  { id: 'marketing', label: 'Marketing Campaigns' },
-  { id: 'finance', label: 'Financial Management' },
-  { id: 'settings', label: 'System Settings' }
+const availableModules = [
+  { id: 'dashboard', name: 'Dashboard Overview' },
+  { id: 'analytics', name: 'Advanced Analytics' },
+  { id: 'orders', name: 'Order Processing' },
+  { id: 'products', name: 'Product Control Center' },
+  { id: 'storefront', name: 'Storefront manager' },
+  { id: 'chats', name: 'Inbox (Chats)' },
+  { id: 'marketing', name: 'Marketing Campaigns' },
+  { id: 'employees', name: 'Employee Management' },
+  { id: 'finance', name: 'Financial Overview' },
+  { id: 'security', name: 'Security Center' },
+  { id: 'settings', name: 'System Settings' },
+  { id: 'ai', name: 'AI Center' }
 ];
 
 export default function Employees() {
-  const [employees, setEmployees] = useState(generateEmployees(20));
   const [activeTab, setActiveTab] = useState('directory');
-  
-  // Modals state
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<any>(null);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [roles, setRoles] = useState<any[]>([]);
+  const [invitations, setInvitations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  // Add Employee Form States
-  const [newName, setNewName] = useState('');
-  const [newEmail, setNewEmail] = useState('');
-  const [newRole, setNewRole] = useState<'Super Admin' | 'Admin' | 'Manager' | 'Staff' | 'Support Agent' | 'Delivery Agent'>('Staff');
-  const [newDept, setNewDept] = useState('Operations');
-  const [newStatus, setNewStatus] = useState<'active' | 'inactive' | 'suspended'>('active');
-  const [newPerms, setNewPerms] = useState<string[]>(['dashboard']);
+  // Modals state
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [editingRole, setEditingRole] = useState<any | null>(null);
+  const [showEditEmpModal, setShowEditEmpModal] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<any | null>(null);
+
+  // Invite Form States
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRoleId, setInviteRoleId] = useState<number | string>('');
+  const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null);
+  const [inviteError, setInviteError] = useState('');
+  const [inviteSuccessMsg, setInviteSuccessMsg] = useState('');
+  const [generatedLink, setGeneratedLink] = useState('');
+
+  // Role Form States
+  const [roleName, setRoleName] = useState('');
+  const [roleDesc, setRoleDesc] = useState('');
+  const [rolePerms, setRolePerms] = useState<string[]>([]);
+  const [roleError, setRoleError] = useState('');
 
   const tabs = [
     { id: 'directory', label: 'Employee Directory', icon: UserCog },
-    { id: 'roles', label: 'Roles & Permissions', icon: Shield },
-    { id: 'activity', label: 'Activity Logs', icon: Activity },
+    { id: 'roles', label: 'Roles Matrix Setup', icon: Shield },
+    { id: 'invitations', label: 'Invitations log', icon: Mail },
   ];
 
-  // Audit Logs Data
-  const [auditLogs] = useState([
-    { id: 1, time: new Date(Date.now() - 5 * 60 * 1000).toISOString(), user: 'Super Admin', action: 'System Login', details: 'Successful administrator login from IP 192.168.1.15', severity: 'low' },
-    { id: 2, time: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), user: 'Super Admin', action: 'Update Permissions', details: 'Modified access matrix for Emily Rodriguez', severity: 'medium' },
-    { id: 3, time: new Date(Date.now() - 4 * 3600 * 1000).toISOString(), user: 'Sarah Jenkins', action: 'Edit Product', details: 'Modified stock values for Dell XPS 13 Plus', severity: 'low' },
-    { id: 4, time: new Date(Date.now() - 24 * 3600 * 1000).toISOString(), user: 'Michael Chang', action: 'Process Payout', details: 'Disbursed payout to TechHub Distributing (৳45,000.00)', severity: 'medium' },
-    { id: 5, time: new Date(Date.now() - 36 * 3600 * 1000).toISOString(), user: 'Emily Rodriguez', action: 'Create Coupon', details: 'Created promo discount coupon code SUMMER20', severity: 'low' },
-    { id: 6, time: new Date(Date.now() - 48 * 3600 * 1000).toISOString(), user: 'System Guard', action: 'API Key Revoked', details: 'Revoked developer API key #3 due to 90 days inactivity', severity: 'high' }
-  ]);
+  const loadData = async () => {
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const [empData, roleData, inviteData] = await Promise.all([
+        fetchEmployees(),
+        fetchRoles(),
+        fetchInvitations()
+      ]);
 
-  // Handle Add Employee
-  const handleAddEmployee = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newName || !newEmail) return;
-
-    const newEmp: any = {
-      id: `EMP-${String(employees.length + 1).padStart(3, '0')}`,
-      name: newName,
-      email: newEmail,
-      role: newRole,
-      department: newDept,
-      status: newStatus,
-      avatar: newName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'E',
-      lastLogin: new Date().toISOString(),
-      permissions: newRole === 'Super Admin' ? ['all'] : newPerms
-    };
-
-    const updatedList = [...employees, newEmp];
-    setEmployees(updatedList);
-    saveEmployees(updatedList);
-
-    // Reset Form
-    setNewName('');
-    setNewEmail('');
-    setNewRole('Staff');
-    setNewDept('Operations');
-    setNewStatus('active');
-    setNewPerms(['dashboard']);
-    setShowAddModal(false);
-  };
-
-  // Handle Edit Employee Save
-  const handleSaveEdit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const updatedList = employees.map(emp => emp.id === editingEmployee.id ? editingEmployee : emp);
-    setEmployees(updatedList);
-    saveEmployees(updatedList);
-    setEditingEmployee(null);
-  };
-
-  // Handle Delete Employee
-  const handleDeleteEmployee = (emp: any) => {
-    if (confirm(`Are you sure you want to delete ${emp.name}?`)) {
-      const updatedList = employees.filter(e => e.id !== emp.id);
-      setEmployees(updatedList);
-      saveEmployees(updatedList);
+      if (empData) setEmployees(empData);
+      if (roleData) {
+        setRoles(roleData);
+        if (roleData.length > 0 && !inviteRoleId) {
+          // Select first role as default in select dropdown
+          const firstNonSuper = roleData.find((r: any) => r.name !== 'Super Admin') || roleData[0];
+          setInviteRoleId(firstNonSuper.id);
+        }
+      }
+      if (inviteData) setInvitations(inviteData);
+    } catch (e) {
+      setErrorMsg('সার্ভার থেকে ডাটা লোড করা যাচ্ছে না।');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Toggle permission checkbox in Add / Edit forms
-  const togglePerm = (permId: string, isEditing: boolean) => {
-    if (isEditing) {
-      const currentPerms = editingEmployee.permissions || [];
-      const updated = currentPerms.includes(permId)
-        ? currentPerms.filter((p: string) => p !== permId)
-        : [...currentPerms, permId];
-      setEditingEmployee({ ...editingEmployee, permissions: updated });
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Handle Invite Form Submission
+  const handleSendInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInviteError('');
+    setInviteSuccessMsg('');
+    setGeneratedLink('');
+
+    if (!inviteEmail.trim() || !inviteRoleId) {
+      setInviteError('ইমেইল এবং রোল সিলেক্ট করুন।');
+      return;
+    }
+
+    const res = await inviteEmployee({
+      email: inviteEmail.trim().toLowerCase(),
+      role_id: Number(inviteRoleId)
+    });
+
+    if (res.status === 'success') {
+      const link = `${window.location.protocol}//${window.location.host}/register-employee?token=${res.data.token}`;
+      setGeneratedLink(link);
+      setInviteSuccessMsg('ইনভাইটেশন লিংক সফলভাবে তৈরি হয়েছে! নিচের লিংকটি কপি করে ইনভাইট করুন।');
+      setInviteEmail('');
+      // Reload invitations logs
+      const updatedInvites = await fetchInvitations();
+      if (updatedInvites) setInvitations(updatedInvites);
     } else {
-      setNewPerms(prev => prev.includes(permId)
-        ? prev.filter(p => p !== permId)
-        : [...prev, permId]
-      );
+      setInviteError(res.message || 'ইনভাইটেশন তৈরি করা সম্ভব হয়নি।');
     }
   };
+
+  // Revoke Invitation
+  const handleRevokeInvitation = async (id: string) => {
+    if (confirm('Are you sure you want to revoke this invitation?')) {
+      const res = await deleteInvitation(id);
+      if (res.status === 'success') {
+        setInvitations(prev => prev.filter(inv => inv.id !== id));
+      } else {
+        alert(res.message || 'Failed to revoke invitation');
+      }
+    }
+  };
+
+  // Copy registration link to clipboard
+  const handleCopyLink = (linkText: string, id: string) => {
+    navigator.clipboard.writeText(linkText);
+    setCopiedInviteId(id);
+    setTimeout(() => setCopiedInviteId(null), 2000);
+  };
+
+  // Edit employee status/role/department
+  const handleOpenEditEmp = (emp: any) => {
+    setEditingEmployee({
+      id: emp.id,
+      name: emp.name,
+      email: emp.email,
+      role_id: emp.role_id,
+      status: emp.status,
+      department: emp.department
+    });
+    setShowEditEmpModal(true);
+  };
+
+  const handleSaveEmployee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEmployee) return;
+
+    const res = await updateEmployee(editingEmployee.id, {
+      role_id: Number(editingEmployee.role_id),
+      status: editingEmployee.status,
+      department: editingEmployee.department
+    });
+
+    if (res.status === 'success') {
+      setShowEditEmpModal(false);
+      setEditingEmployee(null);
+      loadData();
+    } else {
+      alert(res.message || 'Failed to update employee details');
+    }
+  };
+
+  // Delete employee
+  const handleDeleteEmp = async (emp: any) => {
+    if (confirm(`Are you sure you want to delete ${emp.name}?`)) {
+      const res = await deleteEmployee(emp.id);
+      if (res.status === 'success') {
+        setEmployees(prev => prev.filter(e => e.id !== emp.id));
+      } else {
+        alert(res.message || 'Failed to delete employee');
+      }
+    }
+  };
+
+  // Open Add/Edit custom role
+  const handleOpenAddRole = () => {
+    setEditingRole(null);
+    setRoleName('');
+    setRoleDesc('');
+    setRolePerms([]);
+    setRoleError('');
+    setShowRoleModal(true);
+  };
+
+  const handleOpenEditRole = (role: any) => {
+    setEditingRole(role);
+    setRoleName(role.name);
+    setRoleDesc(role.description);
+    setRolePerms(role.permissions || []);
+    setRoleError('');
+    setShowRoleModal(true);
+  };
+
+  // Save Role settings
+  const handleSaveRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRoleError('');
+
+    if (!roleName.trim()) {
+      setRoleError('রোল টাইটেল দিতে হবে।');
+      return;
+    }
+
+    if (editingRole) {
+      // Update
+      const res = await updateRole(editingRole.id, {
+        name: roleName.trim(),
+        description: roleDesc.trim(),
+        permissions: rolePerms
+      });
+      if (res.status === 'success') {
+        setShowRoleModal(false);
+        setEditingRole(null);
+        loadData();
+      } else {
+        setRoleError(res.message || 'Failed to update role');
+      }
+    } else {
+      // Create
+      const res = await createRole({
+        name: roleName.trim(),
+        description: roleDesc.trim(),
+        permissions: rolePerms
+      });
+      if (res.status === 'success') {
+        setShowRoleModal(false);
+        loadData();
+      } else {
+        setRoleError(res.message || 'Failed to create role');
+      }
+    }
+  };
+
+  // Delete custom role
+  const handleDeleteRole = async (roleId: number, roleName: string) => {
+    if (confirm(`Are you sure you want to delete the custom role: ${roleName}?`)) {
+      const res = await deleteRole(roleId);
+      if (res.status === 'success') {
+        loadData();
+      } else {
+        alert(res.message || 'Failed to delete role');
+      }
+    }
+  };
+
+  const toggleRolePerm = (modId: string) => {
+    setRolePerms(prev => 
+      prev.includes(modId) ? prev.filter(id => id !== modId) : [...prev, modId]
+    );
+  };
+
+  if (loading && employees.length === 0) {
+    return (
+      <div style={{ display: 'flex', minHeight: '60vh', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="spinner" />
+      </div>
+    );
+  }
 
   return (
     <div>
       <div className="page-header">
         <div className="page-header-left">
           <div className="page-breadcrumb"><span>Home</span><span className="page-breadcrumb-sep">/</span><span>Employees</span></div>
-          <h1 className="page-title">Employee Management</h1>
-          <p className="page-subtitle">Manage staff access, roles, and monitor activity</p>
+          <h1 className="page-title">Employee Control Panel</h1>
+          <p className="page-subtitle">Manage staff access levels, roles setup, and employee invitations</p>
         </div>
         <div className="page-header-actions">
-          <button className="btn btn-secondary" onClick={() => setActiveTab('roles')}><Shield size={16} /> Roles Setup</button>
-          <button className="btn btn-primary" onClick={() => setShowAddModal(true)}><Plus size={16} /> Add Employee</button>
+          <button className="btn btn-secondary" onClick={handleOpenAddRole}><Shield size={16} /> Roles Setup</button>
+          <button className="btn btn-primary" onClick={() => setActiveTab('invitations')}><Plus size={16} /> Invite Employee</button>
         </div>
       </div>
+
+      {errorMsg && (
+        <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444', padding: '12px', borderRadius: '8px', fontSize: 'var(--text-xs)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <AlertCircle size={16} /> {errorMsg}
+        </div>
+      )}
 
       <div className="tabs" style={{ marginBottom: 'var(--space-6)' }}>
         {tabs.map((tab) => {
@@ -154,10 +319,11 @@ export default function Employees() {
         })}
       </div>
 
+      {/* STAFF DIRECTORY PANEL */}
       {activeTab === 'directory' && (
         <div className="data-table-container">
           <div className="data-table-header">
-            <div className="data-table-title">Staff Directory</div>
+            <div className="data-table-title">Employee List</div>
           </div>
           <table className="data-table">
             <thead>
@@ -184,21 +350,26 @@ export default function Employees() {
                       </div>
                     </div>
                   </td>
-                  <td><span className={`badge ${roleColors[employee.role] || 'badge-secondary'}`}>{employee.role}</span></td>
+                  <td>
+                    <span className={`badge ${roleColors[employee.role] || 'badge-secondary'}`}>
+                      {employee.role}
+                    </span>
+                  </td>
                   <td>{employee.department}</td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div className={statusColors[employee.status]} />
+                      <div className={statusColors[employee.status] || 'status-dot offline'} />
                       <span style={{ fontSize: 'var(--text-xs)', textTransform: 'capitalize' }}>{employee.status}</span>
                     </div>
                   </td>
-                  <td style={{ fontSize: 'var(--text-xs)' }}>{timeAgo(employee.lastLogin)}</td>
+                  <td style={{ fontSize: 'var(--text-xs)' }}>
+                    {employee.lastLogin ? new Date(employee.lastLogin).toLocaleString() : 'N/A'}
+                  </td>
                   <td>
                     <div style={{ display: 'flex', gap: '4px' }}>
-                      <button className="btn btn-ghost btn-sm" title="Edit Employee" onClick={() => setEditingEmployee(employee)}><Edit size={14} /></button>
-                      <button className="btn btn-ghost btn-sm" title="Manage Access" onClick={() => setEditingEmployee(employee)}><Key size={14} /></button>
-                      {employee.role !== 'Super Admin' && (
-                        <button className="btn btn-ghost btn-sm" title="Delete" style={{ color: 'var(--color-danger)' }} onClick={() => handleDeleteEmployee(employee)}><Trash2 size={14} /></button>
+                      <button className="btn btn-ghost btn-sm" title="Edit Employee" onClick={() => handleOpenEditEmp(employee)}><Edit size={14} /></button>
+                      {employee.id !== 'EMP-001' && (
+                        <button className="btn btn-ghost btn-sm" title="Delete" style={{ color: 'var(--color-danger)' }} onClick={() => handleDeleteEmp(employee)}><Trash2 size={14} /></button>
                       )}
                     </div>
                   </td>
@@ -209,218 +380,355 @@ export default function Employees() {
         </div>
       )}
 
+      {/* ROLES MATRIX PANEL */}
       {activeTab === 'roles' && (
-        <div className="card">
-          <div className="card-header">
-            <div><div className="card-title">Permission Matrix</div></div>
-          </div>
-          <div className="card-body">
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>Configure what each role can access and modify within the admin panel.</p>
-            <div style={{ overflowX: 'auto' }}>
-              <table className="data-table" style={{ minWidth: '800px' }}>
-                <thead>
-                  <tr>
-                    <th>Module</th>
-                    <th style={{ textAlign: 'center' }}>Super Admin</th>
-                    <th style={{ textAlign: 'center' }}>Admin</th>
-                    <th style={{ textAlign: 'center' }}>Manager</th>
-                    <th style={{ textAlign: 'center' }}>Staff</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {['Dashboard', 'Analytics', 'Orders', 'Customers', 'Products', 'Vendors', 'Marketing', 'System Settings'].map((module, i) => (
-                    <tr key={i}>
-                      <td style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{module}</td>
-                      <td style={{ textAlign: 'center' }}><span className="badge badge-success">Full</span></td>
-                      <td style={{ textAlign: 'center' }}>
-                        {module === 'System Settings' ? <span className="badge badge-danger">None</span> : <span className="badge badge-success">Full</span>}
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        {['Dashboard', 'Orders', 'Products', 'Customers'].includes(module) ? <span className="badge badge-warning">Read/Write</span> : 
-                         ['Analytics', 'Marketing'].includes(module) ? <span className="badge badge-info">Read Only</span> : <span className="badge badge-danger">None</span>}
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        {['Orders', 'Products'].includes(module) ? <span className="badge badge-warning">Read/Write</span> : 
-                         ['Dashboard', 'Customers'].includes(module) ? <span className="badge badge-info">Read Only</span> : <span className="badge badge-danger">None</span>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div className="card">
+            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="card-title">Roles & Access Toggles</div>
+              <button className="btn btn-primary btn-sm" onClick={handleOpenAddRole}><Plus size={14} /> Add Role</button>
+            </div>
+            <div className="card-body">
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>
+                Set up administrative access configurations. Edit each role to manage exactly what tabs they can view.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                {roles.map((role) => (
+                  <div key={role.id} style={{ background: 'var(--bg-input)', border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-lg)', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <h4 style={{ margin: 0, fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{role.name}</h4>
+                        {role.is_system && <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>System</span>}
+                      </div>
+                      <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '0 0 16px 0', minHeight: '36px' }}>{role.description}</p>
+                      
+                      <div style={{ borderTop: '1px solid var(--border-primary)', paddingTop: '12px' }}>
+                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', marginBottom: '6px' }}>Allowed Modules:</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                          {role.name === 'Super Admin' || role.name === 'Admin' ? (
+                            <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>All Modules</span>
+                          ) : role.permissions.length === 0 ? (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>No access granted</span>
+                          ) : (
+                            role.permissions.map((p: string) => (
+                              <span key={p} className="badge badge-info" style={{ fontSize: '0.68rem', textTransform: 'capitalize' }}>{p}</span>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '20px', paddingTop: '12px', borderTop: '1px solid var(--border-primary)' }}>
+                      <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => handleOpenEditRole(role)}><Edit size={14} /> Permissions Matrix</button>
+                      {!role.is_system && (
+                        <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-danger)' }} onClick={() => handleDeleteRole(role.id, role.name)}><Trash2 size={14} /></button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {activeTab === 'activity' && (
-        <div className="data-table-container">
-          <div className="data-table-header">
-            <div className="data-table-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <ShieldAlert size={18} className="text-primary" /> Security Audit Log
+      {/* INVITATIONS LOGS PANEL */}
+      {activeTab === 'invitations' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '24px', alignItems: 'start' }}>
+          {/* Create Invite Form */}
+          <div className="card">
+            <div className="card-header">
+              <div className="card-title">Create Invitation</div>
             </div>
-          </div>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Timestamp</th>
-                <th>Employee / User</th>
-                <th>Action</th>
-                <th>Details</th>
-                <th>Severity</th>
-              </tr>
-            </thead>
-            <tbody>
-              {auditLogs.map((log) => (
-                <tr key={log.id}>
-                  <td style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)' }}>
-                    {new Date(log.time).toLocaleString()}
-                  </td>
-                  <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{log.user}</td>
-                  <td><span style={{ fontWeight: 500 }}>{log.action}</span></td>
-                  <td style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>{log.details}</td>
-                  <td>
-                    <span className={`badge ${log.severity === 'high' ? 'badge-danger' : log.severity === 'medium' ? 'badge-warning' : 'badge-primary'}`}>
-                      {log.severity}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            <form onSubmit={handleSendInvite}>
+              <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', margin: 0 }}>
+                  Enter the moderator or admin's email address below to generate a unique registration link associated with their role.
+                </p>
 
-      {/* ADD EMPLOYEE MODAL */}
-      {showAddModal && (
-        <div className="modal-overlay" style={{ display: 'flex' }}>
-          <div className="modal">
-            <div className="modal-header">
-              <span className="modal-title">Add New Employee</span>
-              <button onClick={() => setShowAddModal(false)} style={{ color: 'var(--text-secondary)' }}><X size={18} /></button>
-            </div>
-            <form onSubmit={handleAddEmployee}>
-              <div className="modal-body">
-                <div className="grid-2">
-                  <div className="form-group">
-                    <label className="form-label">Full Name</label>
-                    <input type="text" className="form-input" required value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. John Doe" />
+                {inviteError && (
+                  <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444', padding: '10px 12px', borderRadius: '8px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <AlertCircle size={16} /> {inviteError}
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Email Address</label>
-                    <input type="email" className="form-input" required value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="john@vipcommerce.com" />
-                  </div>
-                </div>
+                )}
 
-                <div className="grid-2">
-                  <div className="form-group">
-                    <label className="form-label">Role Title</label>
-                    <select className="form-select" value={newRole} onChange={e => setNewRole(e.target.value as any)}>
-                      <option value="Super Admin">Super Admin</option>
-                      <option value="Admin">Admin</option>
-                      <option value="Manager">Manager</option>
-                      <option value="Staff">Staff</option>
-                      <option value="Support Agent">Support Agent</option>
-                      <option value="Delivery Agent">Delivery Agent</option>
-                    </select>
+                {inviteSuccessMsg && (
+                  <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#16a34a', padding: '10px 12px', borderRadius: '8px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Check size={16} /> {inviteSuccessMsg}
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Department</label>
-                    <input type="text" className="form-input" value={newDept} onChange={e => setNewDept(e.target.value)} placeholder="Operations / Marketing" />
-                  </div>
+                )}
+
+                <div className="form-group">
+                  <label className="form-label">Email Address *</label>
+                  <input
+                    type="email"
+                    className="form-input"
+                    required
+                    placeholder="moderator@example.com"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                  />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Access Status</label>
-                  <select className="form-select" value={newStatus} onChange={e => setNewStatus(e.target.value as any)}>
-                    <option value="active">Active (Granted Access)</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="suspended">Suspended (Blocked Access)</option>
+                  <label className="form-label">Assign Role *</label>
+                  <select
+                    className="form-select"
+                    value={inviteRoleId}
+                    onChange={(e) => setInviteRoleId(e.target.value)}
+                  >
+                    {roles.map(r => (
+                      <option key={r.id} value={r.id}>{r.name} {r.is_system ? '(Default)' : ''}</option>
+                    ))}
                   </select>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label" style={{ marginBottom: '12px' }}>Permissions / Module Access Scope</label>
-                  <div className="grid-2" style={{ gap: '8px', padding: '12px', background: 'var(--bg-input)', borderRadius: 'var(--radius-md)' }}>
-                    {availablePermissions.map(p => (
-                      <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                        <input type="checkbox" className="form-checkbox" checked={newRole === 'Super Admin' || newPerms.includes(p.id)} disabled={newRole === 'Super Admin'} onChange={() => togglePerm(p.id, false)} />
-                        {p.label}
-                      </label>
-                    ))}
+                {generatedLink && (
+                  <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border-primary)', borderRadius: '8px', padding: '12px', marginTop: '8px' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', marginBottom: '6px' }}>Registration Link:</div>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        readOnly
+                        value={generatedLink}
+                        style={{ flex: 1, height: '36px', background: 'transparent', border: '1px solid var(--border-primary)', borderRadius: '4px', padding: '0 8px', fontSize: '0.78rem', color: 'var(--text-primary)' }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        style={{ height: '36px', display: 'flex', gap: '4px', alignItems: 'center' }}
+                        onClick={() => handleCopyLink(generatedLink, 'invite-form')}
+                      >
+                        {copiedInviteId === 'invite-form' ? <Check size={14} /> : <Copy size={14} />}
+                        {copiedInviteId === 'invite-form' ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
                   </div>
+                )}
+              </div>
+              <div className="card-footer">
+                <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Generate Invitation</button>
+              </div>
+            </form>
+          </div>
+
+          {/* Invitation Logs Grid */}
+          <div className="data-table-container">
+            <div className="data-table-header">
+              <div className="data-table-title">Sent Invitations</div>
+            </div>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Invited User</th>
+                  <th>Assigned Role</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invitations.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '24px' }}>
+                      কোনো পেন্ডিং আমন্ত্রণপত্র পাওয়া যায়নি।
+                    </td>
+                  </tr>
+                ) : (
+                  invitations.map((inv) => {
+                    const regLink = `${window.location.protocol}//${window.location.host}/register-employee?token=${inv.token}`;
+                    return (
+                      <tr key={inv.id}>
+                        <td>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{inv.email}</div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>Expires: {new Date(inv.expires_at).toLocaleDateString()}</div>
+                        </td>
+                        <td><span className="badge badge-info">{inv.role}</span></td>
+                        <td>
+                          <span className={`badge ${inv.status === 'accepted' ? 'badge-success' : 'badge-warning'}`}>
+                            {inv.status}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            {inv.status === 'pending' && (
+                              <>
+                                <button
+                                  className="btn btn-ghost btn-sm"
+                                  title="Copy Registration Link"
+                                  onClick={() => handleCopyLink(regLink, inv.id)}
+                                >
+                                  {copiedInviteId === inv.id ? <Check size={14} color="var(--color-success)" /> : <Link size={14} />}
+                                </button>
+                                <button
+                                  className="btn btn-ghost btn-sm"
+                                  title="Revoke invitation"
+                                  style={{ color: 'var(--color-danger)' }}
+                                  onClick={() => handleRevokeInvitation(inv.id)}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ADD / EDIT ROLE PERMISSIONS MATRIX MODAL */}
+      {showRoleModal && (
+        <div className="modal-overlay" style={{ display: 'flex' }}>
+          <div className="modal" style={{ maxWidth: '580px' }}>
+            <div className="modal-header">
+              <span className="modal-title">{editingRole ? 'Edit Access Matrix' : 'Create Custom Role'}</span>
+              <button onClick={() => setShowRoleModal(false)} style={{ color: 'var(--text-secondary)' }}><X size={18} /></button>
+            </div>
+            <form onSubmit={handleSaveRole}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {roleError && (
+                  <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444', padding: '10px 12px', borderRadius: '8px', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <AlertCircle size={16} /> {roleError}
+                  </div>
+                )}
+
+                <div className="form-group">
+                  <label className="form-label">Role Title *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    required
+                    placeholder="e.g. Moderator"
+                    value={roleName}
+                    onChange={(e) => setRoleName(e.target.value)}
+                    disabled={editingRole?.is_system}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Description</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Brief details about what this role does"
+                    value={roleDesc}
+                    onChange={(e) => setRoleDesc(e.target.value)}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ marginBottom: '8px' }}>Module Permissions Access</label>
+                  {editingRole?.name === 'Super Admin' || editingRole?.name === 'Admin' ? (
+                    <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '12px', borderRadius: '6px', fontSize: '0.8rem', color: '#16a34a', fontWeight: 600 }}>
+                      ✓ System admins automatically hold full access to all panels.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', padding: '16px', background: 'var(--bg-input)', borderRadius: 'var(--radius-lg)', maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border-primary)' }}>
+                      {availableModules.map(m => {
+                        const isChecked = rolePerms.includes(m.id);
+                        return (
+                          <label key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-secondary)', userSelect: 'none' }}>
+                            <input
+                              type="checkbox"
+                              className="form-checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleRolePerm(m.id)}
+                            />
+                            {m.name}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Add Employee</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowRoleModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Save Role Configuration</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* EDIT / ACCESS CONTROL MODAL */}
-      {editingEmployee && (
+      {/* EDIT EMPLOYEE DETAILS MODAL */}
+      {showEditEmpModal && editingEmployee && (
         <div className="modal-overlay" style={{ display: 'flex' }}>
-          <div className="modal">
+          <div className="modal" style={{ maxWidth: '440px' }}>
             <div className="modal-header">
-              <span className="modal-title">Edit: {editingEmployee.name} ({editingEmployee.role})</span>
-              <button onClick={() => setEditingEmployee(null)} style={{ color: 'var(--text-secondary)' }}><X size={18} /></button>
+              <span className="modal-title">Edit Employee Access</span>
+              <button onClick={() => setShowEditEmpModal(false)} style={{ color: 'var(--text-secondary)' }}><X size={18} /></button>
             </div>
-            <form onSubmit={handleSaveEdit}>
-              <div className="modal-body">
-                <div className="grid-2">
-                  <div className="form-group">
-                    <label className="form-label">Full Name</label>
-                    <input type="text" className="form-input" required value={editingEmployee.name} onChange={e => setEditingEmployee({ ...editingEmployee, name: e.target.value })} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Email Address</label>
-                    <input type="email" className="form-input" required value={editingEmployee.email} onChange={e => setEditingEmployee({ ...editingEmployee, email: e.target.value })} />
-                  </div>
-                </div>
-
-                <div className="grid-2">
-                  <div className="form-group">
-                    <label className="form-label">Role Title</label>
-                    <select className="form-select" value={editingEmployee.role} onChange={e => setEditingEmployee({ ...editingEmployee, role: e.target.value })}>
-                      <option value="Super Admin">Super Admin</option>
-                      <option value="Admin">Admin</option>
-                      <option value="Manager">Manager</option>
-                      <option value="Staff">Staff</option>
-                      <option value="Support Agent">Support Agent</option>
-                      <option value="Delivery Agent">Delivery Agent</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Department</label>
-                    <input type="text" className="form-input" value={editingEmployee.department} onChange={e => setEditingEmployee({ ...editingEmployee, department: e.target.value })} />
-                  </div>
+            <form onSubmit={handleSaveEmployee}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div className="form-group">
+                  <label className="form-label">Employee Name</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    disabled
+                    value={editingEmployee.name}
+                    style={{ background: 'var(--bg-input)', color: 'var(--text-secondary)', cursor: 'not-allowed' }}
+                  />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Access Status</label>
-                  <select className="form-select" value={editingEmployee.status} onChange={e => setEditingEmployee({ ...editingEmployee, status: e.target.value })}>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="suspended">Suspended</option>
+                  <label className="form-label">Email Address</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    disabled
+                    value={editingEmployee.email}
+                    style={{ background: 'var(--bg-input)', color: 'var(--text-secondary)', cursor: 'not-allowed' }}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Department</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    required
+                    value={editingEmployee.department}
+                    onChange={(e) => setEditingEmployee({ ...editingEmployee, department: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Select Role Setup</label>
+                  <select
+                    className="form-select"
+                    value={editingEmployee.role_id}
+                    onChange={(e) => setEditingEmployee({ ...editingEmployee, role_id: e.target.value })}
+                    disabled={editingEmployee.id === 'EMP-001'}
+                  >
+                    {roles.map(r => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
                   </select>
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" style={{ marginBottom: '12px' }}>Access Scope / Permissions</label>
-                  <div className="grid-2" style={{ gap: '8px', padding: '12px', background: 'var(--bg-input)', borderRadius: 'var(--radius-md)' }}>
-                    {availablePermissions.map(p => (
-                      <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                        <input type="checkbox" className="form-checkbox" checked={editingEmployee.role === 'Super Admin' || (editingEmployee.permissions || []).includes(p.id)} disabled={editingEmployee.role === 'Super Admin'} onChange={() => togglePerm(p.id, true)} />
-                        {p.label}
-                      </label>
-                    ))}
-                  </div>
+                  <label className="form-label">Status Access</label>
+                  <select
+                    className="form-select"
+                    value={editingEmployee.status}
+                    onChange={(e) => setEditingEmployee({ ...editingEmployee, status: e.target.value })}
+                    disabled={editingEmployee.id === 'EMP-001'}
+                  >
+                    <option value="active">Active (Full access)</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="suspended">Suspended (Access blocked)</option>
+                  </select>
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setEditingEmployee(null)}>Cancel</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowEditEmpModal(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary">Save Changes</button>
               </div>
             </form>

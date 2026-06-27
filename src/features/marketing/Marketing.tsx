@@ -1,6 +1,13 @@
-import { useState } from 'react';
-import { Megaphone, Mail, MessageSquare, Bell, Share2, Ticket, Zap, Gift, Send, Play, Pause, BarChart2, X, Plus, Trash2, Edit } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Megaphone, Mail, MessageSquare, Bell, Share2, Ticket, Zap, Gift, Send, Play, Pause, BarChart2, X, Plus, Trash2, Eye, DollarSign } from 'lucide-react';
 import { generateCampaigns, saveCampaigns, formatCurrency, formatDate } from '../../mock/data';
+import { 
+  fetchCoupons, 
+  createCoupon, 
+  deleteCoupon, 
+  fetchSubscribers, 
+  deleteSubscriber 
+} from '../../services/api';
 
 const typeConfig: Record<string, { icon: any; color: string }> = {
   email: { icon: Mail, color: 'primary' },
@@ -24,13 +31,11 @@ export default function Marketing() {
   const [showCampaignModal, setShowCampaignModal] = useState(false);
   const [showCouponModal, setShowCouponModal] = useState(false);
 
-  // Coupons state
-  const [coupons, setCoupons] = useState([
-    { code: 'SUMMER20', type: 'percentage', value: 20, expiry: '2026-08-31', status: 'active' },
-    { code: 'TECH10', type: 'percentage', value: 10, expiry: '2026-07-15', status: 'active' },
-    { code: 'FREESHIP', type: 'fixed', value: 150, expiry: '2026-12-31', status: 'active' },
-    { code: 'WELCOME50', type: 'fixed', value: 50, expiry: '2026-06-30', status: 'expired' },
-  ]);
+  // Marketing database states
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [subscribers, setSubscribers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
 
   // Flash Sale state
   const [flashSale, setFlashSale] = useState({
@@ -65,10 +70,31 @@ export default function Marketing() {
 
   const tabs = [
     { id: 'campaigns', label: 'Campaigns', icon: Megaphone },
-    { id: 'coupons', label: 'Coupons', icon: Ticket },
+    { id: 'coupons', label: 'Coupons Matrix', icon: Ticket },
+    { id: 'subscribers', label: 'Subscribers Log', icon: Mail },
     { id: 'flash', label: 'Flash Sales', icon: Zap },
     { id: 'loyalty', label: 'Loyalty Program', icon: Gift },
   ];
+
+  const loadMarketingData = async () => {
+    setLoading(true);
+    try {
+      const [couponData, subData] = await Promise.all([
+        fetchCoupons(),
+        fetchSubscribers()
+      ]);
+      if (couponData) setCoupons(couponData);
+      if (subData) setSubscribers(subData);
+    } catch (e) {
+      setErrorMsg('ডাটাবেজ থেকে কুপন ও সাবস্ক্রাইবার ডাটা লোড করা যাচ্ছে না।');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadMarketingData();
+  }, []);
 
   // Campaign Actions
   const handleToggleCampaign = (id: string) => {
@@ -112,28 +138,56 @@ export default function Marketing() {
   };
 
   // Coupon Actions
-  const handleCreateCoupon = (e: React.FormEvent) => {
+  const handleCreateCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!coupCode) return;
 
-    const newCoup = {
-      code: coupCode.toUpperCase(),
+    const res = await createCoupon({
+      code: coupCode.toUpperCase().trim(),
       type: coupType,
       value: coupVal,
-      expiry: coupExpiry,
-      status: 'active'
-    };
+      expiry: coupExpiry
+    });
 
-    setCoupons([...coupons, newCoup]);
-    setCoupCode('');
-    setShowCouponModal(false);
-  };
-
-  const handleDeleteCoupon = (code: string) => {
-    if (confirm(`Delete coupon code ${code}?`)) {
-      setCoupons(coupons.filter(c => c.code !== code));
+    if (res.status === 'success') {
+      setCoupons(prev => [res.data, ...prev]);
+      setCoupCode('');
+      setShowCouponModal(false);
+    } else {
+      alert(res.message || 'Failed to create coupon code');
     }
   };
+
+  const handleDeleteCoupon = async (code: string) => {
+    if (confirm(`Delete coupon code ${code}?`)) {
+      const res = await deleteCoupon(code);
+      if (res.status === 'success') {
+        setCoupons(prev => prev.filter(c => c.code !== code));
+      } else {
+        alert(res.message || 'Failed to delete coupon');
+      }
+    }
+  };
+
+  // Subscriber Actions
+  const handleDeleteSubscriber = async (id: number) => {
+    if (confirm('Are you sure you want to remove this subscriber email?')) {
+      const res = await deleteSubscriber(id);
+      if (res.status === 'success') {
+        setSubscribers(prev => prev.filter(sub => sub.id !== id));
+      } else {
+        alert(res.message || 'Failed to delete subscriber');
+      }
+    }
+  };
+
+  if (loading && coupons.length === 0) {
+    return (
+      <div style={{ display: 'flex', minHeight: '60vh', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="spinner" />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -141,7 +195,7 @@ export default function Marketing() {
         <div className="page-header-left">
           <div className="page-breadcrumb"><span>Home</span><span className="page-breadcrumb-sep">/</span><span>Marketing</span></div>
           <h1 className="page-title">Marketing Control Center</h1>
-          <p className="page-subtitle">Manage campaigns, promotions, and customer retention</p>
+          <p className="page-subtitle">Manage campaigns, promo coupons, and email subscriptions</p>
         </div>
         <div className="page-header-actions">
           {activeTab === 'coupons' ? (
@@ -152,11 +206,17 @@ export default function Marketing() {
         </div>
       </div>
 
+      {errorMsg && (
+        <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444', padding: '12px', borderRadius: '8px', fontSize: 'var(--text-xs)', marginBottom: '16px' }}>
+          {errorMsg}
+        </div>
+      )}
+
       <div className="stats-grid" style={{ marginBottom: 'var(--space-6)' }}>
         {[
           { label: 'Active Campaigns', value: campaigns.filter(c => c.status === 'active').length.toString(), icon: Play, color: 'success' },
-          { label: 'Total Emails Sent', value: '46.5K', icon: Send, color: 'primary' },
-          { label: 'Avg Open Rate', value: '54.2%', icon: Eye, color: 'info' },
+          { label: 'Subscribed Emails', value: subscribers.length.toString(), icon: Mail, color: 'primary' },
+          { label: 'Total Promo Codes', value: coupons.length.toString(), icon: Ticket, color: 'info' },
           { label: 'Campaign Revenue', value: formatCurrency(campaigns.reduce((acc, c) => acc + c.revenue, 0)), icon: DollarSign, color: 'warning' },
         ].map((s, i) => {
           const Icon = s.icon;
@@ -188,6 +248,7 @@ export default function Marketing() {
         })}
       </div>
 
+      {/* CAMPAIGNS PANEL */}
       {activeTab === 'campaigns' && (
         <div className="data-table-container">
           <div className="data-table-header">
@@ -260,6 +321,7 @@ export default function Marketing() {
         </div>
       )}
 
+      {/* COUPONS MATRIX PANEL */}
       {activeTab === 'coupons' && (
         <div className="data-table-container">
           <div className="data-table-header">
@@ -302,6 +364,52 @@ export default function Marketing() {
         </div>
       )}
 
+      {/* NEWSLETTER SUBSCRIBERS PANEL */}
+      {activeTab === 'subscribers' && (
+        <div className="data-table-container">
+          <div className="data-table-header">
+            <div className="data-table-title">Newsletter Subscriptions</div>
+          </div>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Subscriber Email</th>
+                <th>Status</th>
+                <th>Joined Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {subscribers.length === 0 ? (
+                <tr>
+                  <td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: '24px' }}>
+                    কোনো নিউজলেটার সাবস্ক্রাইবার পাওয়া যায়নি।
+                  </td>
+                </tr>
+              ) : (
+                subscribers.map((sub) => (
+                  <tr key={sub.id}>
+                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{sub.email}</td>
+                    <td>
+                      <span className="badge badge-success">
+                        {sub.status}
+                      </span>
+                    </td>
+                    <td>{new Date(sub.created_at).toLocaleString()}</td>
+                    <td>
+                      <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-danger)' }} onClick={() => handleDeleteSubscriber(sub.id)}>
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* FLASH SALES PANEL */}
       {activeTab === 'flash' && (
         <div className="card" style={{ maxWidth: '600px' }}>
           <div className="card-header">
@@ -356,6 +464,7 @@ export default function Marketing() {
         </div>
       )}
 
+      {/* LOYALTY PROGRAM PANEL */}
       {activeTab === 'loyalty' && (
         <div className="grid-1-2">
           <div className="card">
@@ -504,12 +613,4 @@ export default function Marketing() {
       )}
     </div>
   );
-}
-
-function Eye(props: any) {
-  return <svg xmlns="http://www.w3.org/2000/svg" width={props.size||24} height={props.size||24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>;
-}
-
-function DollarSign(props: any) {
-  return <svg xmlns="http://www.w3.org/2000/svg" width={props.size||24} height={props.size||24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>;
 }

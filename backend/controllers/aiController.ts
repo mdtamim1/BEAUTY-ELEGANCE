@@ -105,7 +105,7 @@ export const chatWithAI = async (req: Request, res: Response) => {
       });
     });
 
-    const storeName = 'Beauty & Elegance';
+    const storeName = 'AURA Sports';
     const systemPrompt = buildSystemPrompt(products, storeName);
 
     // Build conversation history for multi-turn chat
@@ -131,10 +131,8 @@ export const chatWithAI = async (req: Request, res: Response) => {
 
     // Call Gemini API — try multiple models as fallback if quota is exceeded
     const models = [
-      'gemini-2.5-flash',
-      'gemini-3.5-flash',
-      'gemini-2.5-flash-lite',
-      'gemini-2.0-flash-lite',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash'
     ];
 
     let lastError = '';

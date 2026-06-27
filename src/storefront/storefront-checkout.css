@@ -5,7 +5,7 @@
   margin: 0 auto;
   padding: 40px 24px;
   font-family: 'Hind Siliguri', sans-serif, var(--font-family);
-  background: #f8f9fc; /* Clean slate light gray background */
+  background: #ffffff; /* Clean white background */
 }
 
 .checkout-header {
@@ -15,14 +15,15 @@
 
 .checkout-header h1 {
   font-size: 2.2rem;
-  font-weight: 700;
-  color: #0a2540; /* Stripe deep slate color */
+  font-weight: 800;
+  color: #000000; /* Crisp black */
   margin-bottom: 10px;
   letter-spacing: -0.02em;
+  text-transform: uppercase;
 }
 
 .checkout-header p {
-  color: #4f566b; /* Muted slate gray */
+  color: var(--sf-text-secondary);
   font-size: 1.05rem;
 }
 
@@ -37,16 +38,16 @@
 /* Stripe-style Flat Panels */
 .checkout-panel {
   background: #ffffff;
-  border: 1px solid #e3e8ee; /* Thin clean border */
-  border-radius: 8px; /* Classic tight border radius */
-  box-shadow: 0 4px 12px rgba(10, 37, 64, 0.02), 0 1px 3px rgba(10, 37, 64, 0.01);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius-md);
+  box-shadow: none;
   padding: 28px;
   margin-bottom: 24px;
   transition: all 0.2s ease;
 }
 
 .checkout-panel:hover {
-  box-shadow: 0 7px 14px rgba(10, 37, 64, 0.04), 0 3px 6px rgba(0, 0, 0, 0.01);
+  box-shadow: none;
 }
 
 .checkout-panel-title {
@@ -54,15 +55,17 @@
   align-items: center;
   gap: 12px;
   font-size: 1.15rem;
-  font-weight: 700;
-  color: #0a2540;
+  font-weight: 800;
+  color: #000000;
   margin-bottom: 24px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #e3e8ee;
+  border-bottom: 1px solid var(--sf-border);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .checkout-panel-title svg {
-  color: #635bff; /* Royal Indigo */
+  color: #000000; /* Black accent icon */
 }
 
 /* Corporate Form Elements */
@@ -84,10 +87,10 @@
 
 .checkout-container .form-label {
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: #4f566b !important;
+  letter-spacing: 0.05em;
+  color: #222222 !important;
 }
 
 .checkout-container .form-label span {
@@ -98,23 +101,23 @@
   width: 100% !important;
   height: 44px !important;
   padding: 0 14px !important;
-  border: 1px solid #cbd5e1 !important;
-  border-radius: 6px !important;
+  border: 1.5px solid var(--sf-border) !important;
+  border-radius: var(--sf-radius-sm) !important;
   font-size: 0.95rem !important;
   background: #ffffff !important;
-  color: #0a2540 !important;
+  color: #000000 !important;
   transition: all 0.15s ease !important;
   font-family: inherit !important;
-  box-shadow: 0 1px 2px rgba(10, 37, 64, 0.05) inset !important;
+  box-shadow: none !important;
 }
 
 .checkout-container .form-input::placeholder {
-  color: #a3acb9 !important;
+  color: #999999 !important;
 }
 
 .checkout-container .form-input:focus {
-  border-color: #635bff !important;
-  box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.15) !important;
+  border-color: #000000 !important;
+  box-shadow: none !important;
   outline: none !important;
   background: #ffffff !important;
 }
@@ -131,13 +134,14 @@
   align-items: center;
   gap: 8px;
   font-size: 0.95rem;
-  font-weight: 700;
-  color: #0a2540;
+  font-weight: 800;
+  color: #000000;
   margin-bottom: 12px;
+  text-transform: uppercase;
 }
 
 .method-title svg {
-  color: #635bff;
+  color: #000000;
 }
 
 .selection-row {
@@ -151,8 +155,8 @@
   gap: 10px;
   padding: 10px 12px;
   height: 60px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
+  border: 1.5px solid var(--sf-border);
+  border-radius: var(--sf-radius-sm);
   cursor: pointer;
   transition: all 0.15s ease;
   background: #ffffff;
@@ -160,14 +164,14 @@
 }
 
 .selection-card:hover {
-  border-color: #a3acb9;
-  background: #f8f9fc;
+  border-color: #000000;
+  background: var(--sf-bg-light);
 }
 
 .selection-card.active {
-  border-color: #635bff;
+  border-color: #000000;
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.12);
+  box-shadow: none;
 }
 
 .selection-card-content {
@@ -175,19 +179,19 @@
 }
 
 .selection-card-title {
-  font-weight: 700;
-  color: #0a2540;
+  font-weight: 800;
+  color: #000000;
   font-size: 0.88rem;
   margin-bottom: 2px;
 }
 
 .selection-card-desc {
   font-size: 0.75rem;
-  color: #4f566b;
+  color: var(--sf-text-secondary);
 }
 
 .selection-card svg {
-  color: #635bff !important;
+  color: #000000 !important;
 }
 
 /* Payment Section */
@@ -197,24 +201,24 @@
   gap: 10px;
   padding: 10px 14px;
   height: 60px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
+  border: 1.5px solid var(--sf-border);
+  border-radius: var(--sf-radius-sm);
   background: #ffffff;
 }
 
 .payment-card.active {
-  border-color: #635bff;
-  box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.12);
+  border-color: #000000;
+  box-shadow: none;
 }
 
 .payment-card svg {
-  color: #635bff;
+  color: #000000;
 }
 
 .payment-card span {
   font-size: 0.92rem;
-  font-weight: 700;
-  color: #0a2540;
+  font-weight: 800;
+  color: #000000;
 }
 
 /* Order Summary Panel */
@@ -253,11 +257,12 @@
 }
 
 .summary-item-name {
-  font-weight: 700;
-  color: #0a2540;
+  font-weight: 800;
+  color: #000000;
   font-size: 0.92rem;
   margin-bottom: 3px;
   line-height: 1.35;
+  text-transform: uppercase;
 }
 
 .summary-item-variant {
@@ -273,8 +278,8 @@
 }
 
 .summary-item-price {
-  font-weight: 700;
-  color: #0a2540;
+  font-weight: 800;
+  color: #000000;
   font-size: 0.95rem;
 }
 
@@ -319,14 +324,14 @@
   width: 100% !important;
   height: 44px !important;
   padding: 0 14px !important;
-  border: 1px solid #cbd5e1 !important;
-  border-radius: 6px !important;
+  border: 1.5px solid var(--sf-border) !important;
+  border-radius: var(--sf-radius-sm) !important;
   font-size: 0.95rem !important;
   background: #ffffff !important;
-  color: #0a2540 !important;
+  color: #000000 !important;
   transition: all 0.15s ease !important;
   font-family: inherit !important;
-  box-shadow: 0 1px 2px rgba(10, 37, 64, 0.05) inset !important;
+  box-shadow: none !important;
   appearance: none;
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23475569' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
   background-position: right 12px center !important;
@@ -336,8 +341,8 @@
 }
 
 .checkout-select:focus {
-  border-color: #635bff !important;
-  box-shadow: 0 0 0 3px rgba(99, 91, 255, 0.15) !important;
+  border-color: #000000 !important;
+  box-shadow: none !important;
   outline: none !important;
 }
 
@@ -357,12 +362,12 @@
 
 .summary-row.total {
   font-size: 1.3rem;
-  font-weight: 700;
-  color: #0a2540;
+  font-weight: 800;
+  color: #000000;
   margin-bottom: 0;
   margin-top: 20px;
   padding-top: 20px;
-  border-top: 1px solid #e3e8ee;
+  border-top: 1.5px solid var(--sf-border);
 }
 
 /* Checkout Button Styles */
@@ -376,24 +381,26 @@
 .btn-confirm {
   width: 100%;
   height: 48px;
-  background: #635bff; /* Stripe Royal Indigo */
+  background: #000000; /* Solid Black */
   color: white;
   border: none;
-  border-radius: 6px; /* Flat-style matching form fields */
+  border-radius: var(--sf-radius-sm);
   font-size: 1.05rem;
-  font-weight: 600;
+  font-weight: 800;
   cursor: pointer;
-  transition: all 0.15s ease;
-  box-shadow: 0 2px 4px rgba(10, 37, 64, 0.08), 0 1px 2px rgba(10, 37, 64, 0.08);
+  transition: all 0.2s ease;
+  box-shadow: none;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .btn-confirm:hover {
-  background: #0a2540; /* Dark slate hover */
-  box-shadow: 0 4px 12px rgba(10, 37, 64, 0.15);
+  background: #222222; /* Slate dark gray */
+  transform: translateY(-1px);
 }
 
 .btn-whatsapp {
@@ -482,7 +489,7 @@
 .success-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(10, 37, 64, 0.55);
+  background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(4px);
   z-index: 1000;
   display: flex;
@@ -493,20 +500,20 @@
 
 .success-modal {
   background: white;
-  border-radius: 8px;
+  border-radius: var(--sf-radius-md);
   padding: 40px;
   text-align: center;
   max-width: 440px;
   width: 90%;
-  box-shadow: 0 15px 35px rgba(10, 37, 64, 0.15);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
   animation: scaleIn 0.25s ease;
 }
 
 .success-icon {
   width: 64px;
   height: 64px;
-  background: #ecfdf5;
-  color: #10b981;
+  background: #f5f5f5;
+  color: #000000;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -516,9 +523,10 @@
 
 .success-modal h2 {
   font-size: 1.6rem;
-  font-weight: 700;
-  color: #0a2540;
+  font-weight: 800;
+  color: #000000;
   margin-bottom: 10px;
+  text-transform: uppercase;
 }
 
 .success-modal p {

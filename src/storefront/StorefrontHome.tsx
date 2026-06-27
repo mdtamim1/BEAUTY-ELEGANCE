@@ -3,10 +3,11 @@ import { useOutletContext, Link, useLocation } from 'react-router-dom';
 import { Truck, Shield, RotateCcw, Headphones, Star, Heart, ShoppingCart, Zap,
   Smartphone, Shirt, Home as HomeIcon, Dumbbell, Sparkles, BookOpen,
   Monitor, Camera, Watch, Car, Baby, Flower, Palette, Music, Gamepad, Gift,
-  Grid3X3, ArrowRight
+  Grid3X3, ArrowRight, CheckCircle, AlertCircle
 } from 'lucide-react';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import { CountdownTimer } from './CollectionPage';
+import { subscribeToNewsletter } from '../services/api';
 
 interface StorefrontContext {
   addToCart: (product: any) => void;
@@ -36,6 +37,30 @@ export default function StorefrontHome() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const location = useLocation();
+
+  // Newsletter states
+  const [emailInput, setEmailInput] = useState('');
+  const [subMsg, setSubMsg] = useState('');
+  const [subError, setSubError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubMsg('');
+    setSubError('');
+    if (!emailInput.trim()) return;
+
+    setIsSubmitting(true);
+    const res = await subscribeToNewsletter(emailInput.trim());
+    setIsSubmitting(false);
+
+    if (res.status === 'success') {
+      setSubMsg(res.message || 'নিউজলেটার সাবস্ক্রিপশন সফল হয়েছে!');
+      setEmailInput('');
+    } else {
+      setSubError(res.message || 'সাবস্ক্রাইব করা যায়নি। আবার চেষ্টা করুন।');
+    }
+  };
 
   // Shuffle products randomly on component mount or products update
   const shuffledProducts = useMemo(() => {
@@ -226,6 +251,12 @@ export default function StorefrontHome() {
             const Icon = ICON_MAP[cat.icon] || Grid3X3;
             const categorySlug = cat.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
             const categoryUrl = `/collection/${categorySlug}`;
+            
+            // Find all published products for this category
+            const categoryProducts = config.products.filter(p => p.published && p.category === cat.name);
+            // Get last product image
+            const lastProductImage = categoryProducts.length > 0 ? categoryProducts[categoryProducts.length - 1].image : '';
+
             return (
               <Link 
                 to={categoryUrl}
@@ -233,9 +264,17 @@ export default function StorefrontHome() {
                 className="category-card"
                 style={{ textDecoration: 'none' }}
               >
-                <div className="category-icon"><Icon size={22} /></div>
-                <div className="category-name">{cat.name}</div>
-                <div className="category-count">{cat.count.toLocaleString()} products</div>
+                <div className="category-image-container">
+                  {lastProductImage ? (
+                    <img src={lastProductImage} alt={cat.name} className="category-card-image" />
+                  ) : (
+                    <div className="category-icon-fallback"><Icon size={22} /></div>
+                  )}
+                </div>
+                <div className="category-card-info">
+                  <div className="category-name">{cat.name}</div>
+                  <div className="category-count">{cat.count.toLocaleString()} products</div>
+                </div>
               </Link>
             );
           })}
@@ -335,6 +374,43 @@ export default function StorefrontHome() {
             )}
           </div>
         </div>
+      </section>
+
+      {/* ---- Newsletter Section ---- */}
+      <section className="store-section newsletter-section" style={{ background: '#000000', color: '#ffffff', padding: '60px 24px', borderRadius: '12px', marginTop: '48px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: '-50%', left: '-20%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <h2 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '8px', color: '#ffffff' }}>অফার ও কুপন আপডেট পেতে সাবস্ক্রাইব করুন</h2>
+        <p style={{ color: '#9ca3af', marginBottom: '24px', fontSize: '0.95rem' }}>আমাদের নিউজলেটারে জয়েন করুন এবং নতুন স্পোর্টস কালেকশন ও ডিসকাউন্ট ড্রপ সবার আগে পান।</p>
+        
+        {subMsg && (
+          <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#34d399', padding: '10px 16px', borderRadius: '8px', fontSize: '0.9rem', maxWidth: '480px', margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <CheckCircle size={16} /> {subMsg}
+          </div>
+        )}
+
+        {subError && (
+          <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#f87171', padding: '10px 16px', borderRadius: '8px', fontSize: '0.9rem', maxWidth: '480px', margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <AlertCircle size={16} /> {subError}
+          </div>
+        )}
+
+        <form onSubmit={handleSubscribe} style={{ display: 'flex', gap: '8px', maxWidth: '480px', margin: '0 auto', flexWrap: 'wrap' }}>
+          <input 
+            type="email" 
+            placeholder="আপনার ইমেইল এড্রেস লিখুন" 
+            required 
+            value={emailInput}
+            onChange={(e) => setEmailInput(e.target.value)}
+            style={{ flex: 1, padding: '0 16px', height: '44px', border: '1px solid #374151', borderRadius: '8px', background: '#111827', color: '#ffffff', outline: 'none', minWidth: '240px', boxSizing: 'border-box' }}
+          />
+          <button 
+            type="submit" 
+            disabled={isSubmitting}
+            style={{ height: '44px', padding: '0 24px', background: '#ffffff', color: '#000000', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: isSubmitting ? 'not-allowed' : 'pointer', minWidth: '120px' }}
+          >
+            {isSubmitting ? 'প্রসেস হচ্ছে...' : 'সাবস্ক্রাইব'}
+          </button>
+        </form>
       </section>
 
     </>

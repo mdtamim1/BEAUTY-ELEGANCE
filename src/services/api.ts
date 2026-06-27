@@ -435,6 +435,292 @@ export const markCustomerChatAsRead = async (customerId: string): Promise<boolea
   }
 };
 
+// Fetch registered employees
+export const fetchEmployees = async (): Promise<any[] | null> => {
+  try {
+    const res = await fetch(`${API_BASE}/employees`, {
+      headers: getAuthHeaders()
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.status === 'success' ? json.data : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+// Update employee status, role, department
+export const updateEmployee = async (id: string, data: any): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/employees/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
+      body: JSON.stringify(data)
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to update employee' };
+  }
+};
+
+// Delete employee
+export const deleteEmployee = async (id: string): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/employees/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to delete employee' };
+  }
+};
+
+// Fetch invitations
+export const fetchInvitations = async (): Promise<any[] | null> => {
+  try {
+    const res = await fetch(`${API_BASE}/employees/invitations`, {
+      headers: getAuthHeaders()
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.status === 'success' ? json.data : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+// Create invitation
+export const inviteEmployee = async (data: { email: string; role_id: number }): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/employees/invite`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
+      body: JSON.stringify(data)
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to invite employee' };
+  }
+};
+
+// Revoke/Delete invitation
+export const deleteInvitation = async (id: string): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/employees/invitations/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to delete invitation' };
+  }
+};
+
+// Fetch roles
+export const fetchRoles = async (): Promise<any[] | null> => {
+  try {
+    const res = await fetch(`${API_BASE}/employees/roles`, {
+      headers: getAuthHeaders()
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.status === 'success' ? json.data : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+// Create custom role
+export const createRole = async (data: { name: string; description: string; permissions: string[] }): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/employees/roles`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
+      body: JSON.stringify(data)
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to create role' };
+  }
+};
+
+// Update custom role
+export const updateRole = async (id: number, data: { name: string; description: string; permissions: string[] }): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/employees/roles/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
+      body: JSON.stringify(data)
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to update role' };
+  }
+};
+
+// Delete custom role
+export const deleteRole = async (id: number): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/employees/roles/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to delete role' };
+  }
+};
+
+// Verify invitation token (Public)
+export const verifyInvitationToken = async (token: string): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/employees/invite/verify?token=${encodeURIComponent(token)}`);
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'সার্ভারে সংযোগ করা যাচ্ছে না।' };
+  }
+};
+
+// Register invited employee (Public)
+export const registerEmployee = async (data: any): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/employees/invite/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'সার্ভারে সংযোগ করা যাচ্ছে না।' };
+  }
+};
+
+// Fetch promo coupons
+export const fetchCoupons = async (): Promise<any[] | null> => {
+  try {
+    const res = await fetch(`${API_BASE}/marketing/coupons`, {
+      headers: getAuthHeaders()
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.status === 'success' ? json.data : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+// Create a coupon
+export const createCoupon = async (data: { code: string; type: string; value: number; expiry: string }): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/marketing/coupons`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
+      body: JSON.stringify(data)
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to create coupon' };
+  }
+};
+
+// Delete a coupon
+export const deleteCoupon = async (code: string): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/marketing/coupons/${encodeURIComponent(code)}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to delete coupon' };
+  }
+};
+
+// Validate coupon for checkout (Public)
+export const validateCouponCode = async (code: string): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/marketing/coupons/validate/${encodeURIComponent(code)}`);
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'সার্ভারে সংযোগ করা যাচ্ছে না।' };
+  }
+};
+
+// Fetch newsletter subscribers
+export const fetchSubscribers = async (): Promise<any[] | null> => {
+  try {
+    const res = await fetch(`${API_BASE}/marketing/subscribers`, {
+      headers: getAuthHeaders()
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.status === 'success' ? json.data : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+// Subscribe to newsletter (Public)
+export const subscribeToNewsletter = async (email: string): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/marketing/subscribers/subscribe`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email })
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'সার্ভারে সংযোগ করা যাচ্ছে না।' };
+  }
+};
+
+// Delete subscriber from log
+export const deleteSubscriber = async (id: number): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/marketing/subscribers/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to delete subscriber' };
+  }
+};
+
+// Fetch live advanced analytics
+export const fetchAnalyticsData = async (range: string): Promise<any | null> => {
+  try {
+    const res = await fetch(`${API_BASE}/analytics?range=${encodeURIComponent(range)}`, {
+      headers: getAuthHeaders()
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.status === 'success' ? json.data : null;
+  } catch (e) {
+    return null;
+  }
+};
+
 
 
 

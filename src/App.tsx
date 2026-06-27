@@ -19,6 +19,7 @@ import Security from './features/security/Security';
 import SystemSettings from './features/system/SystemSettings';
 import AICenter from './features/ai/AICenter';
 import StorefrontManager from './features/storefront-manager/StorefrontManager';
+import RegisterEmployee from './features/employees/RegisterEmployee';
 
 // Storefront (Customer-facing)
 import StorefrontLayout from './storefront/StorefrontLayout';
@@ -135,6 +136,9 @@ export default function App() {
         <Routes>
           {/* Login Portal */}
           <Route path="/login" element={<Login />} />
+
+          {/* Employee Registration (via Invitation) */}
+          <Route path="/register-employee" element={<RegisterEmployee />} />
 
           {/* Customer-Facing Storefront */}
           <Route path="/" element={<StorefrontLayout />}>

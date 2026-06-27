@@ -64,6 +64,17 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     },
   ];
 
+  // Filter sections and items based on permissions
+  const filteredNavSections = navSections.map(section => {
+    const items = section.items.filter(item => {
+      // Super Admin and Admin role gets all access by default
+      if (user?.role === 'Super Admin' || user?.role === 'Admin') return true;
+      // Check if item.id is inside user permissions array
+      return user?.permissions?.includes(item.id);
+    });
+    return { ...section, items };
+  }).filter(section => section.items.length > 0);
+
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
@@ -86,7 +97,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </div>
 
       <nav className="sidebar-nav">
-        {navSections.map((section) => (
+        {filteredNavSections.map((section) => (
           <div key={section.title} className="sidebar-section">
             {!collapsed && (
               <div className="sidebar-section-title">{section.title}</div>

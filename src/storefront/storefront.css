@@ -4,39 +4,39 @@
 
 /* ---- Storefront Variables ---- */
 :root {
-  --sf-bg: #fafafa;
+  --sf-bg: #ffffff;
   --sf-bg-white: #ffffff;
-  --sf-bg-light: #f5f5f5;
-  --sf-bg-dark: #0f172a;
-  --sf-bg-overlay: rgba(0, 0, 0, 0.5);
+  --sf-bg-light: #f6f6f6;
+  --sf-bg-dark: #000000;
+  --sf-bg-overlay: rgba(0, 0, 0, 0.7);
   
-  --sf-text-primary: #0f172a;
-  --sf-text-secondary: #475569;
-  --sf-text-tertiary: #94a3b8;
+  --sf-text-primary: #000000;
+  --sf-text-secondary: #222222;
+  --sf-text-tertiary: #666666;
   --sf-text-white: #ffffff;
   
-  --sf-accent: #6366f1;
-  --sf-accent-hover: #4f46e5;
-  --sf-accent-light: #eef2ff;
-  --sf-accent-glow: rgba(99, 102, 241, 0.15);
+  --sf-accent: #000000;
+  --sf-accent-hover: #1e1e1e;
+  --sf-accent-light: #f5f5f5;
+  --sf-accent-glow: rgba(0, 0, 0, 0.05);
   
-  --sf-success: #10b981;
-  --sf-warning: #f59e0b;
-  --sf-danger: #ef4444;
-  --sf-info: #3b82f6;
+  --sf-success: #000000;
+  --sf-warning: #666666;
+  --sf-danger: #d90429;
+  --sf-info: #000000;
   
-  --sf-border: #e2e8f0;
-  --sf-border-hover: #cbd5e1;
+  --sf-border: #e5e5e5;
+  --sf-border-hover: #000000;
   
-  --sf-shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
-  --sf-shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-  --sf-shadow-lg: 0 8px 30px rgba(0,0,0,0.1);
-  --sf-shadow-xl: 0 16px 48px rgba(0,0,0,0.12);
+  --sf-shadow-sm: none;
+  --sf-shadow-md: none;
+  --sf-shadow-lg: none;
+  --sf-shadow-xl: none;
   
-  --sf-radius-sm: 8px;
-  --sf-radius-md: 12px;
-  --sf-radius-lg: 16px;
-  --sf-radius-xl: 24px;
+  --sf-radius-sm: 4px;
+  --sf-radius-md: 6px;
+  --sf-radius-lg: 8px;
+  --sf-radius-xl: 12px;
   --sf-radius-full: 9999px;
   
   --sf-max-width: 1280px;
@@ -324,7 +324,7 @@
 .slide-offer-highlight {
   font-size: 1.4rem;
   font-weight: 900;
-  color: #fde047; /* Bright yellow */
+  color: #ffffff; /* Crisp white */
   text-transform: uppercase;
   letter-spacing: 0.03em;
   text-shadow: 0 2px 8px rgba(0,0,0,0.2);
@@ -600,51 +600,72 @@
 }
 
 .category-card {
-  background: white;
-  border: 1px solid var(--sf-border);
+  background: var(--sf-bg-light);
+  border: none;
   border-radius: var(--sf-radius-md);
-  padding: 14px 10px;
+  overflow: hidden;
   text-align: center;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
   text-decoration: none;
   color: var(--sf-text-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 0 16px 0;
 }
 
 .category-card:hover {
-  border-color: var(--sf-accent);
-  box-shadow: var(--sf-shadow-md);
-  transform: translateY(-2px);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
 }
 
-.category-icon {
-  width: 42px;
-  height: 42px;
-  margin: 0 auto 8px;
-  background: var(--sf-accent-light);
-  border-radius: var(--sf-radius-sm);
+.category-image-container {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  position: relative;
+  background: var(--sf-bg-light);
+  margin-bottom: 12px;
+}
+
+.category-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.category-card:hover .category-card-image {
+  transform: scale(1.08);
+}
+
+.category-icon-fallback {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--sf-accent);
-  transition: all 0.3s;
+  background: var(--sf-bg-light);
+  color: var(--sf-text-tertiary);
 }
 
-.category-card:hover .category-icon {
-  background: var(--sf-accent);
-  color: white;
+.category-card-info {
+  padding: 0 12px;
 }
 
 .category-name {
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   line-height: 1.2;
 }
 
 .category-count {
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   color: var(--sf-text-tertiary);
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 /* ---- Product Cards ---- */
@@ -672,7 +693,7 @@
 
 .product-card {
   background: white;
-  border: 1px solid var(--sf-border);
+  border: none;
   border-radius: var(--sf-radius-lg);
   overflow: hidden;
   cursor: pointer;
@@ -683,8 +704,6 @@
 }
 
 .product-card:hover {
-  border-color: var(--sf-accent);
-  box-shadow: var(--sf-shadow-lg);
   transform: translateY(-4px);
 }
 
@@ -918,7 +937,7 @@
 
 /* ---- Newsletter ---- */
 .newsletter {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: #000000;
   padding: 60px 24px;
   text-align: center;
   color: white;
@@ -1215,17 +1234,11 @@
   .category-card {
     flex-shrink: 0 !important;
     width: 96px !important;
-    padding: 10px 6px !important;
+    padding: 0 0 10px 0 !important;
     border-radius: var(--sf-radius-md) !important;
   }
-  .category-icon {
-    width: 36px !important;
-    height: 36px !important;
-    margin: 0 auto 6px !important;
-  }
-  .category-icon svg {
-    width: 18px !important;
-    height: 18px !important;
+  .category-image-container {
+    margin-bottom: 6px !important;
   }
   .category-name {
     font-size: 0.72rem !important;
@@ -1241,7 +1254,7 @@
 
 /* ---- Announcement Bar ---- */
 .announcement-bar {
-  background: linear-gradient(90deg, #4f46e5 0%, #6366f1 50%, #8b5cf6 100%);
+  background: #000000;
   color: white;
   height: 40px;
   display: flex;
@@ -2188,19 +2201,19 @@
   position: relative;
   width: 100%;
   padding: 32px 40px;
-  background: linear-gradient(135deg, #1e1b4b 0%, #311042 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #111111;
+  border: 1px solid #333333;
   border-radius: var(--sf-radius-xl);
   overflow: hidden;
-  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15), 0 0 50px rgba(99, 102, 241, 0.05) inset;
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15), 0 0 50px rgba(255, 255, 255, 0.02) inset;
   transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
   box-sizing: border-box;
 }
 
 .teaser-campaign-banner:hover {
   transform: translateY(-4px);
-  border-color: rgba(99, 102, 241, 0.25);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2), 0 0 60px rgba(99, 102, 241, 0.08) inset;
+  border-color: #555555;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2), 0 0 60px rgba(255, 255, 255, 0.04) inset;
 }
 
 .teaser-campaign-glow {
@@ -2209,7 +2222,7 @@
   right: -10%;
   width: 300px;
   height: 300px;
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
   border-radius: 50%;
   pointer-events: none;
   animation: pulseSlow 4s infinite ease-in-out alternate;
@@ -2233,9 +2246,9 @@
 .teaser-badge {
   display: inline-block;
   padding: 4px 10px;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #f87171;
+  background: #222222;
+  border: 1px solid #444444;
+  color: #ffffff;
   font-size: 0.7rem;
   font-weight: 700;
   border-radius: var(--sf-radius-full);

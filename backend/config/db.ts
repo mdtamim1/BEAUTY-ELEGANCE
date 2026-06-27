@@ -108,6 +108,39 @@ function initializeDatabase() {
     `);
 
     db.run(`
+      CREATE TABLE IF NOT EXISTS employee_invitations (
+        id TEXT PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        role_id INTEGER NOT NULL,
+        token TEXT UNIQUE NOT NULL,
+        status TEXT DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP NOT NULL,
+        FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE
+      )
+    `);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS coupons (
+        code TEXT PRIMARY KEY,
+        type TEXT NOT NULL,
+        value REAL NOT NULL,
+        expiry TEXT NOT NULL,
+        status TEXT DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        status TEXT DEFAULT 'subscribed',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    db.run(`
       CREATE TABLE IF NOT EXISTS products (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
@@ -140,6 +173,9 @@ function initializeDatabase() {
       // ignore error if column already exists
     });
     db.run("ALTER TABLE customers ADD COLUMN address TEXT", (err) => {
+      // ignore error if column already exists
+    });
+    db.run("ALTER TABLE roles ADD COLUMN permissions TEXT", (err) => {
       // ignore error if column already exists
     });
 
@@ -206,26 +242,54 @@ function initializeDatabase() {
       )
     `);
 
-    // Insert Default Super Admin role and employee if they don't exist
-    db.get("SELECT id FROM roles WHERE name = 'Super Admin'", (err, row: any) => {
-      if (!row) {
-        db.run("INSERT INTO roles (name, description, is_system) VALUES ('Super Admin', 'System Administrator', 1)", function(err) {
-          if (!err) {
-            const roleId = this.lastID;
-            // Admin password: admin123 (hashed: $2b$10$dT13c2LnpixQIRx7Bx/CtOqFOvNeS00tUBecfTZZ1lxBWXJpyYOHa)
-            db.run(`
-              INSERT OR IGNORE INTO employees (id, role_id, first_name, last_name, email, password_hash, status, department)
-              VALUES ('EMP-001', ?, 'Super', 'Admin', 'admin@vipcommerce.com', '$2b$10$dT13c2LnpixQIRx7Bx/CtOqFOvNeS00tUBecfTZZ1lxBWXJpyYOHa', 'active', 'Management')
-            `, [roleId]);
-          }
-        });
-      }
-    });
+    // Seed default roles and super admin employee
+    const defaultRoles = [
+      { name: 'Super Admin', desc: 'System Administrator with full access', is_system: 1, permissions: ["dashboard", "analytics", "orders", "products", "storefront", "chats", "marketing", "employees", "finance", "security", "settings", "ai"] },
+      { name: 'Admin', desc: 'Administrator with full management access', is_system: 1, permissions: ["dashboard", "analytics", "orders", "products", "storefront", "chats", "marketing", "employees", "finance", "security", "settings", "ai"] },
+      { name: 'Moderator', desc: 'Staff with moderate access to orders, products, and support', is_system: 1, permissions: ["dashboard", "orders", "products", "chats"] }
+    ];
 
+    let processedCount = 0;
+    defaultRoles.forEach(r => {
+      db.get("SELECT id FROM roles WHERE name = ?", [r.name], (err, row: any) => {
+        const afterRoleProcessed = () => {
+          processedCount++;
+          if (processedCount === defaultRoles.length) {
+            // Seed Super Admin employee if they don't exist
+            db.get("SELECT id FROM roles WHERE name = 'Super Admin'", (err, roleRow: any) => {
+              if (roleRow) {
+                const roleId = roleRow.id;
+                db.get("SELECT id FROM employees WHERE email = 'admin@vipcommerce.com'", (err, empRow) => {
+                  if (!empRow) {
+                    // Admin password: admin123
+                    db.run(`
+                      INSERT INTO employees (id, role_id, first_name, last_name, email, password_hash, status, department)
+                      VALUES ('EMP-001', ?, 'Super', 'Admin', 'admin@vipcommerce.com', '$2b$10$dT13c2LnpixQIRx7Bx/CtOqFOvNeS00tUBecfTZZ1lxBWXJpyYOHa', 'active', 'Management')
+                    `, [roleId]);
+                  }
+                });
+              }
+            });
+          }
+        };
+
+        if (!row) {
+          db.run(
+            "INSERT INTO roles (name, description, is_system, permissions) VALUES (?, ?, ?, ?)",
+            [r.name, r.desc, r.is_system, JSON.stringify(r.permissions)],
+            afterRoleProcessed
+          );
+        } else {
+          db.run(
+            "UPDATE roles SET permissions = ?, description = ? WHERE id = ?",
+            [JSON.stringify(r.permissions), r.desc, row.id],
+            afterRoleProcessed
+          );
+        }
+      });
     // Seed default products with full details (gallery, features, specs)
     db.run("DELETE FROM products WHERE id LIKE 'PRD-00%'", (err) => {
       if (err) console.error('Error deleting default products:', err);
-      
       db.run("DELETE FROM product_gallery WHERE product_id LIKE 'PRD-00%'", (err) => {
         if (err) console.error('Error deleting default gallery:', err);
         
@@ -253,6 +317,25 @@ function initializeDatabase() {
           console.log('🖼️ Seeded default product galleries.');
         });
       });
+    });
+
+    // Seed default coupons if none exist
+    db.get("SELECT COUNT(*) as count FROM coupons", (err, row: any) => {
+      if (row && row.count === 0) {
+        const defaultCoupons = [
+          { code: 'SUMMER20', type: 'percentage', value: 20, expiry: '2026-08-31', status: 'active' },
+          { code: 'TECH10', type: 'percentage', value: 10, expiry: '2026-07-15', status: 'active' },
+          { code: 'FREESHIP', type: 'fixed', value: 150, expiry: '2026-12-31', status: 'active' },
+          { code: 'WELCOME50', type: 'fixed', value: 50, expiry: '2026-06-30', status: 'expired' }
+        ];
+
+        defaultCoupons.forEach(c => {
+          db.run(
+            "INSERT INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, ?, ?)",
+            [c.code, c.type, c.value, c.expiry, c.status]
+          );
+        });
+      }
     });
 
     // Seed default customer accounts and addresses if customers table is empty

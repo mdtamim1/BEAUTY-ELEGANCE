@@ -13,7 +13,7 @@ export const login = (req: Request, res: Response) => {
   }
 
   db.get(
-    `SELECT e.*, r.name as role_name 
+    `SELECT e.*, r.name as role_name, r.permissions as role_permissions 
      FROM employees e 
      JOIN roles r ON e.role_id = r.id 
      WHERE e.email = ?`,
@@ -38,6 +38,13 @@ export const login = (req: Request, res: Response) => {
           return res.status(401).json({ status: 'error', message: 'Invalid email or password' });
         }
 
+        let permissions: string[] = [];
+        if (employee.role_permissions) {
+          try {
+            permissions = JSON.parse(employee.role_permissions);
+          } catch (e) {}
+        }
+
         // Generate JWT token
         const token = jwt.sign(
           {
@@ -45,6 +52,7 @@ export const login = (req: Request, res: Response) => {
             email: employee.email,
             role: employee.role_name,
             name: `${employee.first_name} ${employee.last_name}`,
+            permissions,
           },
           JWT_SECRET,
           { expiresIn: '8h' }
@@ -69,6 +77,7 @@ export const login = (req: Request, res: Response) => {
               role: employee.role_name,
               department: employee.department,
               avatar: employee.first_name.substring(0, 1) + employee.last_name.substring(0, 1),
+              permissions,
             },
           },
         });

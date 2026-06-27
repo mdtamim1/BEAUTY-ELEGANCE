@@ -7,6 +7,7 @@ export interface UserProfile {
   role: string;
   department?: string;
   avatar?: string;
+  permissions?: string[];
 }
 
 interface AuthContextType {

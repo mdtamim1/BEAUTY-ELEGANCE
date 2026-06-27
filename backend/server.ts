@@ -27,6 +27,9 @@ import dashboardRoutes from './routes/dashboard';
 import settingsRoutes from './routes/settings';
 import chatRoutes from './routes/chats';
 import aiRoutes from './routes/ai';
+import employeeRoutes from './routes/employees';
+import marketingRoutes from './routes/marketing';
+import analyticsRoutes from './routes/analytics';
 import { initChatSocket } from './websocket/chatSocket';
 
 dotenv.config();
@@ -141,6 +144,9 @@ app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/chats', chatRoutes);
 app.use('/api/v1/ai', aiRoutes);
+app.use('/api/v1/employees', employeeRoutes);
+app.use('/api/v1/marketing', marketingRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
 
 // Fallback stubs for other routes to prevent breaks
 app.use('/api/v1/customers', customerRoutes);

@@ -3,7 +3,7 @@ import { useOutletContext, useNavigate, Link, useLocation } from 'react-router-d
 import { Shield, Truck, RotateCcw, Headphones, User, MapPin, Package, CreditCard, CheckCircle, Zap, ArrowRight, Minus, Plus } from 'lucide-react';
 import { storeProducts } from './data';
 import { addOrder } from '../mock/data';
-import { sendOrderToBackend } from '../services/api';
+import { sendOrderToBackend, validateCouponCode } from '../services/api';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import './storefront-checkout.css';
@@ -20,7 +20,7 @@ export default function Checkout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [config] = useStorefrontConfig();
-  const { customer, updateCustomerPhone, updateCustomerProfile } = useCustomerAuth();
+  const { customer, updateCustomerPhone, updateCustomerProfile, addCustomerAddress } = useCustomerAuth();
   
   const buyNowProduct = location.state?.product as typeof storeProducts[0] | undefined;
   const [buyNowQty, setBuyNowQty] = useState<number>(location.state?.quantity as number || 1);
@@ -36,16 +36,60 @@ export default function Checkout() {
   const [customerNote, setCustomerNote] = useState('');
   const [shippingLocation, setShippingLocation] = useState<'dhaka' | 'outside'>('dhaka');
   const [isSuccess, setIsSuccess] = useState(false);
-  const [selectedAddressId, setSelectedAddressId] = useState<string>('');
+  const [selectedAddressId, setSelectedAddressId] = useState<string | number>('');
+  const [saveAddress, setSaveAddress] = useState(true);
+  
+  // Coupon states
+  const [promoCodeInput, setPromoCodeInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
+  const [couponError, setCouponError] = useState('');
+  const [couponSuccess, setCouponSuccess] = useState('');
+  const [isValidating, setIsValidating] = useState(false);
   
   const [nameEdited, setNameEdited] = useState(false);
   const [phoneEdited, setPhoneEdited] = useState(false);
   const [addressEdited, setAddressEdited] = useState(false);
+
+  const handleApplyCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCouponError('');
+    setCouponSuccess('');
+    
+    if (!promoCodeInput.trim()) return;
+    
+    setIsValidating(true);
+    const res = await validateCouponCode(promoCodeInput.trim());
+    setIsValidating(false);
+    
+    if (res.status === 'success') {
+      setAppliedCoupon(res.data);
+      setCouponSuccess(`কুপন কোড '${res.data.code}' সফলভাবে যুক্ত হয়েছে!`);
+    } else {
+      setCouponError(res.message || 'কুপনটি প্রযোজ্য নয়।');
+      setAppliedCoupon(null);
+    }
+  };
+  
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setPromoCodeInput('');
+    setCouponSuccess('');
+    setCouponError('');
+  };
   
   const deliveryCharge = shippingLocation === 'dhaka' 
     ? config.delivery.insideDhakaPrice 
     : config.delivery.outsideDhakaPrice;
-  const discount = 0;
+
+  let discount = 0;
+  if (appliedCoupon) {
+    if (appliedCoupon.type === 'percentage') {
+      discount = (subtotal * appliedCoupon.value) / 100;
+    } else {
+      discount = appliedCoupon.value;
+    }
+  }
+  
   const total = subtotal + deliveryCharge - discount;
 
   useEffect(() => {
@@ -101,6 +145,24 @@ export default function Checkout() {
       const needsUpdate = !customer.phone || !customer.address || customer.phone !== customerPhone || customer.address !== customerAddress || customer.name !== customerName;
       if (needsUpdate) {
         updateCustomerProfile({ name: customerName, phone: customerPhone, address: customerAddress });
+      }
+
+      // Save address to profile if checked and not a duplicate
+      if (saveAddress) {
+        const isDuplicate = customer.addresses?.some(addr => 
+          addr.name === customerName && 
+          addr.phone === customerPhone && 
+          addr.address === customerAddress
+        );
+        if (!isDuplicate) {
+          addCustomerAddress({
+            label: 'Shipping Address',
+            name: customerName,
+            phone: customerPhone,
+            address: customerAddress,
+            isDefault: !customer.addresses || customer.addresses.length === 0
+          });
+        }
       }
     }
 
@@ -207,6 +269,40 @@ export default function Checkout() {
             ))}
           </div>
 
+          {/* Coupon / Promo Code Form */}
+          <div style={{ padding: '16px', background: 'var(--sf-bg-secondary, #fafafa)', borderTop: '1px dashed var(--border-secondary)', borderBottom: '1px dashed var(--border-secondary)', margin: '0 0 16px 0' }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--sf-text-secondary)', marginBottom: '8px' }}>প্রোমো কোড (Promo Code)</div>
+            {appliedCoupon ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '8px 12px', borderRadius: '6px' }}>
+                <span style={{ fontSize: '0.82rem', color: '#16a34a', fontWeight: 600 }}>
+                  '{appliedCoupon.code}' প্রয়োগ করা হয়েছে ({appliedCoupon.type === 'percentage' ? `${appliedCoupon.value}%` : `৳${appliedCoupon.value}`} ছাড়)
+                </span>
+                <button type="button" onClick={handleRemoveCoupon} style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 700 }}>সরিয়ে ফেলুন</button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  placeholder="কোড লিখুন (যেমন: SUMMER20)"
+                  className="form-input"
+                  style={{ height: '36px', fontSize: '0.8rem', textTransform: 'uppercase', flex: 1 }}
+                  value={promoCodeInput}
+                  onChange={(e) => setPromoCodeInput(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={handleApplyCoupon}
+                  disabled={isValidating}
+                  style={{ height: '36px', padding: '0 16px', background: '#000000', color: '#ffffff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}
+                >
+                  {isValidating ? '...' : 'প্রয়োগ'}
+                </button>
+              </div>
+            )}
+            {couponError && <div style={{ color: '#dc2626', fontSize: '0.75rem', marginTop: '4px', fontWeight: 500 }}>{couponError}</div>}
+            {couponSuccess && <div style={{ color: '#16a34a', fontSize: '0.75rem', marginTop: '4px', fontWeight: 500 }}>{couponSuccess}</div>}
+          </div>
+
           <div className="summary-totals">
             <div className="summary-row">
               <span>পণ্যের মূল্য (Subtotal)</span>
@@ -243,7 +339,7 @@ export default function Checkout() {
               </div>
               <div className="checkout-address-list">
                 {customer.addresses.map((addr) => {
-                  const isSelected = selectedAddressId === addr.id;
+                  const isSelected = String(selectedAddressId) === String(addr.id);
                   return (
                     <div 
                       key={addr.id} 
@@ -288,6 +384,21 @@ export default function Checkout() {
               <label className="form-label">অর্ডার সংক্রান্ত নোট (Optional Note)</label>
               <input type="text" className="form-input" placeholder="অর্ডার সংক্রান্ত অতিরিক্ত তথ্য বা নির্দেশনা" value={customerNote} onChange={(e) => setCustomerNote(e.target.value)} />
             </div>
+
+            {customer && (
+              <div className="form-group full-width" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
+                <input 
+                  type="checkbox" 
+                  id="saveAddressCheckbox" 
+                  checked={saveAddress} 
+                  onChange={(e) => setSaveAddress(e.target.checked)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--sf-accent)' }}
+                />
+                <label htmlFor="saveAddressCheckbox" style={{ cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, color: 'var(--sf-text-secondary)', userSelect: 'none' }}>
+                  ভবিষ্যতে ব্যবহারের জন্য এই ঠিকানাটি সেভ করে রাখুন (Save this address to my profile)
+                </label>
+              </div>
+            )}
           </div>
         </div>
 
