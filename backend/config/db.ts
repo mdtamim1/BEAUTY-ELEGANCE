@@ -287,6 +287,7 @@ function initializeDatabase() {
           );
         }
       });
+    });
     // Seed default products with full details (gallery, features, specs)
     db.run("DELETE FROM products WHERE id LIKE 'PRD-00%'", (err) => {
       if (err) console.error('Error deleting default products:', err);
