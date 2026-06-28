@@ -95,8 +95,8 @@ export const createOrder = (req: Request, res: Response) => {
       `INSERT INTO orders (
         id, customer, email, amount, items, payment_method, store_name, phone, address, 
         courier, city, thana, area, customer_note, shop_note, payment_type, memo_number, 
-        delivery_charge, discount, paid_amount, subtotal
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        delivery_charge, discount, paid_amount, subtotal, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'processing')`,
       [
         id, customer, email, amount, items, paymentMethod, storeName, phone, address,
         courier, city, thana, area, customerNote, shopNote, paymentType, memoNumber,

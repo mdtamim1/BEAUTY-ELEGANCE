@@ -429,7 +429,7 @@ function initializeDatabase() {
         discount REAL DEFAULT 0,
         paid_amount REAL DEFAULT 0,
         subtotal REAL NOT NULL,
-        status TEXT DEFAULT 'pending',
+        status TEXT DEFAULT 'processing',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -716,7 +716,7 @@ function initializeDatabase() {
             discount: 100,
             paid_amount: 0,
             subtotal: 739.99,
-            status: "pending",
+            status: "processing",
             created_at: new Date(Date.now() - 5 * 3600 * 1e3).toISOString()
             // 5 hours ago
           },
@@ -1255,8 +1255,8 @@ var createOrder = (req, res) => {
       `INSERT INTO orders (
         id, customer, email, amount, items, payment_method, store_name, phone, address, 
         courier, city, thana, area, customer_note, shop_note, payment_type, memo_number, 
-        delivery_charge, discount, paid_amount, subtotal
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        delivery_charge, discount, paid_amount, subtotal, status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'processing')`,
       [
         id,
         customer,
