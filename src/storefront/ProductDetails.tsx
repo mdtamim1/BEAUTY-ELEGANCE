@@ -26,7 +26,7 @@ const StarRating = ({ rating }: { rating: number }) => (
 export default function ProductDetails() {
   const { id } = useParams<{ id: string }>();
   const { addToCart, toggleWishlist, wishlist } = useOutletContext<StorefrontContext>();
-  const [config] = useStorefrontConfig();
+  const [config, setConfig] = useStorefrontConfig();
   
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -73,6 +73,77 @@ export default function ProductDetails() {
   const [chatAuthPhone, setChatAuthPhone] = useState('');
   const [chatAuthError, setChatAuthError] = useState('');
   const [chatAuthSuccess, setChatAuthSuccess] = useState('');
+
+  // Review Form states
+  const [reviewerName, setReviewerName] = useState('');
+  const [reviewerRating, setReviewerRating] = useState(5);
+  const [reviewerComment, setReviewerComment] = useState('');
+  const [reviewerImage, setReviewerImage] = useState<string>(''); // Base64 string
+  const [reviewMsg, setReviewMsg] = useState('');
+  const [reviewError, setReviewError] = useState('');
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+
+  const handleReviewSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reviewerName.trim() || !reviewerComment.trim()) {
+      setReviewError('দয়া করে আপনার নাম এবং মতামত সঠিকভাবে লিখুন।');
+      return;
+    }
+
+    const newReview = {
+      id: Date.now(),
+      user: reviewerName.trim(),
+      rating: reviewerRating,
+      date: new Date().toISOString(),
+      comment: reviewerComment.trim(),
+      helpful: 0,
+      image: reviewerImage || undefined
+    };
+
+    // Calculate new stats
+    const updatedReviews = [...(product.customerReviews || []), newReview];
+    const newAverageRating = Number((updatedReviews.reduce((sum, r) => sum + r.rating, 0) / updatedReviews.length).toFixed(1));
+
+    // Update in config.products
+    const updatedProducts = config.products.map((p: any) => {
+      if (String(p.id) === String(product.id)) {
+        return {
+          ...p,
+          customerReviews: updatedReviews,
+          reviews: updatedReviews.length,
+          rating: newAverageRating
+        };
+      }
+      return p;
+    });
+
+    // Save configuration reactively and sync with SQLite
+    setConfig({
+      ...config,
+      products: updatedProducts
+    });
+
+    // Update local state product immediately
+    setProduct((prev: any) => ({
+      ...prev,
+      customerReviews: updatedReviews,
+      reviews: updatedReviews.length,
+      rating: newAverageRating
+    }));
+
+    // Reset Form & Show Success Message
+    setReviewerName('');
+    setReviewerRating(5);
+    setReviewerComment('');
+    setReviewerImage('');
+    setReviewError('');
+    setReviewMsg('আপনার রিভিউটি সফলভাবে সাবমিট করা হয়েছে! ধন্যবাদ।');
+
+    // Dismiss message after 5 seconds
+    setTimeout(() => {
+      setReviewMsg('');
+    }, 5000);
+  };
 
   // Scroll chat to bottom
   useEffect(() => {
@@ -668,23 +739,156 @@ export default function ProductDetails() {
 
           {activeTab === 'reviews' && (
             <div className="pdp-reviews-tab">
-              {product.customerReviews && product.customerReviews.length > 0 ? (
-                product.customerReviews.map((review: any) => (
-                  <div key={review.id} className="pdp-review-card">
-                    <div className="review-header">
-                      <span className="review-user">{review.user}</span>
-                      <span className="review-date">{new Date(review.date).toLocaleDateString()}</span>
+              
+              {/* Existing Reviews List */}
+              <div className="pdp-reviews-list" style={{ marginBottom: '40px' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', marginBottom: '20px' }}>কাস্টমার রিভিউসমূহ ({product.customerReviews?.length || 0})</h3>
+                {product.customerReviews && product.customerReviews.length > 0 ? (
+                  product.customerReviews.map((review: any) => (
+                    <div key={review.id} className="pdp-review-card" style={{ padding: '16px', borderBottom: '1px solid #f1f5f9', marginBottom: '16px' }}>
+                      <div className="review-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <span className="review-user" style={{ fontWeight: 700, color: '#1e293b' }}>{review.user}</span>
+                        <span className="review-date" style={{ fontSize: '0.8rem', color: '#64748b' }}>{new Date(review.date).toLocaleDateString('bn-BD')}</span>
+                      </div>
+                      <StarRating rating={review.rating} />
+                      <p className="review-comment" style={{ margin: '8px 0', color: '#475569', fontSize: '0.92rem', lineHeight: 1.5 }}>{review.comment}</p>
+                      
+                      {/* Review Photo Attachment */}
+                      {review.image && (
+                        <div style={{ marginTop: '12px' }}>
+                          <img 
+                            src={review.image} 
+                            alt="Review attachment" 
+                            onClick={() => setLightboxImage(review.image)}
+                            style={{ maxWidth: '120px', maxHeight: '120px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #e2e8f0', cursor: 'pointer', transition: 'transform 0.2s' }} 
+                            className="hover-scale"
+                          />
+                        </div>
+                      )}
                     </div>
-                    <StarRating rating={review.rating} />
-                    <p className="review-comment">{review.comment}</p>
-                    <div className="review-helpful">
-                      {review.helpful} people found this helpful
+                  ))
+                ) : (
+                  <p style={{ color: '#64748b' }}>এই প্রোডাক্টে এখনও কোনো রিভিউ দেওয়া হয়নি। প্রথম রিভিউটি আপনিই দিন!</p>
+                )}
+              </div>
+
+              {/* Write a Review Form */}
+              <div className="pdp-write-review-form" style={{ background: '#f8fafc', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', marginBottom: '16px' }}>একটি রিভিউ লিখুন</h3>
+                
+                {reviewMsg && (
+                  <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#10b981', padding: '10px 16px', borderRadius: '8px', fontSize: '0.9rem', marginBottom: '16px' }}>
+                    {reviewMsg}
+                  </div>
+                )}
+
+                {reviewError && (
+                  <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444', padding: '10px 16px', borderRadius: '8px', fontSize: '0.9rem', marginBottom: '16px' }}>
+                    {reviewError}
+                  </div>
+                )}
+
+                <form onSubmit={handleReviewSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  
+                  {/* Name Input */}
+                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>আপনার নাম (Your Name)</label>
+                    <input 
+                      type="text" 
+                      placeholder="আপনার নাম লিখুন" 
+                      required 
+                      value={reviewerName} 
+                      onChange={(e) => setReviewerName(e.target.value)} 
+                      style={{ padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.9rem', outline: 'none', background: 'white' }}
+                    />
+                  </div>
+
+                  {/* Rating Selector */}
+                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>রেটিং সিলেক্ট করুন (Rating)</label>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      {[1, 2, 3, 4, 5].map((stars) => (
+                        <button
+                          key={stars}
+                          type="button"
+                          onClick={() => setReviewerRating(stars)}
+                          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                        >
+                          <Star 
+                            size={24} 
+                            fill={stars <= reviewerRating ? '#fbbf24' : 'none'} 
+                            color="#fbbf24" 
+                          />
+                        </button>
+                      ))}
+                      <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#64748b', marginLeft: '8px' }}>
+                        {reviewerRating} / 5
+                      </span>
                     </div>
                   </div>
-                ))
-              ) : (
-                <p>No reviews yet. Be the first to review this product!</p>
-              )}
+
+                  {/* Comment Textarea */}
+                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>মন্তব্য লিখুন (Your Review)</label>
+                    <textarea 
+                      placeholder="এখানে আপনার মতামত লিখুন..." 
+                      required 
+                      rows={4}
+                      value={reviewerComment} 
+                      onChange={(e) => setReviewerComment(e.target.value)} 
+                      style={{ padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.9rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', background: 'white' }}
+                    />
+                  </div>
+
+                  {/* Photo Upload Attachment */}
+                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>প্রোডাক্টের ছবি যোগ করুন (Add Photo - Optional)</label>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setReviewerImage(reader.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }} 
+                      style={{ fontSize: '0.85rem', color: '#64748b' }}
+                    />
+                    
+                    {reviewerImage && (
+                      <div style={{ marginTop: '10px', position: 'relative', display: 'inline-block' }}>
+                        <img 
+                          src={reviewerImage} 
+                          alt="Review attachment preview" 
+                          style={{ maxWidth: '100px', maxHeight: '100px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #cbd5e1' }} 
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setReviewerImage('')}
+                          style={{ position: 'absolute', top: '-6px', right: '-6px', width: '20px', height: '20px', background: 'rgba(239,68,68,0.9)', color: 'white', border: 'none', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold' }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Submit Button */}
+                  <button 
+                    type="submit" 
+                    className="store-btn"
+                    style={{ background: 'var(--sf-accent)', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '30px', fontWeight: 'bold', cursor: 'pointer', marginTop: '8px', alignSelf: 'flex-start' }}
+                  >
+                    রিভিউ সাবমিট করুন
+                  </button>
+
+                </form>
+              </div>
+
             </div>
           )}
         </div>
@@ -1293,6 +1497,32 @@ export default function ProductDetails() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Lightbox Modal for Review Images */}
+      {lightboxImage && (
+        <div 
+          onClick={() => setLightboxImage(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0, 0, 0, 0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            cursor: 'pointer'
+          }}
+        >
+          <img 
+            src={lightboxImage} 
+            alt="Enlarged review attachment" 
+            style={{ maxWidth: '90%', maxHeight: '90%', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)' }} 
+          />
         </div>
       )}
     </div>
