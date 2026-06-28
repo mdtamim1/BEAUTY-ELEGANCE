@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Image, Megaphone, Grid3X3, ShoppingBag, Link2, Columns3,
   Palette, Award, Truck, RotateCcw, Save, Plus, Trash2,
-  ChevronUp, ChevronDown, Edit3, Eye, EyeOff, X, Check
+  ChevronUp, ChevronDown, Edit3, Eye, EyeOff, X, Check, Upload
 } from 'lucide-react';
 import {
   useStorefrontConfig,
@@ -242,12 +242,30 @@ function BannersSection({ config, updateConfig }: SectionProps) {
                       <input className="sfm-input" value={banner.buttonLink} onChange={e => update(banner.id, 'buttonLink', e.target.value)} />
                     </div>
                     <div className="sfm-form-group full-width">
-                      <label className="sfm-label">Custom Image URL (Optional)</label>
-                      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                        <input className="sfm-input" style={{ flex: 1 }} value={banner.image || ''} onChange={e => update(banner.id, 'image', e.target.value)} placeholder="https://example.com/banner-pic.png" />
-                        {banner.image && <img src={banner.image} alt="" className="sfm-image-preview" />}
-                      </div>
-                    </div>
+                       <label className="sfm-label">Custom Image URL (Optional)</label>
+                       <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                         <input className="sfm-input" style={{ flex: 1 }} value={banner.image || ''} onChange={e => update(banner.id, 'image', e.target.value)} placeholder="https://example.com/banner-pic.png" />
+                         <label className="btn btn-secondary" style={{ margin: 0, display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', padding: '8px 16px', height: '38px', boxSizing: 'border-box' }}>
+                           <Upload size={14} /> Upload File
+                           <input 
+                             type="file" 
+                             accept="image/*" 
+                             style={{ display: 'none' }} 
+                             onChange={(e) => {
+                               const file = e.target.files?.[0];
+                               if (file) {
+                                 const reader = new FileReader();
+                                 reader.onloadend = () => {
+                                   update(banner.id, 'image', reader.result as string);
+                                 };
+                                 reader.readAsDataURL(file);
+                               }
+                             }} 
+                           />
+                         </label>
+                         {banner.image && <img src={banner.image} alt="" className="sfm-image-preview" />}
+                       </div>
+                     </div>
                     <div className="sfm-form-group full-width">
                       <label className="sfm-label">Gradient Background CSS</label>
                       <input className="sfm-input" value={banner.gradient} onChange={e => update(banner.id, 'gradient', e.target.value)} />
