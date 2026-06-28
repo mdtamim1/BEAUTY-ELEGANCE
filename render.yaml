@@ -3,7 +3,7 @@ services:
     name: beauty-elegance-admin
     runtime: node
     plan: free
-    buildCommand: npm install --include=dev && npm run build
+    buildCommand: npm install --include=dev && npm rebuild sqlite3 --build-from-source && npm run build
     startCommand: npm run start
     envVars:
       - key: NODE_VERSION
