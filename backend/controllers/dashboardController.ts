@@ -71,7 +71,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       GROUP BY month_str
     `);
 
-    const monthlyRevenueData = [];
+    const monthlyRevenueData: any[] = [];
     for (let i = 5; i >= 0; i--) {
       const dateObj = new Date();
       dateObj.setMonth(dateObj.getMonth() - i);
@@ -96,7 +96,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       GROUP BY date_str
     `);
 
-    const dailyRevenueData = [];
+    const dailyRevenueData: any[] = [];
     for (let i = 29; i >= 0; i--) {
       const dateObj = new Date();
       dateObj.setDate(dateObj.getDate() - i);

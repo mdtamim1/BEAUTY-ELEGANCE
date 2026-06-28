@@ -9,8 +9,8 @@
   "scripts": {
     "dev": "vite",
     "backend": "tsx --watch backend/server.ts",
-    "build": "tsc -b && vite build",
-    "start": "tsx backend/server.ts",
+    "build": "tsc -b && tsc -p tsconfig.backend.json && vite build",
+    "start": "node backend/dist/server.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
