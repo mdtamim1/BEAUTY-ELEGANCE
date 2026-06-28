@@ -3,7 +3,7 @@ import { useOutletContext, Link, useLocation } from 'react-router-dom';
 import { Truck, Shield, RotateCcw, Headphones, Star, Heart, ShoppingCart, Zap,
   Smartphone, Shirt, Home as HomeIcon, Dumbbell, Sparkles, BookOpen,
   Monitor, Camera, Watch, Car, Baby, Flower, Palette, Music, Gamepad, Gift,
-  Grid3X3, ArrowRight, CheckCircle, AlertCircle
+  Grid3X3, ArrowRight, CheckCircle, AlertCircle, X
 } from 'lucide-react';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import { CountdownTimer } from './CollectionPage';
@@ -36,6 +36,7 @@ export default function StorefrontHome() {
   const [config] = useStorefrontConfig();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [showCampaignsModal, setShowCampaignsModal] = useState(false);
   const location = useLocation();
 
   // Newsletter states
@@ -208,45 +209,7 @@ export default function StorefrontHome() {
         </section>
       )}
 
-      {/* ---- Premium Campaign Teaser Banner ---- */}
-      {(() => {
-        if (!activePromoSection || !activePromoSection.timerEndDate) return null;
-        
-        const labelLower = (activePromoSection.label || '').toLowerCase();
-        const promoSlug = (labelLower === 'offers' || labelLower === 'offer')
-          ? 'offers'
-          : (labelLower === 'new arrivals' || labelLower === 'new arrival')
-          ? 'new-arrivals'
-          : (labelLower === 'popular order' || labelLower === 'popular')
-          ? 'popular-order'
-          : activePromoSection.url.split('/').pop()?.replace('#', '') || 'offers';
-
-        return (
-          <section className="store-section teaser-campaign-section">
-            <Link to={`/collection/${promoSlug}`} className="teaser-campaign-link" style={{ textDecoration: 'none' }}>
-              <div className="teaser-campaign-banner">
-                <div className="teaser-campaign-glow" />
-                <div className="teaser-campaign-content">
-                  <div className="teaser-left">
-                    <span className="teaser-badge">⚡ Limited Campaign</span>
-                    <h2 className="teaser-title">{activePromoSection.label} Campaign</h2>
-                    <p className="teaser-subtitle">Explore exclusive products at unmatched prices. Click to shop deals!</p>
-                  </div>
-                  <div className="teaser-right">
-                    <CountdownTimer
-                      startDate={activePromoSection.timerStartDate}
-                      endDate={activePromoSection.timerEndDate}
-                      startLabel={activePromoSection.timerStartLabel}
-                      label={activePromoSection.timerLabel || 'Offer ends in'}
-                      isLarge={true}
-                    />
-                  </div>
-                </div>
-              </div>
-            </Link>
-          </section>
-        );
-      })()}
+      {/* Banners display */}
 
       {/* ---- Categories ---- */}
       <section className="store-section" id="categories" style={{ paddingTop: 0, paddingBottom: '24px' }}>
@@ -291,50 +254,136 @@ export default function StorefrontHome() {
         </div>
       </section>
 
-      {/* ---- Marketing Campaigns Section ---- */}
+      {/* ---- All Campaigns Trigger Button ---- */}
       {activeCampaigns.length > 0 && (
-        <section className="store-section campaign-banner-section" style={{ paddingTop: 0, paddingBottom: '24px' }}>
-          <div className="store-section-header">
-            <div>
-              <h2 className="store-section-title">চলমান অফার ও ক্যাম্পেইন (Active Campaigns)</h2>
-              <p className="store-section-subtitle">আমাদের সেরা ক্যাম্পেইন ও অফারগুলো উপভোগ করুন</p>
+        <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 16px' }}>
+          <button 
+            onClick={() => setShowCampaignsModal(true)} 
+            className="store-btn"
+            style={{ 
+              padding: '14px 28px', 
+              fontSize: '1rem', 
+              fontWeight: 800, 
+              borderRadius: '30px', 
+              background: 'var(--sf-accent)',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer',
+              boxShadow: '0 8px 24px var(--sf-accent-glow)',
+              transition: 'all 0.25s ease'
+            }}
+          >
+            Show Our All Campaigns
+          </button>
+        </div>
+      )}
+
+      {/* ---- Active Campaigns Modal ---- */}
+      {showCampaignsModal && (
+        <div className="modal-overlay" style={{ display: 'flex', zIndex: 1000, background: 'rgba(15, 23, 42, 0.65)' }}>
+          <div className="modal" style={{ maxWidth: '800px', width: '90%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: 'white', borderRadius: '24px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', overflow: 'hidden' }}>
+            <div className="modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="modal-title" style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a' }}>আমাদের ক্যাম্পেইনসমূহ (Active Campaigns)</span>
+              <button onClick={() => setShowCampaignsModal(false)} style={{ color: '#64748b', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '6px' }} title="Close Modal">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="modal-body" style={{ overflowY: 'auto', flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              {activeCampaigns.map((camp) => {
+                // Resolve products associated with this campaign
+                const campProducts = config.products.filter(p => {
+                  if (camp.productIds && Array.isArray(camp.productIds)) {
+                    return camp.productIds.includes(String(p.id));
+                  }
+                  if (camp.productId) {
+                    return String(p.id) === String(camp.productId);
+                  }
+                  return false;
+                });
+
+                return (
+                  <div 
+                    key={camp.id} 
+                    style={{
+                      background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                      borderRadius: '20px',
+                      padding: '24px',
+                      color: 'white',
+                      border: '1px solid rgba(233, 43, 43, 0.2)',
+                      boxShadow: '0 10px 20px rgba(0, 0, 0, 0.15)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}>
+                      <div>
+                        <span style={{ display: 'inline-block', background: 'var(--sf-accent)', color: 'white', fontSize: '0.65rem', fontWeight: 800, padding: '3px 8px', borderRadius: '4px', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>
+                          Campaign Active
+                        </span>
+                        <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, color: 'white' }}>{camp.name}</h3>
+                        <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '4px 0 0 0' }}>
+                          মেয়াদ: {new Date(camp.startDate).toLocaleDateString()} থেকে {new Date(camp.endDate).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div>
+                        <CountdownTimer
+                          startDate={camp.startDate}
+                          endDate={camp.endDate}
+                          label="ক্যাম্পেইন শেষ হতে বাকি"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Associated products list */}
+                    {campProducts.length > 0 ? (
+                      <div style={{ marginTop: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '16px' }}>
+                        <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '12px' }}>ক্যাম্পেইনের পণ্যসমূহ:</h4>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
+                          {campProducts.map((product) => (
+                            <div 
+                              key={product.id} 
+                              style={{
+                                background: 'rgba(255, 255, 255, 0.04)',
+                                borderRadius: '14px',
+                                padding: '12px',
+                                border: '1px solid rgba(255, 255, 255, 0.08)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '8px',
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              <img src={product.image} alt={product.name} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '10px' }} />
+                              <Link 
+                                to={`/product/${product.id}`} 
+                                onClick={() => setShowCampaignsModal(false)}
+                                style={{ fontSize: '0.78rem', fontWeight: 700, color: '#f8fafc', textDecoration: 'none', lineHeight: 1.3, height: '2.6em', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}
+                              >
+                                {product.name}
+                              </Link>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
+                                <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--sf-accent)' }}>৳{product.price}</span>
+                                <button 
+                                  onClick={() => {
+                                    addToCart(product);
+                                    setShowCampaignsModal(false);
+                                  }}
+                                  style={{ background: 'var(--sf-accent)', color: 'white', border: 'none', borderRadius: '6px', padding: '4px 8px', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer' }}
+                                >
+                                  Buy Now
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '16px 0 0 0', fontStyle: 'italic' }}>এই ক্যাম্পেইনের সাথে কোনো পণ্য সংযুক্ত করা নেই।</p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-            {activeCampaigns.map((camp) => (
-              <div 
-                key={camp.id} 
-                className="campaign-card"
-                style={{
-                  background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-                  borderRadius: '16px',
-                  padding: '24px',
-                  color: 'white',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  border: '1px solid rgba(233, 43, 43, 0.2)',
-                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)'
-                }}
-              >
-                <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '120px', height: '120px', background: 'rgba(233, 43, 43, 0.1)', borderRadius: '50%', filter: 'blur(20px)' }} />
-                <div style={{ display: 'inline-block', background: 'var(--sf-accent)', color: 'white', fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '4px', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>
-                  CAMP ACTIVE
-                </div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '8px', lineHeight: 1.3 }}>{camp.name}</h3>
-                <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '20px' }}>
-                  ক্যাম্পেইন চলবে: {new Date(camp.startDate).toLocaleDateString()} থেকে {new Date(camp.endDate).toLocaleDateString()} পর্যন্ত
-                </p>
-                <Link 
-                  to={camp.productId ? `/product/${camp.productId}` : "/collection/all-products"} 
-                  className="store-btn store-btn-white" 
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', padding: '10px 16px', textDecoration: 'none' }}
-                >
-                  ক্যাম্পেইন দেখুন <ArrowRight size={14} />
-                </Link>
-              </div>
-            ))}
-          </div>
-        </section>
+        </div>
       )}
 
       {/* ---- All Products Grid (Shuffled) ---- */}

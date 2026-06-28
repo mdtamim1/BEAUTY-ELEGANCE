@@ -119,6 +119,8 @@ export interface Campaign {
   revenue: number;
   startDate: string;
   endDate: string;
+  productId?: string | null;
+  productIds?: string[];
 }
 
 export interface SecurityEvent {

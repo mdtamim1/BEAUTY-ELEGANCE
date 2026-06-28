@@ -63,7 +63,7 @@ export default function Marketing() {
   const [campType, setCampType] = useState<'email' | 'sms' | 'push' | 'social'>('email');
   const [campMessage, setCampMessage] = useState('');
   const [campTarget, setCampTarget] = useState('All Customers');
-  const [selectedProductId, setSelectedProductId] = useState('');
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
 
   // Form states (Coupon Creation)
   const [coupCode, setCoupCode] = useState('');
@@ -130,7 +130,7 @@ export default function Marketing() {
       revenue: 0,
       startDate: new Date().toISOString().split('T')[0],
       endDate: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0],
-      productId: selectedProductId || null
+      productIds: selectedProductIds
     };
 
     const list = [newCamp, ...campaigns];
@@ -140,7 +140,7 @@ export default function Marketing() {
     // Reset Form
     setCampName('');
     setCampMessage('');
-    setSelectedProductId('');
+    setSelectedProductIds([]);
     setShowCampaignModal(false);
   };
 
@@ -564,13 +564,35 @@ export default function Marketing() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">সংশ্লিষ্ট পণ্য (Associated Product - Optional)</label>
-                  <select className="form-select" value={selectedProductId} onChange={e => setSelectedProductId(e.target.value)}>
-                    <option value="">কোনো পণ্য লিংক করবেন না (No Product Link)</option>
+                  <label className="form-label">সংশ্লিষ্ট পণ্যসমূহ (Associated Products - Select Multiple)</label>
+                  <div style={{
+                    maxHeight: '150px',
+                    overflowY: 'auto',
+                    border: '1.5px solid rgba(99, 102, 241, 0.15)',
+                    borderRadius: '12px',
+                    padding: '10px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    background: 'white'
+                  }}>
                     {products.map(p => (
-                      <option key={p.id} value={p.id}>{p.name} (৳{p.price})</option>
+                      <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedProductIds.includes(String(p.id))}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedProductIds(prev => [...prev, String(p.id)]);
+                            } else {
+                              setSelectedProductIds(prev => prev.filter(id => id !== String(p.id)));
+                            }
+                          }}
+                        />
+                        <span>{p.name} (৳{p.price})</span>
+                      </label>
                     ))}
-                  </select>
+                  </div>
                 </div>
 
                 <div className="form-group">
