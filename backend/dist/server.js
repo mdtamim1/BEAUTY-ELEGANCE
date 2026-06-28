@@ -1158,6 +1158,25 @@ var deleteProduct = (req, res) => {
   });
 };
 var getFacebookFeed = (req, res) => {
+  const escapeXml = (unsafe) => {
+    if (unsafe === null || unsafe === void 0) return "";
+    return String(unsafe).replace(/[&<>'"]/g, (c) => {
+      switch (c) {
+        case "&":
+          return "&amp;";
+        case "<":
+          return "&lt;";
+        case ">":
+          return "&gt;";
+        case "'":
+          return "&apos;";
+        case '"':
+          return "&quot;";
+        default:
+          return c;
+      }
+    });
+  };
   db_default.all(`SELECT * FROM products WHERE published = 1`, [], (err, rows) => {
     if (err) {
       console.error(err);
@@ -1178,54 +1197,7 @@ var getFacebookFeed = (req, res) => {
 `;
     rows.forEach((p) => {
       const rawDesc = p.description || `${p.name} - Premium sports item from AURA Sports.`;
-      const cleanDesc = rawDesc.replace(/<[^>]*>/g, "").replace(/[&<>'"]/g, (c) => {
-        switch (c) {
-          case "&":
-            return "&amp;";
-          case "<":
-            return "&lt;";
-          case ">":
-            return "&gt;";
-          case "'":
-            return "&apos;";
-          case '"':
-            return "&quot;";
-          default:
-            return c;
-        }
-      });
-      const cleanTitle = p.name.replace(/[&<>'"]/g, (c) => {
-        switch (c) {
-          case "&":
-            return "&amp;";
-          case "<":
-            return "&lt;";
-          case ">":
-            return "&gt;";
-          case "'":
-            return "&apos;";
-          case '"':
-            return "&quot;";
-          default:
-            return c;
-        }
-      });
-      const cleanBrand = (p.brand || "AURA Sports").replace(/[&<>'"]/g, (c) => {
-        switch (c) {
-          case "&":
-            return "&amp;";
-          case "<":
-            return "&lt;";
-          case ">":
-            return "&gt;";
-          case "'":
-            return "&apos;";
-          case '"':
-            return "&quot;";
-          default:
-            return c;
-        }
-      });
+      const cleanDesc = rawDesc.replace(/<[^>]*>/g, "");
       let imageLink = p.image || "";
       if (imageLink && !imageLink.startsWith("http")) {
         imageLink = `${domain}${imageLink.startsWith("/") ? "" : "/"}${imageLink}`;
@@ -1235,42 +1207,26 @@ var getFacebookFeed = (req, res) => {
       const priceFormatted = `${p.price} BDT`;
       xml += `    <item>
 `;
-      xml += `      <g:id>${p.id}</g:id>
+      xml += `      <g:id>${escapeXml(p.id)}</g:id>
 `;
-      xml += `      <g:title>${cleanTitle}</g:title>
+      xml += `      <g:title>${escapeXml(p.name)}</g:title>
 `;
-      xml += `      <g:description>${cleanDesc}</g:description>
+      xml += `      <g:description>${escapeXml(cleanDesc)}</g:description>
 `;
-      xml += `      <g:link>${domain}/product/${p.id}</g:link>
+      xml += `      <g:link>${escapeXml(`${domain}/product/${p.id}`)}</g:link>
 `;
-      xml += `      <g:image_link>${imageLink}</g:image_link>
+      xml += `      <g:image_link>${escapeXml(imageLink)}</g:image_link>
 `;
-      xml += `      <g:brand>${cleanBrand}</g:brand>
+      xml += `      <g:brand>${escapeXml(p.brand || "AURA Sports")}</g:brand>
 `;
       xml += `      <g:condition>new</g:condition>
 `;
-      xml += `      <g:availability>${availability}</g:availability>
+      xml += `      <g:availability>${escapeXml(availability)}</g:availability>
 `;
-      xml += `      <g:price>${priceFormatted}</g:price>
+      xml += `      <g:price>${escapeXml(priceFormatted)}</g:price>
 `;
       if (p.category) {
-        const cleanCat = p.category.replace(/[&<>'"]/g, (c) => {
-          switch (c) {
-            case "&":
-              return "&amp;";
-            case "<":
-              return "&lt;";
-            case ">":
-              return "&gt;";
-            case "'":
-              return "&apos;";
-            case '"':
-              return "&quot;";
-            default:
-              return c;
-          }
-        });
-        xml += `      <g:google_product_category>${cleanCat}</g:google_product_category>
+        xml += `      <g:google_product_category>${escapeXml(p.category)}</g:google_product_category>
 `;
       }
       xml += `    </item>
