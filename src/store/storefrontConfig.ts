@@ -534,6 +534,41 @@ function saveConfig(config: StorefrontConfig): void {
 }
 
 // ============================================================
+// BACKEND SYNC AND UTILITIES
+// ============================================================
+
+const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+const API_BASE = isLocalDev
+  ? `${window.location.protocol}//${window.location.hostname}:5000/api/v1`
+  : 'https://beauty-elegance-admin.onrender.com/api/v1';
+
+const getAuthHeaders = (): Record<string, string> => {
+  const token = localStorage.getItem('admin_token');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+};
+
+async function syncWithBackend() {
+  try {
+    const response = await fetch(`${API_BASE}/settings/storefront`);
+    if (response.ok) {
+      const res = await response.json();
+      if (res.status === 'success' && res.data) {
+        const serverConfig = res.data;
+        const localData = localStorage.getItem(STORAGE_KEY);
+        if (JSON.stringify(serverConfig) !== localData) {
+          _config = serverConfig;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(serverConfig));
+          _listeners.forEach(fn => fn());
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Failed to sync storefront config from backend:", err);
+  }
+}
+
+// ============================================================
 // PUBLIC API
 // ============================================================
 
@@ -545,6 +580,14 @@ export function getStorefrontConfig(): StorefrontConfig {
 /** Update the full config */
 export function setStorefrontConfig(config: StorefrontConfig): void {
   saveConfig(config);
+  fetch(`${API_BASE}/settings/storefront`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify(config),
+  }).catch(e => console.warn("Failed to save config to backend:", e));
 }
 
 /** Update a specific section of the config */
@@ -553,7 +596,16 @@ export function updateStorefrontConfig<K extends keyof StorefrontConfig>(
   value: StorefrontConfig[K]
 ): void {
   const config = loadConfig();
-  saveConfig({ ...config, [key]: value });
+  const newConfig = { ...config, [key]: value };
+  saveConfig(newConfig);
+  fetch(`${API_BASE}/settings/storefront`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify(newConfig),
+  }).catch(e => console.warn("Failed to save config to backend:", e));
 }
 
 /** Subscribe to config changes. Returns unsubscribe function. */
@@ -569,6 +621,14 @@ export function resetStorefrontConfig(): void {
   _config = null;
   localStorage.removeItem(STORAGE_KEY);
   _listeners.forEach(fn => fn());
+  fetch(`${API_BASE}/settings/storefront`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify(getDefaultConfig()),
+  }).catch(e => console.warn("Failed to reset config on backend:", e));
 }
 
 // ============================================================
@@ -582,6 +642,7 @@ export function useStorefrontConfig(): [StorefrontConfig, (config: StorefrontCon
   const [config, setConfigState] = useStateReact<StorefrontConfig>(() => loadConfig());
 
   useEffectReact(() => {
+    syncWithBackend();
     const unsubscribe = subscribeToConfig(() => {
       setConfigState({ ...loadConfig() });
     });
@@ -590,6 +651,14 @@ export function useStorefrontConfig(): [StorefrontConfig, (config: StorefrontCon
 
   const setConfig = (newConfig: StorefrontConfig) => {
     saveConfig(newConfig);
+    fetch(`${API_BASE}/settings/storefront`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(newConfig),
+    }).catch(e => console.warn("Failed to save config to backend:", e));
   };
 
   return [config, setConfig];

@@ -2187,9 +2187,46 @@ var updateSettings = (req, res) => {
     });
   });
 };
+var getStorefrontSettings = (req, res) => {
+  db_default.get(
+    "SELECT setting_value FROM system_settings WHERE setting_key = 'storefront_config'",
+    [],
+    (err, row) => {
+      if (err) {
+        console.error("Failed to load storefront settings:", err);
+        return res.status(500).json({ status: "error", message: "Database error" });
+      }
+      if (!row || !row.setting_value) {
+        return res.json({ status: "success", data: null });
+      }
+      try {
+        const data = JSON.parse(row.setting_value);
+        res.json({ status: "success", data });
+      } catch (e) {
+        res.status(500).json({ status: "error", message: "Failed to parse storefront settings" });
+      }
+    }
+  );
+};
+var updateStorefrontSettings = (req, res) => {
+  const configString = JSON.stringify(req.body);
+  db_default.run(
+    "INSERT OR REPLACE INTO system_settings (setting_key, setting_value, group_name, is_public) VALUES ('storefront_config', ?, 'storefront', 1)",
+    [configString],
+    (err) => {
+      if (err) {
+        console.error("Failed to update storefront settings:", err);
+        return res.status(500).json({ status: "error", message: "Database error" });
+      }
+      res.json({ status: "success", message: "Storefront settings updated successfully" });
+    }
+  );
+};
 
 // backend/routes/settings.ts
 var router6 = Router6();
+router6.get("/storefront", getStorefrontSettings);
+router6.put("/storefront", authenticateToken, requireRole(["Super Admin", "Admin"]), updateStorefrontSettings);
 router6.get("/", authenticateToken, requireRole(["Super Admin", "Admin"]), getSettings);
 router6.put("/", authenticateToken, requireRole(["Super Admin", "Admin"]), updateSettings);
 var settings_default = router6;

@@ -121,3 +121,41 @@ export const updateSettings = (req: Request, res: Response) => {
     });
   });
 };
+
+export const getStorefrontSettings = (req: Request, res: Response) => {
+  db.get(
+    "SELECT setting_value FROM system_settings WHERE setting_key = 'storefront_config'",
+    [],
+    (err, row: any) => {
+      if (err) {
+        console.error('Failed to load storefront settings:', err);
+        return res.status(500).json({ status: 'error', message: 'Database error' });
+      }
+      if (!row || !row.setting_value) {
+        return res.json({ status: 'success', data: null });
+      }
+      try {
+        const data = JSON.parse(row.setting_value);
+        res.json({ status: 'success', data });
+      } catch (e) {
+        res.status(500).json({ status: 'error', message: 'Failed to parse storefront settings' });
+      }
+    }
+  );
+};
+
+export const updateStorefrontSettings = (req: Request, res: Response) => {
+  const configString = JSON.stringify(req.body);
+  db.run(
+    "INSERT OR REPLACE INTO system_settings (setting_key, setting_value, group_name, is_public) VALUES ('storefront_config', ?, 'storefront', 1)",
+    [configString],
+    (err) => {
+      if (err) {
+        console.error('Failed to update storefront settings:', err);
+        return res.status(500).json({ status: 'error', message: 'Database error' });
+      }
+      res.json({ status: 'success', message: 'Storefront settings updated successfully' });
+    }
+  );
+};
+
