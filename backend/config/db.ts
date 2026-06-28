@@ -587,8 +587,8 @@ function initializeDatabase() {
             });
           });
 
-          stmtOrder.close();
-          stmtItem.close(() => {
+          stmtOrder.finalize();
+          stmtItem.finalize(() => {
             console.log('🌱 Seeded default orders and order items into database.');
           });
         });
@@ -618,7 +618,7 @@ function initializeDatabase() {
           defaultSettings.forEach(s => {
             stmt.run([s.key, s.val, s.group]);
           });
-          stmt.close(() => {
+          stmt.finalize(() => {
             console.log('🌱 Seeded default system settings into database.');
           });
         });

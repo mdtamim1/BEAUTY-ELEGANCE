@@ -120,7 +120,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       GROUP BY hour_str
     `);
 
-    const hourlySalesData = [];
+    const hourlySalesData: any[] = [];
     const hourSlots = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'];
     const slotCounts = { '00:00': 0, '04:00': 0, '08:00': 0, '12:00': 0, '16:00': 0, '20:00': 0 };
 

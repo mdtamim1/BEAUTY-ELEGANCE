@@ -53,7 +53,7 @@ export const createCoupon = (req: Request, res: Response) => {
 export const deleteCoupon = (req: Request, res: Response) => {
   const { code } = req.params;
 
-  db.run(`DELETE FROM coupons WHERE code = ?`, [code.toUpperCase()], function (err) {
+  db.run(`DELETE FROM coupons WHERE code = ?`, [String(code).toUpperCase()], function (err) {
     if (err) {
       console.error('Failed to delete coupon:', err);
       return res.status(500).json({ status: 'error', message: 'Database error' });
@@ -70,7 +70,7 @@ export const validateCoupon = (req: Request, res: Response) => {
     return res.status(400).json({ status: 'error', message: 'Coupon code is required' });
   }
 
-  db.get(`SELECT * FROM coupons WHERE code = ?`, [code.trim().toUpperCase()], (err, coupon: any) => {
+  db.get(`SELECT * FROM coupons WHERE code = ?`, [String(code).trim().toUpperCase()], (err, coupon: any) => {
     if (err) {
       return res.status(500).json({ status: 'error', message: 'Database error' });
     }
