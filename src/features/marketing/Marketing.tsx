@@ -599,13 +599,14 @@ export default function Marketing() {
                   <div style={{
                     maxHeight: '150px',
                     overflowY: 'auto',
-                    border: '1.5px solid rgba(99, 102, 241, 0.15)',
+                    border: '1.5px solid rgba(255, 255, 255, 0.1)',
                     borderRadius: '12px',
                     padding: '10px',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '8px',
-                    background: 'white'
+                    background: 'rgba(15, 23, 42, 0.6)',
+                    color: '#e2e8f0'
                   }}>
                     {products.map(p => (
                       <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
