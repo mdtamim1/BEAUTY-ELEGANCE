@@ -3,7 +3,7 @@ import { useParams, Link, useOutletContext } from 'react-router-dom';
 import { ShoppingCart, Heart, Share2, Star, CheckCircle, Shield, Truck, RotateCcw, ChevronRight, Smartphone, Phone, MessageCircle, X, User, MapPin, Package, CreditCard, ArrowRight, Minus, Plus, Headphones, Store, Send } from 'lucide-react';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import { addOrder } from '../mock/data';
-import { sendOrderToBackend, fetchProductByIdFromBackend, fetchChatHistory } from '../services/api';
+import { sendOrderToBackend, fetchProductByIdFromBackend, fetchChatHistory, validateCouponCode } from '../services/api';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import './storefront-pdp.css';
 import './storefront-checkout.css';
@@ -49,6 +49,13 @@ export default function ProductDetails() {
   const [nameEdited, setNameEdited] = useState(false);
   const [phoneEdited, setPhoneEdited] = useState(false);
   const [addressEdited, setAddressEdited] = useState(false);
+
+  // Coupon states
+  const [promoCodeInput, setPromoCodeInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
+  const [couponError, setCouponError] = useState('');
+  const [couponSuccess, setCouponSuccess] = useState('');
+  const [isValidating, setIsValidating] = useState(false);
 
   // Chat Drawer State
   const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
@@ -309,7 +316,16 @@ export default function ProductDetails() {
       ? config.delivery.insideDhakaPrice 
       : config.delivery.outsideDhakaPrice;
     const subtotal = product.price * buyNowQty;
-    const discount = 0;
+    
+    let discount = 0;
+    if (appliedCoupon) {
+      if (appliedCoupon.type === 'percentage') {
+        discount = (subtotal * appliedCoupon.value) / 100;
+      } else {
+        discount = appliedCoupon.value;
+      }
+    }
+    
     const total = subtotal + deliveryCharge - discount;
 
     const orderData = {
@@ -364,6 +380,10 @@ export default function ProductDetails() {
     setNameEdited(false);
     setPhoneEdited(false);
     setAddressEdited(false);
+    setPromoCodeInput('');
+    setAppliedCoupon(null);
+    setCouponSuccess('');
+    setCouponError('');
   };
 
   // Auto-populate checkout details when modal opens or customer loads
@@ -478,7 +498,7 @@ export default function ProductDetails() {
             <img src={activeImage} alt={product.name} className="pdp-main-image" />
             {product.badge && (
               <span className={`pdp-badge ${product.badge}`}>
-                {product.badge === 'sale' ? `${Math.round((1 - product.price / (product.originalPrice || product.price)) * 100)}% OFF` : 'NEW'}
+                {product.badge === 'sale' ? `Sale! -${Math.round((1 - product.price / (product.originalPrice || product.price)) * 100)}%` : 'NEW'}
               </span>
             )}
           </div>
@@ -655,7 +675,7 @@ export default function ProductDetails() {
                     <img src={relatedProduct.image} alt={relatedProduct.name} className="product-card-image" />
                     {relatedProduct.badge && (
                       <span className={`product-card-badge ${relatedProduct.badge}`}>
-                        {relatedProduct.badge === 'sale' ? `${Math.round((1 - relatedProduct.price / (relatedProduct.originalPrice || relatedProduct.price)) * 100)}% OFF` : 'New'}
+                        {relatedProduct.badge === 'sale' ? `Sale! -${Math.round((1 - relatedProduct.price / (relatedProduct.originalPrice || relatedProduct.price)) * 100)}%` : 'New'}
                       </span>
                     )}
                   </div>
@@ -717,31 +737,94 @@ export default function ProductDetails() {
                       </div>
                     </div>
 
-                    <div className="pdp-checkout-totals">
-                      <div className="pdp-checkout-row">
-                        <span>পণ্যের মূল্য (Subtotal)</span>
-                        <span>৳{(product.price * buyNowQty).toFixed(2)}</span>
-                      </div>
-                      <div className="pdp-checkout-row">
-                        <span>ডেলিভারি চার্জ (Shipping)</span>
-                        <span>
-                          ৳{(shippingLocation === 'dhaka' 
-                            ? config.delivery.insideDhakaPrice 
-                            : config.delivery.outsideDhakaPrice).toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="pdp-checkout-row total">
-                        <span>সর্বমোট (Total)</span>
-                        <span>
-                          ৳{(
-                            product.price * buyNowQty + 
-                            (shippingLocation === 'dhaka' 
-                              ? config.delivery.insideDhakaPrice 
-                              : config.delivery.outsideDhakaPrice)
-                          ).toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
+                    {(() => {
+                      const subtotal = product.price * buyNowQty;
+                      const deliveryCharge = shippingLocation === 'dhaka' 
+                        ? config.delivery.insideDhakaPrice 
+                        : config.delivery.outsideDhakaPrice;
+                      let discount = 0;
+                      if (appliedCoupon) {
+                        if (appliedCoupon.type === 'percentage') {
+                          discount = (subtotal * appliedCoupon.value) / 100;
+                        } else {
+                          discount = appliedCoupon.value;
+                        }
+                      }
+                      const checkoutTotal = subtotal + deliveryCharge - discount;
+
+                      return (
+                        <>
+                          <div className="pdp-checkout-totals">
+                            <div className="pdp-checkout-row">
+                              <span>পণ্যের মূল্য (Subtotal)</span>
+                              <span>৳{subtotal.toFixed(2)}</span>
+                            </div>
+                            <div className="pdp-checkout-row">
+                              <span>ডেলিভারি চার্জ (Shipping)</span>
+                              <span>৳{deliveryCharge.toFixed(2)}</span>
+                            </div>
+                            {discount > 0 && (
+                              <div className="pdp-checkout-row" style={{ color: '#16a34a', fontWeight: 600 }}>
+                                <span>ছাড় (Discount)</span>
+                                <span>-৳{discount.toFixed(2)}</span>
+                              </div>
+                            )}
+                            <div className="pdp-checkout-row total">
+                              <span>সর্বমোট (Total)</span>
+                              <span>৳{checkoutTotal.toFixed(2)}</span>
+                            </div>
+                          </div>
+
+                          {/* Coupon / Promo Code Form */}
+                          <div style={{ padding: '12px 14px', background: '#fafafa', borderTop: '1px dashed #e5e5e5', borderBottom: '1px dashed #e5e5e5', margin: '12px 0' }}>
+                            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--sf-text-secondary)', marginBottom: '8px' }}>প্রোমো কোড (Promo Code)</div>
+                            {appliedCoupon ? (
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '6px 10px', borderRadius: '6px' }}>
+                                <span style={{ fontSize: '0.78rem', color: '#16a34a', fontWeight: 600 }}>
+                                  '{appliedCoupon.code}' প্রয়োগ করা হয়েছে ({appliedCoupon.type === 'percentage' ? `${appliedCoupon.value}%` : `৳${appliedCoupon.value}`} ছাড়)
+                                </span>
+                                <button type="button" onClick={() => { setAppliedCoupon(null); setPromoCodeInput(''); setCouponSuccess(''); setCouponError(''); }} style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700 }}>সরিয়ে ফেলুন</button>
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <input
+                                  type="text"
+                                  placeholder="কোড লিখুন (যেমন: SUMMER20)"
+                                  className="pdp-checkout-input"
+                                  style={{ height: '36px', fontSize: '0.8rem', textTransform: 'uppercase', flex: 1, padding: '0 10px', backgroundColor: '#ffffff', color: '#0f172a' }}
+                                  value={promoCodeInput}
+                                  onChange={(e) => setPromoCodeInput(e.target.value)}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    setCouponError('');
+                                    setCouponSuccess('');
+                                    if (!promoCodeInput.trim()) return;
+                                    setIsValidating(true);
+                                    const res = await validateCouponCode(promoCodeInput.trim());
+                                    setIsValidating(false);
+                                    if (res.status === 'success') {
+                                      setAppliedCoupon(res.data);
+                                      setCouponSuccess(`কুপন কোড '${res.data.code}' সফলভাবে যুক্ত হয়েছে!`);
+                                    } else {
+                                      setCouponError(res.message || 'কুপনটি প্রযোজ্য নয়।');
+                                      setAppliedCoupon(null);
+                                    }
+                                  }}
+                                  disabled={isValidating}
+                                  style={{ height: '36px', padding: '0 12px', background: '#000000', color: '#ffffff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}
+                                >
+                                  {isValidating ? '...' : 'প্রয়োগ'}
+                                </button>
+                              </div>
+                            )}
+                            {couponError && <div style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '6px' }}>{couponError}</div>}
+                            {couponSuccess && <div style={{ color: '#16a34a', fontSize: '0.72rem', marginTop: '6px' }}>{couponSuccess}</div>}
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
 
                   {/* Step 2: Customer details */}

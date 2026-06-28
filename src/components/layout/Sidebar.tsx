@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, Link } from 'react-router-dom';
 import {
   LayoutDashboard, BarChart3, Users, ShoppingCart, Package, Store,
   Megaphone, UserCog, DollarSign, Shield, Settings, Brain,
@@ -42,6 +42,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       items: [
         { id: 'orders', label: 'Orders', icon: ShoppingCart, path: '/admin/orders', badge: ordersCount > 0 ? String(ordersCount) : '', badgeType: 'warning' },
         { id: 'products', label: 'Products', icon: Package, path: '/admin/products', badge: '', badgeType: '' },
+        { id: 'customers', label: 'User Accounts', icon: Users, path: '/admin/customers', badge: '', badgeType: '' },
         { id: 'storefront', label: 'Storefront', icon: Store, path: '/admin/storefront-manager', badge: 'New', badgeType: 'success' },
         { id: 'chats', label: 'Inbox', icon: MessageSquare, path: '/admin/chats', badge: unreadChatsCount > 0 ? String(unreadChatsCount) : '', badgeType: 'danger' },
       ],
@@ -133,17 +134,19 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </nav>
 
       <div className="sidebar-footer">
-        <div className="sidebar-user">
-          <div className="sidebar-user-avatar">
-            {user?.avatar || (user?.name ? user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'SA')}
-          </div>
-          {!collapsed && (
-            <div className="sidebar-user-info">
-              <div className="sidebar-user-name">{user?.name || 'Super Admin'}</div>
-              <div className="sidebar-user-role">{user?.role || 'Full Access'}</div>
+        <Link to="/admin/employees" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', width: '100%' }}>
+          <div className="sidebar-user" style={{ width: '100%' }}>
+            <div className="sidebar-user-avatar">
+              {user?.avatar || (user?.name ? user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'SA')}
             </div>
-          )}
-        </div>
+            {!collapsed && (
+              <div className="sidebar-user-info">
+                <div className="sidebar-user-name">{user?.name || 'Super Admin'}</div>
+                <div className="sidebar-user-role">{user?.role || 'Full Access'}</div>
+              </div>
+            )}
+          </div>
+        </Link>
       </div>
     </aside>
   );

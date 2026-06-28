@@ -20,6 +20,7 @@ import SystemSettings from './features/system/SystemSettings';
 import AICenter from './features/ai/AICenter';
 import StorefrontManager from './features/storefront-manager/StorefrontManager';
 import RegisterEmployee from './features/employees/RegisterEmployee';
+import Customers from './features/customers/Customers';
 
 // Storefront (Customer-facing)
 import StorefrontLayout from './storefront/StorefrontLayout';
@@ -110,6 +111,7 @@ function AdminLayout() {
             <Route path="ai" element={<AICenter />} />
             <Route path="storefront-manager" element={<StorefrontManager />} />
             <Route path="chats" element={<Inbox />} />
+            <Route path="customers" element={<Customers />} />
           </Routes>
         </main>
       </div>

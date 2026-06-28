@@ -77,39 +77,46 @@ export const updateSettings = (req: Request, res: Response) => {
       VALUES (?, ?)
     `);
 
+    const keys = Object.keys(settingsData).filter(k => keyMapToSnake[k]);
+    if (keys.length === 0) {
+      db.run('COMMIT');
+      return res.json({ status: 'success', message: 'System settings updated successfully (no changes)' });
+    }
+
+    let completed = 0;
     let hasError = false;
 
-    Object.keys(settingsData).forEach(camelKey => {
+    keys.forEach(camelKey => {
       const snakeKey = keyMapToSnake[camelKey];
-      if (snakeKey) {
-        let val = settingsData[camelKey];
-        if (typeof val === 'boolean') {
-          val = val ? '1' : '0';
-        } else {
-          val = String(val);
-        }
-
-        stmt.run([snakeKey, val], (err) => {
-          if (err) {
-            console.error(`Failed to update setting key ${snakeKey}:`, err);
-            hasError = true;
-          }
-        });
-      }
-    });
-
-    stmt.finalize((err) => {
-      if (err || hasError) {
-        db.run('ROLLBACK');
-        return res.status(500).json({ status: 'error', message: 'Failed to update system settings' });
+      let val = settingsData[camelKey];
+      if (typeof val === 'boolean') {
+        val = val ? '1' : '0';
+      } else {
+        val = String(val);
       }
 
-      db.run('COMMIT', (err) => {
+      stmt.run([snakeKey, val], (err) => {
         if (err) {
-          db.run('ROLLBACK');
-          return res.status(500).json({ status: 'error', message: 'Failed to commit settings update' });
+          console.error(`Failed to update setting key ${snakeKey}:`, err);
+          hasError = true;
         }
-        res.json({ status: 'success', message: 'System settings updated successfully' });
+        completed++;
+        if (completed === keys.length) {
+          stmt.finalize((finalErr) => {
+            if (finalErr || hasError) {
+              db.run('ROLLBACK');
+              return res.status(500).json({ status: 'error', message: 'Failed to update system settings' });
+            }
+
+            db.run('COMMIT', (commitErr) => {
+              if (commitErr) {
+                db.run('ROLLBACK');
+                return res.status(500).json({ status: 'error', message: 'Failed to commit settings update' });
+              }
+              res.json({ status: 'success', message: 'System settings updated successfully' });
+            });
+          });
+        }
       });
     });
   });

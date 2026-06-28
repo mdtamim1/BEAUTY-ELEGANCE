@@ -44,6 +44,23 @@ export default function StorefrontHome() {
   const [subError, setSubError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Load active campaigns from localStorage
+  const [activeCampaigns, setActiveCampaigns] = useState<any[]>([]);
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('campaignList');
+      if (stored) {
+        const list = JSON.parse(stored);
+        if (Array.isArray(list)) {
+          const active = list.filter((c: any) => c.status === 'active');
+          setActiveCampaigns(active);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubMsg('');
@@ -274,6 +291,52 @@ export default function StorefrontHome() {
         </div>
       </section>
 
+      {/* ---- Marketing Campaigns Section ---- */}
+      {activeCampaigns.length > 0 && (
+        <section className="store-section campaign-banner-section" style={{ paddingTop: 0, paddingBottom: '24px' }}>
+          <div className="store-section-header">
+            <div>
+              <h2 className="store-section-title">চলমান অফার ও ক্যাম্পেইন (Active Campaigns)</h2>
+              <p className="store-section-subtitle">আমাদের সেরা ক্যাম্পেইন ও অফারগুলো উপভোগ করুন</p>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+            {activeCampaigns.map((camp) => (
+              <div 
+                key={camp.id} 
+                className="campaign-card"
+                style={{
+                  background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  color: 'white',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  border: '1px solid rgba(233, 43, 43, 0.2)',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)'
+                }}
+              >
+                <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '120px', height: '120px', background: 'rgba(233, 43, 43, 0.1)', borderRadius: '50%', filter: 'blur(20px)' }} />
+                <div style={{ display: 'inline-block', background: 'var(--sf-accent)', color: 'white', fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '4px', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.05em' }}>
+                  CAMP ACTIVE
+                </div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '8px', lineHeight: 1.3 }}>{camp.name}</h3>
+                <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginBottom: '20px' }}>
+                  ক্যাম্পেইন চলবে: {new Date(camp.startDate).toLocaleDateString()} থেকে {new Date(camp.endDate).toLocaleDateString()} পর্যন্ত
+                </p>
+                <Link 
+                  to={camp.productId ? `/product/${camp.productId}` : "/collection/all-products"} 
+                  className="store-btn store-btn-white" 
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', padding: '10px 16px', textDecoration: 'none' }}
+                >
+                  ক্যাম্পেইন দেখুন <ArrowRight size={14} />
+                </Link>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* ---- All Products Grid (Shuffled) ---- */}
       <section className="store-section" id="all-products" style={{ paddingTop: 0 }}>
         <div className="store-section-header">
@@ -316,7 +379,7 @@ export default function StorefrontHome() {
                       <img src={product.image} alt={product.name} className="product-card-image" />
                       {product.badge && (
                         <span className={`product-card-badge ${product.badge}`}>
-                          {product.badge === 'sale' ? `${Math.round((1 - product.price / (product.originalPrice || product.price)) * 100)}% OFF` : 'New'}
+                          {product.badge === 'sale' ? `Sale! -${Math.round((1 - product.price / (product.originalPrice || product.price)) * 100)}%` : 'New'}
                         </span>
                       )}
                       {product.originalPrice && product.originalPrice > product.price && (

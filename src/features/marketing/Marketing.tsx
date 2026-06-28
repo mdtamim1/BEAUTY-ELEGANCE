@@ -6,7 +6,8 @@ import {
   createCoupon, 
   deleteCoupon, 
   fetchSubscribers, 
-  deleteSubscriber 
+  deleteSubscriber,
+  fetchProductsFromBackend
 } from '../../services/api';
 
 const typeConfig: Record<string, { icon: any; color: string }> = {
@@ -34,6 +35,7 @@ export default function Marketing() {
   // Marketing database states
   const [coupons, setCoupons] = useState<any[]>([]);
   const [subscribers, setSubscribers] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -61,6 +63,7 @@ export default function Marketing() {
   const [campType, setCampType] = useState<'email' | 'sms' | 'push' | 'social'>('email');
   const [campMessage, setCampMessage] = useState('');
   const [campTarget, setCampTarget] = useState('All Customers');
+  const [selectedProductId, setSelectedProductId] = useState('');
 
   // Form states (Coupon Creation)
   const [coupCode, setCoupCode] = useState('');
@@ -79,14 +82,16 @@ export default function Marketing() {
   const loadMarketingData = async () => {
     setLoading(true);
     try {
-      const [couponData, subData] = await Promise.all([
+      const [couponData, subData, productData] = await Promise.all([
         fetchCoupons(),
-        fetchSubscribers()
+        fetchSubscribers(),
+        fetchProductsFromBackend()
       ]);
       if (couponData) setCoupons(couponData);
       if (subData) setSubscribers(subData);
+      if (productData) setProducts(productData);
     } catch (e) {
-      setErrorMsg('ডাটাবেজ থেকে কুপন ও সাবস্ক্রাইবার ডাটা লোড করা যাচ্ছে না।');
+      setErrorMsg('ডাটাবেজ থেকে কুপন, সাবস্ক্রাইবার ও প্রোডাক্ট ডাটা লোড করা যাচ্ছে না।');
     } finally {
       setLoading(false);
     }
@@ -124,7 +129,8 @@ export default function Marketing() {
       converted: 0,
       revenue: 0,
       startDate: new Date().toISOString().split('T')[0],
-      endDate: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0]
+      endDate: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0],
+      productId: selectedProductId || null
     };
 
     const list = [newCamp, ...campaigns];
@@ -134,6 +140,7 @@ export default function Marketing() {
     // Reset Form
     setCampName('');
     setCampMessage('');
+    setSelectedProductId('');
     setShowCampaignModal(false);
   };
 
@@ -554,6 +561,16 @@ export default function Marketing() {
                       <option value="Inactive Customers">Inactive Customers (1.2K)</option>
                     </select>
                   </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">সংশ্লিষ্ট পণ্য (Associated Product - Optional)</label>
+                  <select className="form-select" value={selectedProductId} onChange={e => setSelectedProductId(e.target.value)}>
+                    <option value="">কোনো পণ্য লিংক করবেন না (No Product Link)</option>
+                    {products.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} (৳{p.price})</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="form-group">

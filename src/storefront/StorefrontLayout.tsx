@@ -83,6 +83,45 @@ export default function StorefrontLayout() {
   const [wishlist, setWishlist] = useState<number[]>([]);
   const navigate = useNavigate();
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  const location = useLocation();
+  const isHome = location.pathname === '/';
+
+  // Load active campaigns from localStorage
+  const [activeCampaigns, setActiveCampaigns] = useState<any[]>([]);
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('campaignList');
+      if (stored) {
+        const list = JSON.parse(stored);
+        if (Array.isArray(list)) {
+          const active = list.filter((c: any) => c.status === 'active');
+          setActiveCampaigns(active);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    if (!isHome) {
+      setScrolled(true);
+      return;
+    }
+
+    const handleScroll = () => {
+      setScrolled(container.scrollTop > 50);
+    };
+
+    handleScroll();
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [isHome]);
 
   useEffect(() => {
     if (mobileSearchOpen && searchInputRef.current) {
@@ -188,9 +227,9 @@ export default function StorefrontLayout() {
 
   return (
     <div className="storefront">
-      <div className="store-sticky-header-container">
+      <div className={`store-sticky-header-container ${isHome && !scrolled ? 'header-transparent' : ''}`}>
         {/* ---- Announcement Bar ---- */}
-        {announcements.length > 0 && (
+        {(announcements.length > 0 || activeCampaigns.length > 0) && (
           <div className="announcement-bar">
             <div className="announcement-marquee">
               <div className="announcement-marquee-content">
@@ -200,10 +239,22 @@ export default function StorefrontLayout() {
                     <span className="announcement-text">{replaceContactInfo(ann.text, config.contactInfo)}</span>
                   </div>
                 ))}
+                {activeCampaigns.map((camp) => (
+                  <div key={`camp-1-${camp.id}`} className="announcement-marquee-item">
+                    <span className="announcement-news-tag" style={{ backgroundColor: 'var(--sf-accent)' }}>অফার</span>
+                    <span className="announcement-text" style={{ fontWeight: 'bold' }}>{camp.name} — Limited Campaign Active!</span>
+                  </div>
+                ))}
                 {announcements.map((ann) => (
                   <div key={`ann-2-${ann.id}`} className="announcement-marquee-item">
                     <span className="announcement-news-tag">বিজ্ঞপ্তি</span>
                     <span className="announcement-text">{replaceContactInfo(ann.text, config.contactInfo)}</span>
+                  </div>
+                ))}
+                {activeCampaigns.map((camp) => (
+                  <div key={`camp-2-${camp.id}`} className="announcement-marquee-item">
+                    <span className="announcement-news-tag" style={{ backgroundColor: 'var(--sf-accent)' }}>অফার</span>
+                    <span className="announcement-text" style={{ fontWeight: 'bold' }}>{camp.name} — Limited Campaign Active!</span>
                   </div>
                 ))}
               </div>
@@ -290,7 +341,7 @@ export default function StorefrontLayout() {
       </div>
 
       {/* ---- Scrollable Container ---- */}
-      <div className="storefront-scroll-container">
+      <div className="storefront-scroll-container" ref={containerRef}>
         {/* ---- Main Content Area ---- */}
         <main>
           <Outlet context={{ addToCart, toggleWishlist, wishlist, cart, cartTotal, clearCart, updateQuantity, searchQuery, setSearchQuery }} />

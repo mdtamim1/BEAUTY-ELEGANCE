@@ -639,6 +639,12 @@ export default function CustomerAccount() {
           >
             <ShoppingBag size={18} /> আমার অর্ডারসমূহ ({orders.length})
           </button>
+          <button 
+            onClick={() => { setActiveTab('chat'); setSelectedOrder(null); }}
+            style={{ width: '100%', padding: '12px 16px', background: activeTab === 'chat' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'chat' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+          >
+            <MessageSquare size={18} /> কাস্টমার সাপোর্ট চ্যাট
+          </button>
         </div>
 
         {/* Tab Contents */}

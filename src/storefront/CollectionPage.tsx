@@ -316,7 +316,7 @@ export default function CollectionPage() {
                 <img src={product.image} alt={product.name} className="product-card-image" />
                 {product.badge && (
                   <span className={`product-card-badge ${product.badge}`}>
-                    {product.badge === 'sale' ? `${Math.round((1 - product.price / (product.originalPrice || product.price)) * 100)}% OFF` : 'New'}
+                    {product.badge === 'sale' ? `Sale! -${Math.round((1 - product.price / (product.originalPrice || product.price)) * 100)}%` : 'New'}
                   </span>
                 )}
                 {product.originalPrice && product.originalPrice > product.price && (

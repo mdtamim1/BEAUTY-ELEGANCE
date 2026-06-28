@@ -1,5 +1,6 @@
 import { Search, Bell, Mail, Moon, Sun, Menu, X, Send, MessageSquare, LogOut } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 interface TopBarProps {
@@ -263,7 +264,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
 
         <div className="topbar-divider" />
 
-        <div className="topbar-profile">
+        <Link to="/admin/employees" style={{ textDecoration: 'none', color: 'inherit' }} className="topbar-profile">
           <div className="topbar-profile-avatar">
             {user?.avatar || (user?.name ? user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'SA')}
           </div>
@@ -271,7 +272,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
             <span className="topbar-profile-name">{user?.name || 'Super Admin'}</span>
             <span className="topbar-profile-role">{user?.role || 'Full Access'}</span>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* QUICK REPLY POPUP MODAL */}
