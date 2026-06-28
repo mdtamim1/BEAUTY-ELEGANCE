@@ -152,3 +152,101 @@ export const deleteSubscriber = (req: Request, res: Response) => {
     res.json({ status: 'success', message: 'Subscriber removed' });
   });
 };
+
+// Get all campaigns from SQLite database
+export const getCampaigns = (req: Request, res: Response) => {
+  db.all(`SELECT * FROM campaigns`, [], (err, rows: any[]) => {
+    if (err) {
+      console.error('Failed to get campaigns:', err);
+      return res.status(500).json({ status: 'error', message: 'Database error' });
+    }
+    const mapped = (rows || []).map(r => ({
+      id: r.id,
+      name: r.name,
+      type: r.type,
+      status: r.status,
+      sent: Number(r.sent || 0),
+      opened: Number(r.opened || 0),
+      clicked: Number(r.clicked || 0),
+      converted: Number(r.converted || 0),
+      revenue: Number(r.revenue || 0.0),
+      startDate: r.start_date || '',
+      endDate: r.end_date || '',
+      productIds: r.product_ids ? r.product_ids.split(',').filter(Boolean) : []
+    }));
+    res.json({ status: 'success', data: mapped });
+  });
+};
+
+// Create a new campaign inside SQLite database
+export const createCampaign = (req: Request, res: Response) => {
+  const { id, name, type, status, sent, opened, clicked, converted, revenue, startDate, endDate, productIds } = req.body;
+
+  if (!id || !name || !type) {
+    return res.status(400).json({ status: 'error', message: 'Campaign ID, name, and type are required' });
+  }
+
+  const productIdsStr = Array.isArray(productIds) ? productIds.join(',') : '';
+
+  db.run(
+    `INSERT INTO campaigns (id, name, type, status, sent, opened, clicked, converted, revenue, start_date, end_date, product_ids)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      name,
+      type,
+      status || 'active',
+      sent || 0,
+      opened || 0,
+      clicked || 0,
+      converted || 0,
+      revenue || 0.0,
+      startDate || '',
+      endDate || '',
+      productIdsStr
+    ],
+    function (err) {
+      if (err) {
+        console.error('Failed to create campaign:', err);
+        return res.status(500).json({ status: 'error', message: 'Database error' });
+      }
+      res.json({ 
+        status: 'success', 
+        data: { 
+          id, name, type, status: status || 'active', sent: sent || 0, opened: opened || 0, clicked: clicked || 0, converted: converted || 0, revenue: revenue || 0.0, startDate, endDate, productIds 
+        } 
+      });
+    }
+  );
+};
+
+// Update campaign status in SQLite database
+export const updateCampaign = (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!status) {
+    return res.status(400).json({ status: 'error', message: 'Status is required' });
+  }
+
+  db.run(`UPDATE campaigns SET status = ? WHERE id = ?`, [status, id], function (err) {
+    if (err) {
+      console.error('Failed to update campaign:', err);
+      return res.status(500).json({ status: 'error', message: 'Database error' });
+    }
+    res.json({ status: 'success', message: 'Campaign status updated' });
+  });
+};
+
+// Delete campaign from SQLite database
+export const deleteCampaign = (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  db.run(`DELETE FROM campaigns WHERE id = ?`, [id], function (err) {
+    if (err) {
+      console.error('Failed to delete campaign:', err);
+      return res.status(500).json({ status: 'error', message: 'Database error' });
+    }
+    res.json({ status: 'success', message: 'Campaign deleted' });
+  });
+};

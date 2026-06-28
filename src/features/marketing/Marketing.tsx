@@ -7,7 +7,10 @@ import {
   deleteCoupon, 
   fetchSubscribers, 
   deleteSubscriber,
-  fetchProductsFromBackend
+  fetchProductsFromBackend,
+  fetchCampaignsFromBackend,
+  createCampaignInBackend,
+  updateCampaignInBackend
 } from '../../services/api';
 
 const typeConfig: Record<string, { icon: any; color: string }> = {
@@ -25,7 +28,7 @@ const statusConfig: Record<string, string> = {
 };
 
 export default function Marketing() {
-  const [campaigns, setCampaigns] = useState(generateCampaigns(15));
+  const [campaigns, setCampaigns] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState('campaigns');
   
   // Modals state
@@ -82,13 +85,20 @@ export default function Marketing() {
   const loadMarketingData = async () => {
     setLoading(true);
     try {
-      const [couponData, subData, productData] = await Promise.all([
+      const [couponData, subData, productData, campaignData] = await Promise.all([
         fetchCoupons(),
         fetchSubscribers(),
-        fetchProductsFromBackend()
+        fetchProductsFromBackend(),
+        fetchCampaignsFromBackend()
       ]);
       if (couponData) setCoupons(couponData);
       if (subData) setSubscribers(subData);
+      if (campaignData) {
+        setCampaigns(campaignData);
+      } else {
+        // Fallback to local storage if API fails
+        setCampaigns(generateCampaigns(15));
+      }
 
       let finalProducts = productData;
       if (!finalProducts || finalProducts.length === 0) {
@@ -133,19 +143,19 @@ export default function Marketing() {
   }, []);
 
   // Campaign Actions
-  const handleToggleCampaign = (id: string) => {
-    const list = campaigns.map(c => {
-      if (c.id === id) {
-        const nextStatus = c.status === 'active' ? 'paused' as const : 'active' as const;
-        return { ...c, status: nextStatus };
-      }
-      return c;
-    });
-    setCampaigns(list);
-    saveCampaigns(list);
+  const handleToggleCampaign = async (id: string) => {
+    const found = campaigns.find(c => c.id === id);
+    if (!found) return;
+    const nextStatus = found.status === 'active' ? 'paused' : 'active';
+    
+    // Optimistic UI update
+    setCampaigns(prev => prev.map(c => c.id === id ? { ...c, status: nextStatus } : c));
+    
+    // Sync with backend SQLite
+    await updateCampaignInBackend(id, nextStatus);
   };
 
-  const handleCreateCampaign = (e: React.FormEvent) => {
+  const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!campName) return;
 
@@ -164,9 +174,11 @@ export default function Marketing() {
       productIds: selectedProductIds
     };
 
-    const list = [newCamp, ...campaigns];
-    setCampaigns(list);
-    saveCampaigns(list);
+    // Optimistic UI update
+    setCampaigns(prev => [newCamp, ...prev]);
+
+    // Save to backend SQLite
+    await createCampaignInBackend(newCamp);
 
     // Reset Form
     setCampName('');

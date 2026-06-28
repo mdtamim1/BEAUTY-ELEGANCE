@@ -721,6 +721,65 @@ export const fetchAnalyticsData = async (range: string): Promise<any | null> => 
   }
 };
 
+// Fetch campaigns from backend (Public)
+export const fetchCampaignsFromBackend = async (): Promise<any[] | null> => {
+  try {
+    const res = await fetch(`${API_BASE}/marketing/campaigns`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.status === 'success' ? json.data : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+// Create campaign in backend
+export const createCampaignInBackend = async (campaignData: any): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/marketing/campaigns`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
+      body: JSON.stringify(campaignData)
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to create campaign' };
+  }
+};
+
+// Update campaign status in backend
+export const updateCampaignInBackend = async (id: string, status: string): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/marketing/campaigns/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
+      body: JSON.stringify({ status })
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to update campaign' };
+  }
+};
+
+// Delete campaign from backend
+export const deleteCampaignFromBackend = async (id: string): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/marketing/campaigns/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to delete campaign' };
+  }
+};
+
 
 
 

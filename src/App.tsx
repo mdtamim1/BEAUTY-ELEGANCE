@@ -30,6 +30,7 @@ import Checkout from './storefront/Checkout';
 import CollectionPage from './storefront/CollectionPage';
 import CustomPage from './storefront/CustomPage';
 import CustomerAccount from './storefront/CustomerAccount';
+import CampaignPage from './storefront/CampaignPage';
 import Inbox from './features/chats/Inbox';
 import { CustomerAuthProvider } from './context/CustomerAuthContext';
 import { useStorefrontConfig } from './store/storefrontConfig';
@@ -148,6 +149,7 @@ export default function App() {
             <Route path="product/:id" element={<ProductDetails />} />
             <Route path="collection/:slug" element={<CollectionPage />} />
             <Route path="page/:id" element={<CustomPage />} />
+            <Route path="campaign/:id" element={<CampaignPage />} />
             <Route path="checkout" element={<Checkout />} />
             <Route path="account" element={<CustomerAccount />} />
           </Route>

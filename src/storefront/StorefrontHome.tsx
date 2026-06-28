@@ -7,7 +7,7 @@ import { Truck, Shield, RotateCcw, Headphones, Star, Heart, ShoppingCart, Zap,
 } from 'lucide-react';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import { CountdownTimer } from './CollectionPage';
-import { subscribeToNewsletter } from '../services/api';
+import { subscribeToNewsletter, fetchCampaignsFromBackend } from '../services/api';
 
 interface StorefrontContext {
   addToCart: (product: any) => void;
@@ -47,22 +47,31 @@ export default function StorefrontHome() {
   const [subError, setSubError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load active campaigns from localStorage
+  // Load active campaigns from backend API
   const [activeCampaigns, setActiveCampaigns] = useState<any[]>([]);
   const announcements = config.announcements ? config.announcements.filter((a: any) => a.enabled) : [];
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('campaignList');
-      if (stored) {
-        const list = JSON.parse(stored);
-        if (Array.isArray(list)) {
-          const active = list.filter((c: any) => c.status === 'active');
+    const loadCampaigns = async () => {
+      try {
+        const campaigns = await fetchCampaignsFromBackend();
+        if (campaigns) {
+          const active = campaigns.filter((c: any) => c.status === 'active');
           setActiveCampaigns(active);
+        } else {
+          // Fallback to localStorage if API is offline
+          const stored = localStorage.getItem('campaignList');
+          if (stored) {
+            const list = JSON.parse(stored);
+            if (Array.isArray(list)) {
+              setActiveCampaigns(list.filter((c: any) => c.status === 'active'));
+            }
+          }
         }
+      } catch (e) {
+        console.error('Failed to load campaigns:', e);
       }
-    } catch (e) {
-      console.error(e);
-    }
+    };
+    loadCampaigns();
   }, []);
 
   const handleSubscribe = async (e: React.FormEvent) => {
@@ -251,9 +260,14 @@ export default function StorefrontHome() {
                 </span>
               ))}
               {activeCampaigns.map((camp: any, idx: number) => (
-                <span key={`camp-${idx}`} className="announcement-marquee-item campaign-promo" style={{ color: 'white', fontWeight: 'bold' }}>
+                <Link 
+                  to={`/campaign/${camp.id}`}
+                  key={`camp-${idx}`} 
+                  className="announcement-marquee-item campaign-promo hover-accent" 
+                  style={{ color: 'white', fontWeight: 'bold', textDecoration: 'none', cursor: 'pointer' }}
+                >
                   🔥 {camp.name} ক্যাম্পেইন চলছে! এখনই দেখুন!
-                </span>
+                </Link>
               ))}
             </div>
           </div>
@@ -357,10 +371,28 @@ export default function StorefrontHome() {
                         <span style={{ display: 'inline-block', background: 'var(--sf-accent)', color: 'white', fontSize: '0.65rem', fontWeight: 800, padding: '3px 8px', borderRadius: '4px', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>
                           Campaign Active
                         </span>
-                        <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, color: 'white' }}>{camp.name}</h3>
+                        <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0 }}>
+                          <Link 
+                            to={`/campaign/${camp.id}`} 
+                            onClick={() => setShowCampaignsModal(false)}
+                            style={{ color: 'white', textDecoration: 'none' }}
+                            className="hover-accent"
+                          >
+                            {camp.name}
+                          </Link>
+                        </h3>
                         <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '4px 0 0 0' }}>
-                          মেয়ad: {new Date(camp.startDate).toLocaleDateString()} থেকে {new Date(camp.endDate).toLocaleDateString()}
+                          মেয়াদ: {new Date(camp.startDate).toLocaleDateString()} থেকে {new Date(camp.endDate).toLocaleDateString()}
                         </p>
+                        <div style={{ marginTop: '8px' }}>
+                          <Link 
+                            to={`/campaign/${camp.id}`}
+                            onClick={() => setShowCampaignsModal(false)}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--sf-accent)', textDecoration: 'none' }}
+                          >
+                            ক্যাম্পেইন পেজে যান &rarr;
+                          </Link>
+                        </div>
                       </div>
                       <div>
                         <CountdownTimer

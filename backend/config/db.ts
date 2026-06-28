@@ -242,6 +242,23 @@ function initializeDatabase() {
       )
     `);
 
+    db.run(`
+      CREATE TABLE IF NOT EXISTS campaigns (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        status TEXT NOT NULL,
+        sent INTEGER DEFAULT 0,
+        opened INTEGER DEFAULT 0,
+        clicked INTEGER DEFAULT 0,
+        converted INTEGER DEFAULT 0,
+        revenue REAL DEFAULT 0.0,
+        start_date TEXT,
+        end_date TEXT,
+        product_ids TEXT
+      )
+    `);
+
     // Seed default roles and super admin employee
     const defaultRoles = [
       { name: 'Super Admin', desc: 'System Administrator with full access', is_system: 1, permissions: ["dashboard", "analytics", "orders", "products", "storefront", "chats", "marketing", "employees", "finance", "security", "settings", "ai"] },

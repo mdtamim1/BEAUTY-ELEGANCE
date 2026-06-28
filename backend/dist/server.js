@@ -457,6 +457,22 @@ function initializeDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    db.run(`
+      CREATE TABLE IF NOT EXISTS campaigns (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        status TEXT NOT NULL,
+        sent INTEGER DEFAULT 0,
+        opened INTEGER DEFAULT 0,
+        clicked INTEGER DEFAULT 0,
+        converted INTEGER DEFAULT 0,
+        revenue REAL DEFAULT 0.0,
+        start_date TEXT,
+        end_date TEXT,
+        product_ids TEXT
+      )
+    `);
     const defaultRoles = [
       { name: "Super Admin", desc: "System Administrator with full access", is_system: 1, permissions: ["dashboard", "analytics", "orders", "products", "storefront", "chats", "marketing", "employees", "finance", "security", "settings", "ai"] },
       { name: "Admin", desc: "Administrator with full management access", is_system: 1, permissions: ["dashboard", "analytics", "orders", "products", "storefront", "chats", "marketing", "employees", "finance", "security", "settings", "ai"] },
@@ -3016,16 +3032,115 @@ var deleteSubscriber = (req, res) => {
     res.json({ status: "success", message: "Subscriber removed" });
   });
 };
+var getCampaigns = (req, res) => {
+  db_default.all(`SELECT * FROM campaigns`, [], (err, rows) => {
+    if (err) {
+      console.error("Failed to get campaigns:", err);
+      return res.status(500).json({ status: "error", message: "Database error" });
+    }
+    const mapped = (rows || []).map((r) => ({
+      id: r.id,
+      name: r.name,
+      type: r.type,
+      status: r.status,
+      sent: Number(r.sent || 0),
+      opened: Number(r.opened || 0),
+      clicked: Number(r.clicked || 0),
+      converted: Number(r.converted || 0),
+      revenue: Number(r.revenue || 0),
+      startDate: r.start_date || "",
+      endDate: r.end_date || "",
+      productIds: r.product_ids ? r.product_ids.split(",").filter(Boolean) : []
+    }));
+    res.json({ status: "success", data: mapped });
+  });
+};
+var createCampaign = (req, res) => {
+  const { id, name, type, status, sent, opened, clicked, converted, revenue, startDate, endDate, productIds } = req.body;
+  if (!id || !name || !type) {
+    return res.status(400).json({ status: "error", message: "Campaign ID, name, and type are required" });
+  }
+  const productIdsStr = Array.isArray(productIds) ? productIds.join(",") : "";
+  db_default.run(
+    `INSERT INTO campaigns (id, name, type, status, sent, opened, clicked, converted, revenue, start_date, end_date, product_ids)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      name,
+      type,
+      status || "active",
+      sent || 0,
+      opened || 0,
+      clicked || 0,
+      converted || 0,
+      revenue || 0,
+      startDate || "",
+      endDate || "",
+      productIdsStr
+    ],
+    function(err) {
+      if (err) {
+        console.error("Failed to create campaign:", err);
+        return res.status(500).json({ status: "error", message: "Database error" });
+      }
+      res.json({
+        status: "success",
+        data: {
+          id,
+          name,
+          type,
+          status: status || "active",
+          sent: sent || 0,
+          opened: opened || 0,
+          clicked: clicked || 0,
+          converted: converted || 0,
+          revenue: revenue || 0,
+          startDate,
+          endDate,
+          productIds
+        }
+      });
+    }
+  );
+};
+var updateCampaign = (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  if (!status) {
+    return res.status(400).json({ status: "error", message: "Status is required" });
+  }
+  db_default.run(`UPDATE campaigns SET status = ? WHERE id = ?`, [status, id], function(err) {
+    if (err) {
+      console.error("Failed to update campaign:", err);
+      return res.status(500).json({ status: "error", message: "Database error" });
+    }
+    res.json({ status: "success", message: "Campaign status updated" });
+  });
+};
+var deleteCampaign = (req, res) => {
+  const { id } = req.params;
+  db_default.run(`DELETE FROM campaigns WHERE id = ?`, [id], function(err) {
+    if (err) {
+      console.error("Failed to delete campaign:", err);
+      return res.status(500).json({ status: "error", message: "Database error" });
+    }
+    res.json({ status: "success", message: "Campaign deleted" });
+  });
+};
 
 // backend/routes/marketing.ts
 var router10 = Router10();
 router10.post("/subscribers/subscribe", subscribeEmail);
 router10.get("/coupons/validate/:code", validateCoupon);
+router10.get("/campaigns", getCampaigns);
 router10.get("/coupons", authenticateToken, requireRole(["Super Admin", "Admin"]), getCoupons);
 router10.post("/coupons", authenticateToken, requireRole(["Super Admin", "Admin"]), createCoupon);
 router10.delete("/coupons/:code", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteCoupon);
 router10.get("/subscribers", authenticateToken, requireRole(["Super Admin", "Admin"]), getSubscribers);
 router10.delete("/subscribers/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteSubscriber);
+router10.post("/campaigns", authenticateToken, requireRole(["Super Admin", "Admin"]), createCampaign);
+router10.put("/campaigns/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), updateCampaign);
+router10.delete("/campaigns/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteCampaign);
 var marketing_default = router10;
 
 // backend/routes/analytics.ts
