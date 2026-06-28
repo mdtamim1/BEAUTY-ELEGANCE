@@ -312,13 +312,19 @@
   max-width: var(--sf-max-width);
   margin: 0 auto;
   width: 100%;
-  padding: 0 24px;
+  padding: 80px 24px 0 !important;
   display: flex;
   align-items: center;
   justify-content: space-between;
   position: relative;
   z-index: 2;
   box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .fullscreen-slide-inner {
+    padding: 60px 16px 0 !important;
+  }
 }
 
 .slide-content-left {
@@ -3483,53 +3489,69 @@
   }
 }
 
-/* Campaign Modal Card Countdown Timer Contrast Overrides */
-.campaign-modal-card .collection-timer {
-  background: rgba(255, 255, 255, 0.08) !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  color: white !important;
-}
-
-.campaign-modal-card .collection-timer-label {
-  color: #cbd5e1 !important;
-}
-
-.campaign-modal-card .timer-value {
-  background: white !important;
-  -webkit-background-clip: unset !important;
-  -webkit-text-fill-color: white !important;
-  background-clip: unset !important;
-  color: white !important;
-}
-
-.campaign-modal-card .timer-label-sm {
-  color: #94a3b8 !important;
-}
-
-.campaign-modal-card .timer-sep {
-  color: white !important;
-}
-
 /* Campaign Modal Card Countdown Timer Contrast & Shifting Overrides */
 .campaign-modal-card .collection-timer {
   background: rgba(255, 255, 255, 0.08) !important;
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
   color: white !important;
-  padding: 6px 12px !important;
+  padding: 8px 12px !important;
   border-radius: 10px !important;
-  display: inline-flex !important;
-  align-self: flex-start !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 8px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  align-self: stretch !important;
 }
 
-.campaign-modal-card .timer-value {
-  font-size: 1rem !important;
-  font-weight: 800 !important;
-  font-variant-numeric: tabular-nums !important;
-  color: white !important;
+.campaign-modal-card .collection-timer-label {
+  color: #cbd5e1 !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+}
+
+.campaign-modal-card .collection-timer-digits {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  width: 100% !important;
+  margin-top: 4px !important;
 }
 
 .campaign-modal-card .timer-unit {
-  min-width: 28px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  min-width: 32px !important;
+}
+
+.campaign-modal-card .timer-value {
+  font-size: 1.1rem !important;
+  font-weight: 800 !important;
+  font-variant-numeric: tabular-nums !important;
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  padding: 4px 8px !important;
+  border-radius: 6px !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background-clip: unset !important;
+}
+
+.campaign-modal-card .timer-label-sm {
+  color: #cbd5e1 !important;
+  font-size: 0.65rem !important;
+  margin-top: 4px !important;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.campaign-modal-card .timer-sep {
+  color: white !important;
+  font-size: 1.1rem !important;
+  margin-top: -16px !important;
 }
 
 /* Sleek 3-dot dropdown popover */
