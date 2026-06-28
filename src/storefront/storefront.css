@@ -1305,10 +1305,10 @@
 .announcement-bar {
   background: #000000;
   color: white;
-  height: 40px;
+  height: 30px;
   display: flex;
   align-items: center;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 600;
   position: relative;
   z-index: 105;
@@ -3480,4 +3480,31 @@
     grid-template-columns: repeat(2, 1fr) !important; /* 2 columns on mobile */
     gap: 12px !important;
   }
+}
+
+/* Campaign Modal Card Countdown Timer Contrast Overrides */
+.campaign-modal-card .collection-timer {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: white !important;
+}
+
+.campaign-modal-card .collection-timer-label {
+  color: #cbd5e1 !important;
+}
+
+.campaign-modal-card .timer-value {
+  background: white !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: white !important;
+  background-clip: unset !important;
+  color: white !important;
+}
+
+.campaign-modal-card .timer-label-sm {
+  color: #94a3b8 !important;
+}
+
+.campaign-modal-card .timer-sep {
+  color: white !important;
 }

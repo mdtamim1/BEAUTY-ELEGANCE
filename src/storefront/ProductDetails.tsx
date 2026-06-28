@@ -33,7 +33,7 @@ export default function ProductDetails() {
   const [activeImage, setActiveImage] = useState('');
   const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'reviews'>('description');
   
-  const { customer, login, register, updateCustomerProfile } = useCustomerAuth();
+  const { customer, login, register, loginWithGmail, updateCustomerProfile } = useCustomerAuth();
   
   // Checkout Modal State
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -78,6 +78,36 @@ export default function ProductDetails() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, isChatDrawerOpen]);
+
+  // Initialize and render Google Identity Services Button in Chat Drawer
+  useEffect(() => {
+    if (isChatDrawerOpen && !customer) {
+      const initGsi = () => {
+        // @ts-ignore
+        if (window.google?.accounts?.id) {
+          // @ts-ignore
+          window.google.accounts.id.initialize({
+            client_id: "284151905011-fs0mh1j6rdug41p2hk882bjl1vq9nmb2.apps.googleusercontent.com",
+            callback: (response: any) => {
+              loginWithGmail(response.credential);
+            }
+          });
+          const btnElem = document.getElementById("google-chat-signin-btn");
+          if (btnElem) {
+            // @ts-ignore
+            window.google.accounts.id.renderButton(
+              btnElem,
+              { theme: "outline", size: "large", width: btnElem.clientWidth || 300 }
+            );
+          }
+        }
+      };
+
+      initGsi();
+      const timer = setTimeout(initGsi, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isChatDrawerOpen, customer]);
 
   // Sync local storage & local state
   const syncChatData = (updated: any[]) => {
@@ -1213,6 +1243,14 @@ export default function ProductDetails() {
                     {chatIsRegister ? 'রেজিস্ট্রেশন করুন' : 'লগইন করুন'}
                   </button>
                 </form>
+
+                <div style={{ display: 'flex', alignItems: 'center', margin: '14px 0', width: '100%' }}>
+                  <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+                  <span style={{ fontSize: '0.72rem', color: '#94a3b8', padding: '0 8px' }}>অথবা</span>
+                  <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+                </div>
+
+                <div id="google-chat-signin-btn" style={{ width: '100%', display: 'flex', justifyContent: 'center' }} />
 
                 <div className="pdp-chat-auth-toggle">
                   {chatIsRegister ? (
