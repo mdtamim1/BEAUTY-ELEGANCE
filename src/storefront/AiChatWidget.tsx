@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Sparkles } from 'lucide-react';
+import { useStorefrontConfig } from '../store/storefrontConfig';
 import './ai-chat.css';
 
 // ============================================
@@ -26,6 +27,7 @@ const SUGGESTION_CHIPS = [
 ];
 
 export default function AiChatWidget() {
+  const [config] = useStorefrontConfig();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState('');
@@ -79,6 +81,10 @@ export default function AiChatWidget() {
         })
       });
 
+      if (!response.ok) {
+        throw new Error('API server returned error status');
+      }
+
       const data = await response.json();
 
       if (data.status === 'success' && data.data?.reply) {
@@ -86,11 +92,14 @@ export default function AiChatWidget() {
         setMessages(prev => [...prev, aiMsg]);
         if (!open) setHasNewReply(true);
       } else {
-        setError(data.message || 'দুঃখিত, AI রেসপন্স পাওয়া যায়নি। আবার চেষ্টা করুন।');
+        throw new Error(data.message || 'AI Response empty');
       }
     } catch (e) {
-      console.error('AI Chat Error:', e);
-      setError('সার্ভারের সাথে সংযোগ করা যাচ্ছে না। পরে আবার চেষ্টা করুন।');
+      console.warn('AI Chat Error, using local fallback:', e);
+      const reply = generateClientFallbackResponse(text.trim(), config.products || []);
+      const aiMsg: ChatMsg = { role: 'model', text: reply };
+      setMessages(prev => [...prev, aiMsg]);
+      if (!open) setHasNewReply(true);
     } finally {
       setLoading(false);
     }
@@ -126,7 +135,7 @@ export default function AiChatWidget() {
         aria-label={open ? 'Close AI Assistant' : 'Open AI Shopping Assistant'}
         id="ai-chat-button"
       >
-        {open ? <X size={24} /> : <Sparkles size={26} />}
+        {open ? <X size={20} /> : <Sparkles size={20} />}
         {!open && hasNewReply && <span className="ai-fab-badge">!</span>}
       </button>
 
@@ -239,4 +248,54 @@ export default function AiChatWidget() {
       )}
     </>
   );
+}
+
+// =========================================================
+// Heuristic Client-Side AI Response Generator (Fallback)
+// =========================================================
+function generateClientFallbackResponse(message: string, products: any[]): string {
+  const query = message.toLowerCase().trim();
+  const activeProducts = products.filter(p => p.published);
+
+  if (query.includes('হ্যালো') || query.includes('hi') || query.includes('hello') || query.includes('কেমন আছ') || query.includes('আছেন')) {
+    return 'হ্যালো! আমি আপনার AI শপিং অ্যাসিস্ট্যান্ট। আমি আপনাকে স্টোরের পণ্য খুঁজে পেতে, দাম জানতে অথবা ছাড় ও অফার জানতে সাহায্য করতে পারি। আপনি কি খুঁজছেন বলুন?';
+  }
+
+  if (query.includes('পণ্য') || query.includes('প্রোডাক্ট') || query.includes('product') || query.includes('list') || query.includes('কি কি আছে')) {
+    if (activeProducts.length === 0) return 'দুঃখিত, এই মুহূর্তে আমাদের স্টোরে কোনো পণ্য পাওয়া যাচ্ছে না।';
+    const listStr = activeProducts.slice(0, 5).map(p => `- **${p.name}** (৳${p.price})`).join('\n');
+    return `আমাদের স্টোরের কিছু চমৎকার পণ্য নিচে দেওয়া হলো:\n\n${listStr}\n\nযেকোনো পণ্যের বিস্তারিত জানতে তার নাম লিখে প্রশ্ন করুন!`;
+  }
+
+  if (query.includes('কম দাম') || query.includes('সস্তা') || query.includes('cheap') || query.includes('low price') || query.includes('কমদামি')) {
+    if (activeProducts.length === 0) return 'দুঃখিত, এই মুহূর্তে কোনো পণ্য পাওয়া যাচ্ছে না।';
+    const sorted = [...activeProducts].sort((a, b) => a.price - b.price);
+    const listStr = sorted.slice(0, 3).map(p => `- **${p.name}** (৳${p.price})`).join('\n');
+    return `আমাদের স্টোরের সবচেয়ে কম দামের পণ্যসমূহ:\n\n${listStr}`;
+  }
+
+  if (query.includes('ছাড়') || query.includes('অফার') || query.includes('discount') || query.includes('sale') || query.includes('ক্যাম্পেইন') || query.includes('কমাবে')) {
+    const discounted = activeProducts.filter(p => p.original_price && p.original_price > p.price);
+    if (discounted.length === 0) return 'এই মুহূর্তে কোনো পণ্যে সরাসরি মূল্যছাড় নেই, তবে আমাদের সব পণ্যের দামই অত্যন্ত সাশ্রয়ী!';
+    const listStr = discounted.slice(0, 3).map(p => {
+      const pct = Math.round((1 - p.price / p.original_price) * 100);
+      return `- **${p.name}**: ৳${p.price} (মূল্য: ৳${p.original_price}, **${pct}% ছাড়!**)`;
+    }).join('\n');
+    return `আমাদের আকর্ষণীয় অফার ও ডিসকাউন্টযুক্ত পণ্যসমূহ:\n\n${listStr}`;
+  }
+
+  // Search for specific product matches
+  const matched = activeProducts.find(p => query.includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(query));
+  if (matched) {
+    const inStock = matched.in_stock === 1 || matched.in_stock === true || matched.stock > 0;
+    let reply = `**${matched.name}** সম্পর্কে তথ্য:\n\n- **মূল্য**: ৳${matched.price}\n`;
+    if (matched.original_price && matched.original_price > matched.price) {
+      reply += `- **অরিজিনাল প্রাইস**: ৳${matched.original_price} (${Math.round((1 - matched.price / matched.original_price) * 100)}% ছাড়!)\n`;
+    }
+    reply += `- **স্টক**: ${inStock ? `স্টকে আছে (${matched.stock || 'উপলব্ধ'})` : 'স্টক আউট'}\n`;
+    if (matched.description) reply += `- **বিবরণ**: ${matched.description}\n`;
+    return reply;
+  }
+
+  return 'আমি আপনার প্রশ্নটি বুঝতে পেরেছি। আমাদের স্টোরে থাকা পণ্যগুলোর দাম, বিবরণ, অথবা কোনো ছাড় সম্পর্কে জানতে পণ্যটির নাম লিখে প্রশ্ন করতে পারেন। আমি আপনাকে সেরা তথ্যটি দেওয়ার চেষ্টা করব!';
 }

@@ -261,58 +261,60 @@ export default function StorefrontLayout() {
       <div className={`store-sticky-header-container ${isHome && !scrolled ? 'header-transparent' : ''}`}>
         {/* ---- Header ---- */}
         <header className="store-header">
-          <div className="store-header-inner">
-            <div className="store-header-logo-row" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {isHome && (
-                <div style={{ position: 'relative' }}>
-                  <button 
-                    className="store-header-btn" 
-                    onClick={() => setMoreMenuOpen(!moreMenuOpen)}
-                    style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    title="Menu"
-                  >
-                    <MoreVertical size={20} />
-                  </button>
-                  {moreMenuOpen && (
-                    <div className="store-more-dropdown">
-                      {navLinks.map(link => (
-                        <Link 
-                          key={link.id} 
-                          to={link.url} 
-                          onClick={() => setMoreMenuOpen(false)}
-                        >
-                          {link.label}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-              
+          <div className="store-header-inner-grid">
+            {/* Left Action: Menu Toggle */}
+            <div className="store-header-left">
+              <button 
+                className="store-header-btn" 
+                onClick={() => setMobileMenuOpen(true)}
+                title="Open Menu"
+              >
+                <Menu size={22} />
+              </button>
+            </div>
+
+            {/* Center: Logo */}
+            <div className="store-header-center">
               <Link to="/" className="store-logo">
                 <div className="store-logo-icon"><Zap size={22} /></div>
                 <div className="store-logo-text">{branding.logoTextPrimary}<span>{branding.logoTextSecondary}</span></div>
               </Link>
             </div>
 
-            {!isHome && (
-              <nav className="store-nav">
-                {navLinks.map(link => (
-                  <Link key={link.id} to={link.url} className="store-nav-link">{link.label}</Link>
-                ))}
-              </nav>
-            )}
+            {/* Right Action: Search & Cart */}
+            <div className="store-header-right">
+              <button 
+                className="store-header-btn" 
+                onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+                title="Search"
+              >
+                <Search size={20} />
+              </button>
 
-            <form className={`store-search ${mobileSearchOpen ? 'open' : ''}`} onSubmit={handleSearch}>
-              <Search size={18} className="store-search-icon" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                placeholder="Search products, brands, categories..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              {mobileSearchOpen && (
+              <button 
+                className="store-header-btn" 
+                title="Cart" 
+                onClick={() => setCartOpen(true)}
+                style={{ position: 'relative' }}
+              >
+                <ShoppingCart size={20} />
+                {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
+              </button>
+            </div>
+          </div>
+
+          {/* Inline search bar toggle under the header when active */}
+          {mobileSearchOpen && (
+            <div className="store-header-search-bar-row">
+              <form className="store-search-full" onSubmit={handleSearch}>
+                <Search size={18} className="store-search-icon" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Search products, brands, categories..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
                 <button
                   type="button"
                   className="store-search-close-btn"
@@ -321,47 +323,9 @@ export default function StorefrontLayout() {
                 >
                   <X size={18} />
                 </button>
-              )}
-            </form>
-
-            <div className="store-header-actions">
-              <button 
-                className="store-header-btn store-mobile-search-toggle" 
-                onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-                title="Search"
-              >
-                <Search size={20} />
-              </button>
-              <button 
-                className="store-header-btn store-desktop-only" 
-                title="Wishlist"
-                onClick={() => setWishlistOpen(true)}
-              >
-                <Heart size={20} />
-                {wishlist.length > 0 && <span className="cart-count">{wishlist.length}</span>}
-              </button>
-              <button 
-                className={`store-header-btn ${isHome ? '' : 'store-desktop-only'}`} 
-                title="Account"
-                onClick={() => navigate('/account')}
-                style={{ position: 'relative' }}
-              >
-                <User size={20} />
-                {customer && <span className="customer-active-dot" style={{ position: 'absolute', top: '8px', right: '8px', width: '8px', height: '8px', background: '#16a34a', borderRadius: '50%', border: '2px solid white' }} />}
-              </button>
-              <button className="store-header-btn store-desktop-only" title="Cart" onClick={() => setCartOpen(true)}>
-                <ShoppingCart size={20} />
-                {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
-              </button>
-              <button 
-                className="store-header-btn store-mobile-menu-btn" 
-                onClick={() => setMobileMenuOpen(true)}
-                title="Open Menu"
-              >
-                <Menu size={22} />
-              </button>
+              </form>
             </div>
-          </div>
+          )}
         </header>
       </div>
 
@@ -584,6 +548,18 @@ export default function StorefrontLayout() {
                   {link.label}
                 </Link>
               ))}
+
+              <div style={{ borderTop: '1px solid rgba(226, 232, 240, 0.6)', marginTop: '16px', paddingTop: '16px' }}>
+                <Link 
+                  to="/account" 
+                  className="mobile-menu-nav-link"
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '10px' }}
+                >
+                  <User size={18} />
+                  <span>{customer ? 'আমার প্রোফাইল' : 'লগইন / রেজিস্টার'}</span>
+                </Link>
+              </div>
             </nav>
 
             <div className="mobile-menu-footer">
@@ -603,56 +579,7 @@ export default function StorefrontLayout() {
         </>
       )}
 
-      {/* ---- Premium Bottom Navigation Bar (Mobile) ---- */}
-      {!isProductPage && (
-        <nav className={`store-bottom-nav ${!bottomNavVisible ? 'hide' : ''}`}>
-          <Link to="/" className={`bottom-nav-item ${location.pathname === '/' ? 'active' : ''}`}>
-            <div className="bottom-nav-icon">
-              <Home size={22} />
-            </div>
-            <span>হোম</span>
-          </Link>
-          <button 
-            className={`bottom-nav-item ${wishlistOpen ? 'active' : ''} ${wishlist.length > 0 ? 'has-badge' : ''}`}
-            onClick={() => setWishlistOpen(true)}
-          >
-            <div className="bottom-nav-icon">
-              <Heart size={22} />
-              {wishlist.length > 0 && <span className="bottom-nav-badge">{wishlist.length}</span>}
-            </div>
-            <span>উইশলিস্ট</span>
-          </button>
-          <button 
-            className={`bottom-nav-item bottom-nav-cart-item ${cartOpen ? 'active' : ''} ${cartCount > 0 ? 'has-badge' : ''}`}
-            onClick={() => setCartOpen(true)}
-          >
-            <div className="bottom-nav-cart-bubble">
-              <ShoppingCart size={24} />
-              {cartCount > 0 && <span className="bottom-nav-cart-count">{cartCount}</span>}
-            </div>
-            <span>কার্ট</span>
-          </button>
-          <button 
-            className={`bottom-nav-item ${location.pathname === '/account' ? 'active' : ''}`}
-            onClick={() => navigate('/account')}
-          >
-            <div className="bottom-nav-icon">
-              <User size={22} />
-              {customer && <span className="bottom-nav-active-dot" />}
-            </div>
-            <span>একাউন্ট</span>
-          </button>
-          <button 
-            className={`bottom-nav-item ${mobileMenuOpen ? 'active' : ''}`}
-            onClick={() => setMobileMenuOpen(true)}
-          >
-            <div className="bottom-nav-icon">
-              <Menu size={22} />
-            </div>
-            <span>মেনু</span>
-          </button>
-        </nav>
-      )}
+      {/* Bottom Nav Removed */}
 
       {/* ---- AI Chat Assistant Widget ---- */}
       <AiChatWidget />

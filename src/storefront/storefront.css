@@ -3250,10 +3250,7 @@
     display: none !important;
   }
 
-  /* Add bottom padding to storefront so content doesn't get hidden behind bottom nav */
-  .storefront {
-    padding-bottom: 92px;
-  }
+  /* Bottom padding removed */
 
   /* Show the premium bottom nav bar (Floating Dock Overlay) */
   .store-bottom-nav {
@@ -3579,4 +3576,59 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Centered Header Layout Grid */
+.store-header-inner-grid {
+  display: grid;
+  grid-template-columns: 80px 1fr 80px;
+  align-items: center;
+  width: 100%;
+  max-width: var(--sf-max-width);
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 100%;
+}
+
+.store-header-left {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.store-header-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.store-header-right {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+}
+
+/* Full Width Search Row */
+.store-header-search-bar-row {
+  background: white;
+  border-top: 1px solid #f1f5f9;
+  padding: 8px 24px;
+}
+
+.store-search-full {
+  display: flex;
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 6px 16px;
+  gap: 8px;
+  width: 100%;
+}
+
+.store-search-full input {
+  flex: 1;
+  border: none;
+  background: none;
+  outline: none;
+  font-size: 0.9rem;
+  color: #0f172a;
 }
