@@ -21,6 +21,73 @@ const statusConfig: Record<string, { class: string; icon: any }> = {
   returned: { class: 'badge-purple', icon: RotateCcw },
 };
 
+const BD_DISTRICTS: Record<string, string[]> = {
+  "Dhaka": ["Dhamrai", "Dohar", "Keraniganj", "Nawabganj", "Savar"],
+  "Faridpur": ["Alfadanga", "Bhanga", "Boalmari", "Charbhadrasan", "Faridpur Sadar", "Madhukhali", "Nagarkanda", "Sadorpur", "Saltha"],
+  "Gazipur": ["Gazipur Sadar", "Kaliakair", "Kaliganj", "Kapasia", "Sreepur"],
+  "Gopalganj": ["Gopalganj Sadar", "Kashiani", "Kotalipara", "Muksudpur", "Tungipara"],
+  "Kishoreganj": ["Austagram", "Bajitpur", "Bhairab", "Hossainpur", "Itna", "Karimganj", "Katiadi", "Kishoreganj Sadar", "Kuliarchar", "Mithamain", "Nikli", "Pakundia", "Tarail"],
+  "Madaripur": ["Kalkini", "Madaripur Sadar", "Rajoir", "Shibchar", "Dasar"],
+  "Manikganj": ["Daulatpur", "Ghior", "Harirampur", "Manikganj Sadar", "Saturia", "Shibalaya", "Singair"],
+  "Munshiganj": ["Gazaria", "Lohajang", "Munshiganj Sadar", "Sirajdikhan", "Sreenagar", "Tongibari"],
+  "Narayanganj": ["Araihazar", "Sonargaon", "Narayanganj Sadar", "Rupganj", "Bandar"],
+  "Narsingdi": ["Belabo", "Monohardi", "Narsingdi Sadar", "Palash", "Raipura", "Shibpur"],
+  "Rajbari": ["Baliakandi", "Goalanda", "Kalukhali", "Pangsha", "Rajbari Sadar"],
+  "Shariatpur": ["Bhederganj", "Damudya", "Gosairhat", "Naria", "Shariatpur Sadar", "Zajira"],
+  "Tangail": ["Basail", "Bhuapur", "Delduar", "Dhanbari", "Ghatail", "Gopalpur", "Kalihati", "Madhupur", "Mirzapur", "Nagarpur", "Sakhipur", "Tangail Sadar"],
+  "Bagerhat": ["Chitalmari", "Fakirhat", "Kachua", "Mollahat", "Mongla", "Morelganj", "Rampal", "Sarankhola", "Bagerhat Sadar"],
+  "Chuadanga": ["Alamdanga", "Chuadanga Sadar", "Damurhuda", "Jibannagar"],
+  "Jashore": ["Abhaynagar", "Bagherpara", "Chougachha", "Jhikargachha", "Keshabpur", "Jashore Sadar", "Manirampur", "Sharsha"],
+  "Jhenaidah": ["Harinakunda", "Jhenaidah Sadar", "Kaliganj", "Kotchandpur", "Moheshpur", "Shailkupa"],
+  "Khulna": ["Batiaghata", "Dacope", "Dumuria", "Koyra", "Paikgachha", "Phultala", "Rupsha", "Terokhada", "Dighalia"],
+  "Kushtia": ["Bheramara", "Daulatpur", "Khoksa", "Kumarkhali", "Kushtia Sadar", "Mirpur"],
+  "Magura": ["Magura Sadar", "Mohammadpur", "Shalikha", "Sreepur"],
+  "Meherpur": ["Gangni", "Mujibnagar", "Meherpur Sadar"],
+  "Narail": ["Kalia", "Lohagara", "Narail Sadar"],
+  "Satkhira": ["Assasuni", "Debhata", "Kalaroa", "Kaliganj", "Satkhira Sadar", "Shyamnagar", "Tala"],
+  "Bandarban": ["Alikadam", "Bandarban Sadar", "Lama", "Naikhongchhari", "Rowangchhari", "Ruma", "Thanchi"],
+  "Brahmanbaria": ["Akhaura", "Bancharampur", "Bijoynagar", "Brahmanbaria Sadar", "Ashuganj", "Kasba", "Nabinagar", "Nasirnagar", "Sarail"],
+  "Chandpur": ["Chandpur Sadar", "Faridganj", "Haimchar", "Haziganj", "Kachua", "Matlab Dakshin", "Matlab Uttar", "Shahrasti"],
+  "Chattogram": ["Anwara", "Banshkhali", "Boalkhali", "Chandanaish", "Fatikchhari", "Hathazari", "Lohagara", "Mirsharai", "Patiya", "Rangunia", "Raozan", "Sandwip", "Satkania", "Sitakunda", "Karnafuli"],
+  "Cumilla": ["Barura", "Brahmanpara", "Burichang", "Chandina", "Chauddagram", "Adarsha Sadar", "Sadar Dakshin", "Daudkandi", "Debidwar", "Homna", "Laksam", "Monohorganj", "Meghna", "Muradnagar", "Nangalkot", "Titas", "Lalmai"],
+  "Cox's Bazar": ["Chakaria", "Coxs Bazar Sadar", "Kutubdia", "Moheshkhali", "Pekua", "Ramu", "Teknaf", "Ukhia", "Eidgaon"],
+  "Feni": ["Chhagalnaiya", "Daganbhuiyan", "Feni Sadar", "Fulgazi", "Parshuram", "Sonagazi"],
+  "Khagrachhari": ["Dighinala", "Manikchhari", "Khagrachhari Sadar", "Lakshmichhari", "Mahalchhari", "Matiranga", "Panchhari", "Ramgarh", "Guimara"],
+  "Lakshmipur": ["Kamalnagar", "Lakshmipur Sadar", "Raipur", "Ramganj", "Ramgoti"],
+  "Noakhali": ["Begumganj", "Chatkhil", "Companiganj", "Hatiya", "Senbagh", "Sonaimuri", "Subarnachar", "Noakhali Sadar", "Kabirhat"],
+  "Rangamati": ["Baghaichhari", "Barkal", "Kawkhali", "Kaptai", "Juraichhari", "Langadu", "Naniarchar", "Rangamati Sadar", "Rajasthali", "Bilaichhari"],
+  "Bogura": ["Adamdighi", "Bogura Sadar", "Dhunot", "Dupchanchia", "Gabtali", "Kahaloo", "Nandigram", "Sariakandi", "Shajahanpur", "Sherpur", "Shibganj", "Sonatala"],
+  "Joypurhat": ["Akkelpur", "Joypurhat Sadar", "Kalai", "Panchbibi", "Khetlal"],
+  "Naogaon": ["Atrai", "Dhamoirhat", "Manda", "Mohadevpur", "Naogaon Sadar", "Niamutpur", "Patnitala", "Raninagar", "Sapahar", "Badalgachhi", "Porsha"],
+  "Natore": ["Bagatipara", "Baraigram", "Gurudaspur", "Lalpur", "Natore Sadar", "Singra", "Naldanga"],
+  "Chapainawabganj": ["Shibganj", "Bholahat", "Gomastapur", "Nachole", "Chapainawabganj Sadar"],
+  "Pabna": ["Atgharia", "Bera", "Bhangura", "Chatmohar", "Faridpur", "Ishwardi", "Pabna Sadar", "Santhia", "Sujanagar"],
+  "Rajshahi": ["Bagha", "Bagmara", "Charghat", "Durgapur", "Godagari", "Mohanpur", "Paba", "Puthia", "Tanor"],
+  "Sirajganj": ["Belkuchi", "Chauhali", "Kamarkhanda", "Kazipur", "Raiganj", "Shahjadpur", "Sirajganj Sadar", "Tarash", "Ullapara"],
+  "Habiganj": ["Ajmiriganj", "Bahubal", "Baniyachong", "Chunarughat", "Habiganj Sadar", "Lakhai", "Madhabpur", "Nabiganj", "Sayestaganj"],
+  "Moulvibazar": ["Barlekha", "Juri", "Kamalganj", "Kulaura", "Moulvibazar Sadar", "Rajnagar", "Sreemangal"],
+  "Sunamganj": ["Bishwambharpur", "Chhatak", "Derai", "Dharampasha", "Dowarabazar", "Jagannathpur", "Jamalganj", "Sallah", "Sunamganj Sadar", "Tahirpur", "Shantiganj", "Madhyanagar"],
+  "Sylhet": ["Balaganj", "Beanibazar", "Bishwanath", "Companiganj", "Fenchuganj", "Golapganj", "Gowainghat", "Jaintiapur", "Kanaighat", "Sylhet Sadar", "Zakiganj", "Osmaninagar", "Dakshin Surma"],
+  "Dinajpur": ["Birampur", "Birganj", "Biral", "Bochaganj", "Chirirbandar", "Phulbari", "Ghoraghat", "Hakimpur", "Kaharole", "Khansama", "Nawabganj", "Parbatipur", "Dinajpur Sadar"],
+  "Gaibandha": ["Phulchhari", "Gaibandha Sadar", "Gobindaganj", "Palashbari", "Sadullapur", "Saghata", "Sundarganj"],
+  "Kurigram": ["Phulbari", "Bhurungamari", "Char Rajibpur", "Chilmari", "Kurigram Sadar", "Nageshwari", "Rajarhat", "Rowmari", "Ulipur"],
+  "Lalmonirhat": ["Aditmari", "Hatibandha", "Kaliganj", "Lalmonirhat Sadar", "Patgram"],
+  "Nilphamari": ["Domar", "Jaldhaka", "Kishoreganj", "Nilphamari Sadar", "Sayedpur", "Dimla"],
+  "Panchagarh": ["Atwari", "Boda", "Debiganj", "Panchagarh Sadar", "Tetulia"],
+  "Rangpur": ["Badarganj", "Kaunia", "Rangpur Sadar", "Mithapukur", "Pirgachha", "Pirganj", "Taraganj", "Gangachhara"],
+  "Thakurgaon": ["Pirganj", "Baliadangi", "Haripur", "Ranisankail", "Thakurgaon Sadar"],
+  "Jamalpur": ["Bakshiganj", "Dewanganj", "Islampur", "Jamalpur Sadar", "Madarganj", "Melandaha", "Sarishabari"],
+  "Mymensingh": ["Valuka", "Dhobaura", "Fulbaria", "Gafargaon", "Gouripur", "Haluaghat", "Ishwarganj", "Mymensingh Sadar", "Muktagachha", "Nandail", "Phulpur", "Tarakanda", "Trishal"],
+  "Netrokona": ["Atpara", "Barhatta", "Durgapur", "Khaliajuri", "Kalmakanda", "Kendua", "Madan", "Mohanganj", "Netrokona Sadar", "Purbadhala"],
+  "Sherpur": ["Jhenaigati", "Nakla", "Nalitabari", "Sherpur Sadar", "Sreebardi"],
+  "Jhalokati": ["Jhalokati Sadar", "Nalchity", "Kathalia", "Rajapur"],
+  "Barguna": ["Amtali", "Bamna", "Barguna Sadar", "Betagi", "Patharghata", "Taltali"],
+  "Barishal": ["Agailjhara", "Babuganj", "Bakerganj", "Banaripara", "Wazirpur", "Muladi", "Mehendiganj", "Barishal Sadar", "Hizla", "Gournadi"],
+  "Bhola": ["Bhola Sadar", "Burhanuddin", "Daulatkhan", "Lalmohan", "Manpura", "Tazumuddin", "Char Fasson"],
+  "Patuakhali": ["Bauphal", "Dashmina", "Dumki", "Kalapara", "Mirzaganj", "Patuakhali Sadar", "Rangabali", "Galachipa"],
+  "Pirojpur": ["Bhandaria", "Kawkhali", "Mathbaria", "Nazirpur", "Pirojpur Sadar", "Nesarabad", "Zianagar"]
+};
+
 export default function Orders() {
   const [orders, setOrders] = useState(generateOrders(60));
   const [isLoading, setIsLoading] = useState(false);
@@ -845,20 +912,35 @@ export default function Orders() {
                   <div className="grid-3">
                     <div className="form-group">
                       <label className="form-label" style={{ color: '#94a3b8' }}>DISTRICT NAME</label>
-                      <select value={formCity} onChange={(e) => setFormCity(e.target.value)} className="form-select" style={{ background: '#111827', border: '1px solid #1e293b', color: '#fff' }}>
-                        <option value="Dhaka">Dhaka</option>
-                        <option value="Chattogram">Chattogram</option>
-                        <option value="Sylhet">Sylhet</option>
-                        <option value="Rajshahi">Rajshahi</option>
-                        <option value="Khulna">Khulna</option>
-                        <option value="Barishal">Barishal</option>
-                        <option value="Rangpur">Rangpur</option>
-                        <option value="Mymensingh">Mymensingh</option>
+                      <select 
+                        value={formCity} 
+                        onChange={(e) => {
+                          const newCity = e.target.value;
+                          setFormCity(newCity);
+                          const thanas = BD_DISTRICTS[newCity] || [];
+                          setFormThana(thanas.length > 0 ? thanas[0] : '');
+                        }} 
+                        className="form-select" 
+                        style={{ background: '#111827', border: '1px solid #1e293b', color: '#fff' }}
+                      >
+                        {Object.keys(BD_DISTRICTS).sort().map(dist => (
+                          <option key={dist} value={dist}>{dist}</option>
+                        ))}
                       </select>
                     </div>
                     <div className="form-group">
                       <label className="form-label" style={{ color: '#94a3b8' }}>THANA NAME</label>
-                      <input type="text" value={formThana} onChange={(e) => setFormThana(e.target.value)} className="form-input" placeholder="Select Thana" style={{ background: '#111827', border: '1px solid #1e293b', color: '#fff' }} />
+                      <select 
+                        value={formThana} 
+                        onChange={(e) => setFormThana(e.target.value)} 
+                        className="form-select" 
+                        style={{ background: '#111827', border: '1px solid #1e293b', color: '#fff' }}
+                      >
+                        <option value="">Select Thana</option>
+                        {(BD_DISTRICTS[formCity] || []).sort().map(th => (
+                          <option key={th} value={th}>{th}</option>
+                        ))}
+                      </select>
                     </div>
                     <div className="form-group">
                       <label className="form-label" style={{ color: '#94a3b8' }}>AREA NAME</label>
