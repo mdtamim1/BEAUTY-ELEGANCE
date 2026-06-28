@@ -1157,10 +1157,138 @@ var deleteProduct = (req, res) => {
     res.json({ status: "success", message: "Product deleted" });
   });
 };
+var getFacebookFeed = (req, res) => {
+  db_default.all(`SELECT * FROM products WHERE published = 1`, [], (err, rows) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).send("Database error");
+    }
+    const domain = "https://beauty-elegance-ec88f.web.app";
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>
+`;
+    xml += `<rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
+`;
+    xml += `  <channel>
+`;
+    xml += `    <title>AURA Sports - Facebook Catalog Feed</title>
+`;
+    xml += `    <link>${domain}</link>
+`;
+    xml += `    <description>Dynamic Product Catalog Feed for Facebook Ads</description>
+`;
+    rows.forEach((p) => {
+      const rawDesc = p.description || `${p.name} - Premium sports item from AURA Sports.`;
+      const cleanDesc = rawDesc.replace(/<[^>]*>/g, "").replace(/[&<>'"]/g, (c) => {
+        switch (c) {
+          case "&":
+            return "&amp;";
+          case "<":
+            return "&lt;";
+          case ">":
+            return "&gt;";
+          case "'":
+            return "&apos;";
+          case '"':
+            return "&quot;";
+          default:
+            return c;
+        }
+      });
+      const cleanTitle = p.name.replace(/[&<>'"]/g, (c) => {
+        switch (c) {
+          case "&":
+            return "&amp;";
+          case "<":
+            return "&lt;";
+          case ">":
+            return "&gt;";
+          case "'":
+            return "&apos;";
+          case '"':
+            return "&quot;";
+          default:
+            return c;
+        }
+      });
+      const cleanBrand = (p.brand || "AURA Sports").replace(/[&<>'"]/g, (c) => {
+        switch (c) {
+          case "&":
+            return "&amp;";
+          case "<":
+            return "&lt;";
+          case ">":
+            return "&gt;";
+          case "'":
+            return "&apos;";
+          case '"':
+            return "&quot;";
+          default:
+            return c;
+        }
+      });
+      let imageLink = p.image || "";
+      if (imageLink && !imageLink.startsWith("http")) {
+        imageLink = `${domain}${imageLink.startsWith("/") ? "" : "/"}${imageLink}`;
+      }
+      const inStock = p.in_stock === 1 || p.stock > 0;
+      const availability = inStock ? "in stock" : "out of stock";
+      const priceFormatted = `${p.price} BDT`;
+      xml += `    <item>
+`;
+      xml += `      <g:id>${p.id}</g:id>
+`;
+      xml += `      <g:title>${cleanTitle}</g:title>
+`;
+      xml += `      <g:description>${cleanDesc}</g:description>
+`;
+      xml += `      <g:link>${domain}/product/${p.id}</g:link>
+`;
+      xml += `      <g:image_link>${imageLink}</g:image_link>
+`;
+      xml += `      <g:brand>${cleanBrand}</g:brand>
+`;
+      xml += `      <g:condition>new</g:condition>
+`;
+      xml += `      <g:availability>${availability}</g:availability>
+`;
+      xml += `      <g:price>${priceFormatted}</g:price>
+`;
+      if (p.category) {
+        const cleanCat = p.category.replace(/[&<>'"]/g, (c) => {
+          switch (c) {
+            case "&":
+              return "&amp;";
+            case "<":
+              return "&lt;";
+            case ">":
+              return "&gt;";
+            case "'":
+              return "&apos;";
+            case '"':
+              return "&quot;";
+            default:
+              return c;
+          }
+        });
+        xml += `      <g:google_product_category>${cleanCat}</g:google_product_category>
+`;
+      }
+      xml += `    </item>
+`;
+    });
+    xml += `  </channel>
+`;
+    xml += `</rss>
+`;
+    res.header("Content-Type", "text/xml; charset=utf-8");
+    res.send(xml);
+  });
+};
 
 // backend/routes/products.ts
 var router2 = Router2();
 router2.get("/", getProducts);
+router2.get("/facebook-feed", getFacebookFeed);
 router2.get("/:id", getProductById);
 router2.post("/", authenticateToken, requireRole(["Super Admin", "Admin", "Staff"]), createProduct);
 router2.put("/:id", authenticateToken, requireRole(["Super Admin", "Admin", "Staff"]), updateProduct);

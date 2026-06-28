@@ -170,3 +170,98 @@ export const deleteProduct = (req: Request, res: Response) => {
     res.json({ status: 'success', message: 'Product deleted' });
   });
 };
+
+export const getFacebookFeed = (req: Request, res: Response) => {
+  db.all(`SELECT * FROM products WHERE published = 1`, [], (err, rows) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).send('Database error');
+    }
+
+    const domain = 'https://beauty-elegance-ec88f.web.app';
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    xml += `<rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">\n`;
+    xml += `  <channel>\n`;
+    xml += `    <title>AURA Sports - Facebook Catalog Feed</title>\n`;
+    xml += `    <link>${domain}</link>\n`;
+    xml += `    <description>Dynamic Product Catalog Feed for Facebook Ads</description>\n`;
+
+    rows.forEach((p: any) => {
+      const rawDesc = p.description || `${p.name} - Premium sports item from AURA Sports.`;
+      const cleanDesc = rawDesc
+        .replace(/<[^>]*>/g, '') 
+        .replace(/[&<>'"]/g, (c: string) => {
+          switch (c) {
+            case '&': return '&amp;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case "'": return '&apos;';
+            case '"': return '&quot;';
+            default: return c;
+          }
+        });
+
+      const cleanTitle = p.name.replace(/[&<>'"]/g, (c: string) => {
+        switch (c) {
+          case '&': return '&amp;';
+          case '<': return '&lt;';
+          case '>': return '&gt;';
+          case "'": return '&apos;';
+          case '"': return '&quot;';
+          default: return c;
+        }
+      });
+
+      const cleanBrand = (p.brand || 'AURA Sports').replace(/[&<>'"]/g, (c: string) => {
+        switch (c) {
+          case '&': return '&amp;';
+          case '<': return '&lt;';
+          case '>': return '&gt;';
+          case "'": return '&apos;';
+          case '"': return '&quot;';
+          default: return c;
+        }
+      });
+
+      let imageLink = p.image || '';
+      if (imageLink && !imageLink.startsWith('http')) {
+        imageLink = `${domain}${imageLink.startsWith('/') ? '' : '/'}${imageLink}`;
+      }
+
+      const inStock = p.in_stock === 1 || p.stock > 0;
+      const availability = inStock ? 'in stock' : 'out of stock';
+      const priceFormatted = `${p.price} BDT`;
+
+      xml += `    <item>\n`;
+      xml += `      <g:id>${p.id}</g:id>\n`;
+      xml += `      <g:title>${cleanTitle}</g:title>\n`;
+      xml += `      <g:description>${cleanDesc}</g:description>\n`;
+      xml += `      <g:link>${domain}/product/${p.id}</g:link>\n`;
+      xml += `      <g:image_link>${imageLink}</g:image_link>\n`;
+      xml += `      <g:brand>${cleanBrand}</g:brand>\n`;
+      xml += `      <g:condition>new</g:condition>\n`;
+      xml += `      <g:availability>${availability}</g:availability>\n`;
+      xml += `      <g:price>${priceFormatted}</g:price>\n`;
+      if (p.category) {
+        const cleanCat = p.category.replace(/[&<>'"]/g, (c: string) => {
+          switch (c) {
+            case '&': return '&amp;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case "'": return '&apos;';
+            case '"': return '&quot;';
+            default: return c;
+          }
+        });
+        xml += `      <g:google_product_category>${cleanCat}</g:google_product_category>\n`;
+      }
+      xml += `    </item>\n`;
+    });
+
+    xml += `  </channel>\n`;
+    xml += `</rss>\n`;
+
+    res.header('Content-Type', 'text/xml; charset=utf-8');
+    res.send(xml);
+  });
+};
