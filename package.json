@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "backend": "tsx --watch backend/server.ts",
-    "build": "tsc -b && tsc -p tsconfig.backend.json && vite build",
+    "build": "tsc -b && tsc -p tsconfig.backend.json --noEmit && esbuild backend/server.ts --bundle --platform=node --format=esm --packages=external --outfile=backend/dist/server.js && vite build",
     "start": "node backend/dist/server.js",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -52,6 +52,7 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
     "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.12"
+    "vite": "^8.0.12",
+    "esbuild": "^0.28.1"
   }
 }
