@@ -47,6 +47,7 @@ export default function StorefrontHome() {
 
   // Load active campaigns from localStorage
   const [activeCampaigns, setActiveCampaigns] = useState<any[]>([]);
+  const announcements = config.announcements ? config.announcements.filter((a: any) => a.enabled) : [];
   useEffect(() => {
     try {
       const stored = localStorage.getItem('campaignList');
@@ -209,7 +210,25 @@ export default function StorefrontHome() {
         </section>
       )}
 
-      {/* Banners display */}
+      {/* ---- Announcement Bar (Below Hero Carousel) ---- */}
+      {(announcements.length > 0 || activeCampaigns.length > 0) && (
+        <div className="announcement-bar theme-colored">
+          <div className="announcement-marquee" style={{ background: 'var(--sf-accent)' }}>
+            <div className="announcement-marquee-content" style={{ color: 'white' }}>
+              {announcements.map((ann: any, idx: number) => (
+                <span key={idx} className="announcement-marquee-item" style={{ color: 'white', fontWeight: 'bold' }}>
+                  📢 {ann.text}
+                </span>
+              ))}
+              {activeCampaigns.map((camp: any, idx: number) => (
+                <span key={`camp-${idx}`} className="announcement-marquee-item campaign-promo" style={{ color: 'white', fontWeight: 'bold' }}>
+                  🔥 {camp.name} ক্যাম্পেইন চলছে! এখনই দেখুন!
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ---- Categories ---- */}
       <section className="store-section" id="categories" style={{ paddingTop: 0, paddingBottom: '24px' }}>
@@ -302,25 +321,15 @@ export default function StorefrontHome() {
                 });
 
                 return (
-                  <div 
-                    key={camp.id} 
-                    style={{
-                      background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-                      borderRadius: '20px',
-                      padding: '24px',
-                      color: 'white',
-                      border: '1px solid rgba(233, 43, 43, 0.2)',
-                      boxShadow: '0 10px 20px rgba(0, 0, 0, 0.15)'
-                    }}
-                  >
-                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}>
+                  <div key={camp.id} className="campaign-modal-card">
+                    <div className="campaign-modal-header-row">
                       <div>
                         <span style={{ display: 'inline-block', background: 'var(--sf-accent)', color: 'white', fontSize: '0.65rem', fontWeight: 800, padding: '3px 8px', borderRadius: '4px', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>
                           Campaign Active
                         </span>
                         <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, color: 'white' }}>{camp.name}</h3>
                         <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '4px 0 0 0' }}>
-                          মেয়াদ: {new Date(camp.startDate).toLocaleDateString()} থেকে {new Date(camp.endDate).toLocaleDateString()}
+                          মেয়ad: {new Date(camp.startDate).toLocaleDateString()} থেকে {new Date(camp.endDate).toLocaleDateString()}
                         </p>
                       </div>
                       <div>
@@ -334,9 +343,9 @@ export default function StorefrontHome() {
 
                     {/* Associated products list */}
                     {campProducts.length > 0 ? (
-                      <div style={{ marginTop: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '16px' }}>
+                      <div style={{ marginTop: '20px' }}>
                         <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '12px' }}>ক্যাম্পেইনের পণ্যসমূহ:</h4>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px' }}>
+                        <div className="campaign-products-grid">
                           {campProducts.map((product) => (
                             <div 
                               key={product.id} 

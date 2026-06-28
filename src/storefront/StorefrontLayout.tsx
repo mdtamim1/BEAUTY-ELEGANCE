@@ -84,6 +84,8 @@ export default function StorefrontLayout() {
   const navigate = useNavigate();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastScrollTopRef = useRef(0);
+  const [bottomNavVisible, setBottomNavVisible] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
   const isHome = location.pathname === '/';
@@ -110,19 +112,46 @@ export default function StorefrontLayout() {
     const container = containerRef.current;
     if (!container) return;
 
-    if (!isHome) {
-      setScrolled(true);
-      return;
-    }
-
     const handleScroll = () => {
-      setScrolled(container.scrollTop > 50);
+      const st = container.scrollTop;
+      
+      // Update scrolled state for transparent header
+      if (isHome) {
+        setScrolled(st > 50);
+      } else {
+        setScrolled(true);
+      }
+
+      // Hide/Show bottom navigation based on scroll direction
+      const diff = st - lastScrollTopRef.current;
+      if (diff > 15 && st > 100) {
+        // Scrolling down -> hide bottom nav
+        setBottomNavVisible(false);
+      } else if (diff < -15 || st <= 20) {
+        // Scrolling up or near top -> show bottom nav
+        setBottomNavVisible(true);
+      }
+      lastScrollTopRef.current = st;
     };
 
-    handleScroll();
+    if (!isHome) {
+      setScrolled(true);
+    } else {
+      setScrolled(container.scrollTop > 50);
+    }
+
     container.addEventListener('scroll', handleScroll, { passive: true });
     return () => container.removeEventListener('scroll', handleScroll);
   }, [isHome]);
+
+  // Scroll restoration and reset bottom nav on route changes
+  useEffect(() => {
+    const container = containerRef.current;
+    if (container) {
+      container.scrollTop = 0;
+    }
+    setBottomNavVisible(true);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (mobileSearchOpen && searchInputRef.current) {
@@ -230,7 +259,7 @@ export default function StorefrontLayout() {
     <div className="storefront">
       <div className={`store-sticky-header-container ${isHome && !scrolled ? 'header-transparent' : ''}`}>
         {/* ---- Announcement Bar ---- */}
-        {(announcements.length > 0 || activeCampaigns.length > 0) && (
+        {!isHome && (announcements.length > 0 || activeCampaigns.length > 0) && (
           <div className="announcement-bar">
             <div className="announcement-marquee">
               <div className="announcement-marquee-content">
@@ -581,7 +610,7 @@ export default function StorefrontLayout() {
 
       {/* ---- Premium Bottom Navigation Bar (Mobile) ---- */}
       {!isProductPage && (
-        <nav className="store-bottom-nav">
+        <nav className={`store-bottom-nav ${!bottomNavVisible ? 'hide' : ''}`}>
           <Link to="/" className={`bottom-nav-item ${location.pathname === '/' ? 'active' : ''}`}>
             <div className="bottom-nav-icon">
               <Home size={22} />

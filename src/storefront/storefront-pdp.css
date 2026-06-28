@@ -1047,7 +1047,7 @@
 }
 
 .sticky-bar-btn.buy-now {
-  background: #00addc; /* Daraz blue/cyan color */
+  background: #0f172a; /* Premium dark slate */
   color: #ffffff;
   border-radius: 24px 0 0 24px;
   clip-path: polygon(0 0, 100% 0, 85% 100%, 0% 100%);
@@ -1057,7 +1057,7 @@
 }
 
 .sticky-bar-btn.add-to-cart {
-  background: #f57224; /* Daraz orange color */
+  background: var(--sf-accent); /* Theme red */
   color: #ffffff;
   border-radius: 0 24px 24px 0;
   clip-path: polygon(15% 0, 100% 0, 100% 100%, 0% 100%);
@@ -1270,7 +1270,7 @@
 /* On Desktop: keep bottom bar hidden if desired, or show it. Let's make body margin-bottom on mobile to avoid overlapping content */
 @media (max-width: 768px) {
   .pdp-mobile-sticky-bar {
-    bottom: 68px; /* Sit above the global bottom nav bar */
+    bottom: 0; /* Move to the absolute bottom of the screen */
   }
   .pdp-actions, .pdp-contact-actions {
     display: none !important;
