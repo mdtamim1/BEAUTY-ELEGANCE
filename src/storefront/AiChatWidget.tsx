@@ -128,17 +128,19 @@ export default function AiChatWidget() {
 
   return (
     <>
-      {/* Floating 3D AI Button */}
-      <button
-        className={`ai-chat-fab ${open ? 'open' : ''}`}
-        onClick={() => setOpen(!open)}
-        title={open ? 'Close AI Assistant' : 'AI Shopping Assistant'}
-        aria-label={open ? 'Close AI Assistant' : 'Open AI Shopping Assistant'}
-        id="ai-chat-button"
-      >
-        {open ? <X size={20} /> : <Sparkles size={20} />}
-        {!open && hasNewReply && <span className="ai-fab-badge">!</span>}
-      </button>
+      {/* Floating 3D AI Button (hidden when chat is open) */}
+      {!open && (
+        <button
+          className="ai-chat-fab"
+          onClick={() => setOpen(true)}
+          title="AI Shopping Assistant"
+          aria-label="Open AI Shopping Assistant"
+          id="ai-chat-button"
+        >
+          <Sparkles size={20} />
+          {hasNewReply && <span className="ai-fab-badge">!</span>}
+        </button>
+      )}
 
       {/* Chat Window */}
       {open && (

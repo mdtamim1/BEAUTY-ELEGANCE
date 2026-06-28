@@ -89,7 +89,38 @@ export default function Marketing() {
       ]);
       if (couponData) setCoupons(couponData);
       if (subData) setSubscribers(subData);
-      if (productData) setProducts(productData);
+
+      let finalProducts = productData;
+      if (!finalProducts || finalProducts.length === 0) {
+        const localConfig = localStorage.getItem('storefront_config');
+        if (localConfig) {
+          try {
+            const parsed = JSON.parse(localConfig);
+            if (parsed && Array.isArray(parsed.products)) {
+              finalProducts = parsed.products;
+            }
+          } catch (err) {
+            console.error('Error parsing storefront_config for marketing:', err);
+          }
+        }
+      }
+      if (!finalProducts || finalProducts.length === 0) {
+        const localList = localStorage.getItem('productList');
+        if (localList) {
+          try {
+            const parsed = JSON.parse(localList);
+            if (Array.isArray(parsed)) {
+              finalProducts = parsed;
+            }
+          } catch (err) {
+            console.error('Error parsing productList for marketing:', err);
+          }
+        }
+      }
+      
+      if (finalProducts) {
+        setProducts(finalProducts);
+      }
     } catch (e) {
       setErrorMsg('ডাটাবেজ থেকে কুপন, সাবস্ক্রাইবার ও প্রোডাক্ট ডাটা লোড করা যাচ্ছে না।');
     } finally {

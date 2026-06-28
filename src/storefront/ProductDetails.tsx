@@ -691,43 +691,68 @@ export default function ProductDetails() {
       </div>
 
       {/* Related Products */}
-      {product.relatedProducts && product.relatedProducts.length > 0 && (
-        <div className="pdp-related">
-          <h2>You May Also Like</h2>
-          <div className="products-grid">
-            {product.relatedProducts.map((relatedId: number) => {
-              const relatedProduct = config.products.find(p => p.id === relatedId);
-              if (!relatedProduct) return null;
-              
-              return (
-                <Link to={`/product/${relatedProduct.id}`} key={relatedProduct.id} className="product-card" style={{ textDecoration: 'none' }}>
-                  <div style={{ position: 'relative' }}>
-                    <img src={relatedProduct.image} alt={relatedProduct.name} className="product-card-image" />
-                    {relatedProduct.badge && (
-                      <span className={`product-card-badge ${relatedProduct.badge}`}>
-                        {relatedProduct.badge === 'sale' ? `Sale! -${Math.round((1 - relatedProduct.price / (relatedProduct.originalPrice || relatedProduct.price)) * 100)}%` : 'New'}
-                      </span>
-                    )}
-                  </div>
-                  <div className="product-card-body">
-                    <div className="product-card-category">{relatedProduct.category}</div>
-                    <div className="product-card-name">{relatedProduct.name}</div>
-                    <div className="product-card-rating">
-                      <StarRating rating={relatedProduct.rating} />
-                      <span className="product-card-reviews">({relatedProduct.reviews.toLocaleString()})</span>
+      {product && (() => {
+        const related = config.products.filter(p => String(p.id) !== String(product.id) && p.category === product.category && p.published).slice(0, 4);
+        if (related.length === 0) return null;
+        
+        return (
+          <div className="pdp-related">
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--sf-text-primary)', marginBottom: '20px' }}>You May Also Like</h3>
+            <div className="products-grid">
+              {related.map((relatedProduct: any) => {
+                return (
+                  <Link to={`/product/${relatedProduct.id}`} key={relatedProduct.id} className="product-card" style={{ textDecoration: 'none' }}>
+                    <div style={{ position: 'relative' }}>
+                      <img src={relatedProduct.image} alt={relatedProduct.name} className="product-card-image" />
+                      {relatedProduct.badge && (
+                        <span className={`product-card-badge ${relatedProduct.badge}`}>
+                          {relatedProduct.badge === 'sale' ? `Sale! -${Math.round((1 - relatedProduct.price / (relatedProduct.originalPrice || relatedProduct.price)) * 100)}%` : 'New'}
+                        </span>
+                      )}
+                      {relatedProduct.originalPrice && relatedProduct.originalPrice > relatedProduct.price && (
+                        <span className="product-card-save-badge">
+                          Save ৳{Math.round(relatedProduct.originalPrice - relatedProduct.price)}
+                        </span>
+                      )}
                     </div>
-                    <div className="product-card-footer">
-                      <div>
-                        <span className="product-card-price">৳{relatedProduct.price}</span>
+                    <div className="product-card-body">
+                      <div className="product-card-category">{relatedProduct.category}</div>
+                      <div className="product-card-name">{relatedProduct.name}</div>
+                      <div className="product-card-rating">
+                        <StarRating rating={relatedProduct.rating} />
+                        <span className="product-card-reviews">({relatedProduct.reviews ? relatedProduct.reviews.toLocaleString() : 0})</span>
+                      </div>
+                      <div className="product-card-footer">
+                        <div className="product-card-price-group">
+                          <span className="product-card-price">৳{relatedProduct.price}</span>
+                          {relatedProduct.originalPrice && relatedProduct.originalPrice > relatedProduct.price && (
+                            <span className="product-card-old-price">৳{relatedProduct.originalPrice}</span>
+                          )}
+                        </div>
+                        <button 
+                          className="product-card-add"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            addToCart({
+                              id: relatedProduct.id,
+                              name: relatedProduct.name,
+                              price: relatedProduct.price,
+                              image: relatedProduct.image,
+                              quantity: 1
+                            });
+                          }}
+                        >
+                          <ShoppingCart size={14} />
+                        </button>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              );
-            })}
+                  </Link>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
       {/* Premium Checkout Modal Overlay */}
       {isCheckoutOpen && (
         <div className="pdp-checkout-overlay" onClick={closeCheckoutModal}>
