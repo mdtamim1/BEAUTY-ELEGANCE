@@ -37,6 +37,8 @@ export default function StorefrontHome() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showCampaignsModal, setShowCampaignsModal] = useState(false);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchEndX, setTouchEndX] = useState<number | null>(null);
   const location = useLocation();
 
   // Newsletter states
@@ -147,11 +149,39 @@ export default function StorefrontHome() {
     return () => clearInterval(timer);
   }, [banners.length]);
 
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEndX(null);
+    setTouchStartX(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEndX(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStartX || !touchEndX) return;
+    const distance = touchStartX - touchEndX;
+    const minSwipeDistance = 50;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      setCurrentSlide(prev => (prev + 1) % banners.length);
+    } else if (isRightSwipe) {
+      setCurrentSlide(prev => (prev - 1 + banners.length) % banners.length);
+    }
+  };
+
   return (
     <>
       {/* ---- Hero Full-Width Carousel ---- */}
       {banners.length > 0 && (
-        <section className="hero-carousel-fullscreen">
+        <section 
+          className="hero-carousel-fullscreen"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
           <div className="fullscreen-slides" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
             {banners.map((banner) => (
               <div 
