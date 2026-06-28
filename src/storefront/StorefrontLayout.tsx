@@ -261,50 +261,50 @@ export default function StorefrontLayout() {
       <div className={`store-sticky-header-container ${isHome && !scrolled ? 'header-transparent' : ''}`}>
         {/* ---- Header ---- */}
         <header className="store-header">
-          <div className="store-header-inner-grid">
-            {/* Left Action: Menu Toggle */}
-            <div className="store-header-left">
-              <button 
-                className="store-header-btn" 
-                onClick={() => setMobileMenuOpen(true)}
-                title="Open Menu"
-              >
-                <Menu size={22} />
-              </button>
+          {!mobileSearchOpen ? (
+            <div className="store-header-inner-grid">
+              {/* Left Action: Menu Toggle */}
+              <div className="store-header-left">
+                <button 
+                  className="store-header-btn" 
+                  onClick={() => setMobileMenuOpen(true)}
+                  title="Open Menu"
+                >
+                  <Menu size={22} />
+                </button>
+              </div>
+
+              {/* Center: Logo */}
+              <div className="store-header-center">
+                <Link to="/" className="store-logo">
+                  <div className="store-logo-icon"><Zap size={22} /></div>
+                  <div className="store-logo-text">{branding.logoTextPrimary}<span>{branding.logoTextSecondary}</span></div>
+                </Link>
+              </div>
+
+              {/* Right Action: Search & Cart */}
+              <div className="store-header-right">
+                <button 
+                  className="store-header-btn" 
+                  onClick={() => setMobileSearchOpen(true)}
+                  title="Search"
+                >
+                  <Search size={20} />
+                </button>
+
+                <button 
+                  className="store-header-btn" 
+                  title="Cart" 
+                  onClick={() => setCartOpen(true)}
+                  style={{ position: 'relative' }}
+                >
+                  <ShoppingCart size={20} />
+                  {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
+                </button>
+              </div>
             </div>
-
-            {/* Center: Logo */}
-            <div className="store-header-center">
-              <Link to="/" className="store-logo">
-                <div className="store-logo-icon"><Zap size={22} /></div>
-                <div className="store-logo-text">{branding.logoTextPrimary}<span>{branding.logoTextSecondary}</span></div>
-              </Link>
-            </div>
-
-            {/* Right Action: Search & Cart */}
-            <div className="store-header-right">
-              <button 
-                className="store-header-btn" 
-                onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-                title="Search"
-              >
-                <Search size={20} />
-              </button>
-
-              <button 
-                className="store-header-btn" 
-                title="Cart" 
-                onClick={() => setCartOpen(true)}
-                style={{ position: 'relative' }}
-              >
-                <ShoppingCart size={20} />
-                {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
-              </button>
-            </div>
-          </div>
-
-          {/* Inline search bar toggle under the header when active */}
-          {mobileSearchOpen && (
+          ) : (
+            /* Full Width Search Bar Row (covers header logo & menu items completely) */
             <div className="store-header-search-bar-row">
               <form className="store-search-full" onSubmit={handleSearch}>
                 <Search size={18} className="store-search-icon" />
@@ -314,6 +314,7 @@ export default function StorefrontLayout() {
                   placeholder="Search products, brands, categories..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{ fontSize: '16px' }}
                 />
                 <button
                   type="button"
@@ -321,7 +322,7 @@ export default function StorefrontLayout() {
                   onClick={() => setMobileSearchOpen(false)}
                   title="Close Search"
                 >
-                  <X size={18} />
+                  <X size={20} />
                 </button>
               </form>
             </div>
