@@ -33,14 +33,40 @@ export default function CampaignPage() {
       setLoading(true);
       try {
         const list = await fetchCampaignsFromBackend();
+        let match = null;
         if (list) {
-          const match = list.find((c: any) => String(c.id) === String(id));
-          if (match) {
-            setCampaign(match);
+          match = list.find((c: any) => String(c.id) === String(id));
+        }
+
+        // Fallback to local storage if not found in backend list
+        if (!match) {
+          const stored = localStorage.getItem('campaignList');
+          if (stored) {
+            const localList = JSON.parse(stored);
+            if (Array.isArray(localList)) {
+              match = localList.find((c: any) => String(c.id) === String(id));
+            }
           }
+        }
+
+        if (match) {
+          setCampaign(match);
         }
       } catch (e) {
         console.error('Failed to load campaign info:', e);
+        // Direct local storage fallback on exception
+        const stored = localStorage.getItem('campaignList');
+        if (stored) {
+          try {
+            const localList = JSON.parse(stored);
+            if (Array.isArray(localList)) {
+              const match = localList.find((c: any) => String(c.id) === String(id));
+              if (match) setCampaign(match);
+            }
+          } catch (err) {
+            console.error('Error parsing stored campaignList:', err);
+          }
+        }
       } finally {
         setLoading(false);
       }
@@ -101,15 +127,22 @@ export default function CampaignPage() {
     );
   }
 
-  // Filter products matching this campaign
+  // Filter products matching this campaign (robust type-agnostic normalized search)
   const campaignProducts = config.products.filter(p => {
     if (!p.published) return false;
-    if (campaign.productIds && Array.isArray(campaign.productIds)) {
-      return campaign.productIds.includes(String(p.id));
+    
+    const targetIds = campaign.productIds 
+      ? campaign.productIds.map((id: any) => String(id).trim()) 
+      : [];
+      
+    if (targetIds.length > 0) {
+      return targetIds.includes(String(p.id).trim());
     }
+    
     if (campaign.productId) {
-      return String(p.id) === String(campaign.productId);
+      return String(p.id).trim() === String(campaign.productId).trim();
     }
+    
     return false;
   });
 

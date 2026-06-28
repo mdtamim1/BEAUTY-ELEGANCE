@@ -317,6 +317,54 @@ export default function StorefrontHome() {
         </div>
       </section>
 
+      {/* ---- Active Campaigns Homepage Grid ---- */}
+      {activeCampaigns.length > 0 && (
+        <section className="store-section" id="active-campaigns" style={{ background: '#f8fafc', padding: '32px 16px', borderRadius: '16px', margin: '24px 16px' }}>
+          <div className="store-section-header" style={{ marginBottom: '20px' }}>
+            <div>
+              <h2 className="store-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.4rem' }}>
+                <Zap size={22} color="var(--sf-accent)" fill="var(--sf-accent)" /> রানিং ক্যাম্পেইনসমূহ (Active Campaigns)
+              </h2>
+              <p className="store-section-subtitle">আমাদের ধামাকা অফার ও ক্যাম্পেইনগুলো লুফে নিন</p>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+            {activeCampaigns.map((camp) => (
+              <Link 
+                to={`/campaign/${camp.id}`} 
+                key={camp.id} 
+                style={{ textDecoration: 'none' }}
+              >
+                <div style={{
+                  background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  color: 'white',
+                  border: '1.5px solid rgba(255, 255, 255, 0.08)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'transform 0.2s',
+                  boxShadow: '0 8px 16px rgba(0, 0, 0, 0.1)'
+                }}
+                className="hover-scale"
+                >
+                  <span style={{ display: 'inline-block', background: 'var(--sf-accent)', color: 'white', fontSize: '0.65rem', fontWeight: 800, padding: '3px 8px', borderRadius: '4px', textTransform: 'uppercase', marginBottom: '12px' }}>
+                    LIVE NOW
+                  </span>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: '0 0 8px 0', color: 'white' }}>{camp.name}</h3>
+                  <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0 0 16px 0' }}>
+                    মেয়াদ: {new Date(camp.startDate).toLocaleDateString()} থেকে {new Date(camp.endDate).toLocaleDateString()}
+                  </p>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--sf-accent)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    অফারটি দেখুন &rarr;
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* ---- All Campaigns Trigger Button ---- */}
       {activeCampaigns.length > 0 && (
         <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 16px' }}>
@@ -353,13 +401,17 @@ export default function StorefrontHome() {
             </div>
             <div className="modal-body" style={{ overflowY: 'auto', flex: 1, padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
               {activeCampaigns.map((camp) => {
-                // Resolve products associated with this campaign
+                // Resolve products associated with this campaign (robust matching)
+                const targetIds = camp.productIds 
+                  ? camp.productIds.map((id: any) => String(id).trim()) 
+                  : [];
                 const campProducts = config.products.filter(p => {
-                  if (camp.productIds && Array.isArray(camp.productIds)) {
-                    return camp.productIds.includes(String(p.id));
+                  if (!p.published) return false;
+                  if (targetIds.length > 0) {
+                    return targetIds.includes(String(p.id).trim());
                   }
                   if (camp.productId) {
-                    return String(p.id) === String(camp.productId);
+                    return String(p.id).trim() === String(camp.productId).trim();
                   }
                   return false;
                 });

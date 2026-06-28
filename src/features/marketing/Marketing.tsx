@@ -10,7 +10,8 @@ import {
   fetchProductsFromBackend,
   fetchCampaignsFromBackend,
   createCampaignInBackend,
-  updateCampaignInBackend
+  updateCampaignInBackend,
+  deleteCampaignFromBackend
 } from '../../services/api';
 
 const typeConfig: Record<string, { icon: any; color: string }> = {
@@ -67,6 +68,7 @@ export default function Marketing() {
   const [campMessage, setCampMessage] = useState('');
   const [campTarget, setCampTarget] = useState('All Customers');
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [productSearchQuery, setProductSearchQuery] = useState('');
 
   // Form states (Coupon Creation)
   const [coupCode, setCoupCode] = useState('');
@@ -184,7 +186,18 @@ export default function Marketing() {
     setCampName('');
     setCampMessage('');
     setSelectedProductIds([]);
+    setProductSearchQuery('');
     setShowCampaignModal(false);
+  };
+
+  const handleDeleteCampaign = async (id: string) => {
+    if (!window.confirm('আপনি কি নিশ্চিত যে এই ক্যাম্পেইনটি ডিলিট করতে চান?')) return;
+    
+    // Optimistic UI update
+    setCampaigns(prev => prev.filter(c => c.id !== id));
+    
+    // Sync with backend SQLite
+    await deleteCampaignFromBackend(id);
   };
 
   // Coupon Actions
@@ -361,6 +374,14 @@ export default function Marketing() {
                         ) : campaign.status === 'paused' ? (
                           <button className="btn btn-ghost btn-sm" title="Resume Campaign" onClick={() => handleToggleCampaign(campaign.id)}><Play size={14} /></button>
                         ) : null}
+                        <button 
+                          className="btn btn-ghost btn-sm text-danger" 
+                          title="Delete Campaign" 
+                          onClick={() => handleDeleteCampaign(campaign.id)}
+                          style={{ color: '#ef4444' }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -608,6 +629,17 @@ export default function Marketing() {
 
                 <div className="form-group">
                   <label className="form-label">সংশ্লিষ্ট পণ্যসমূহ (Associated Products - Select Multiple)</label>
+                  
+                  {/* Product Search Input */}
+                  <input 
+                    type="text" 
+                    placeholder="পণ্য খুঁজুন (Search Product by Name or SKU)..." 
+                    value={productSearchQuery}
+                    onChange={(e) => setProductSearchQuery(e.target.value)}
+                    className="form-input"
+                    style={{ marginBottom: '8px', background: '#111827', border: '1px solid #1e293b', color: '#fff', fontSize: '0.85rem', height: '36px', boxSizing: 'border-box' }}
+                  />
+
                   <div style={{
                     maxHeight: '150px',
                     overflowY: 'auto',
@@ -620,22 +652,28 @@ export default function Marketing() {
                     background: 'rgba(15, 23, 42, 0.6)',
                     color: '#e2e8f0'
                   }}>
-                    {products.map(p => (
-                      <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
-                        <input
-                          type="checkbox"
-                          checked={selectedProductIds.includes(String(p.id))}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedProductIds(prev => [...prev, String(p.id)]);
-                            } else {
-                              setSelectedProductIds(prev => prev.filter(id => id !== String(p.id)));
-                            }
-                          }}
-                        />
-                        <span>{p.name} (৳{p.price})</span>
-                      </label>
-                    ))}
+                    {products
+                      .filter(p => 
+                        p.name.toLowerCase().includes(productSearchQuery.toLowerCase()) || 
+                        (p.sku && p.sku.toLowerCase().includes(productSearchQuery.toLowerCase()))
+                      )
+                      .map(p => (
+                        <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedProductIds.includes(String(p.id))}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedProductIds(prev => [...prev, String(p.id)]);
+                              } else {
+                                setSelectedProductIds(prev => prev.filter(id => id !== String(p.id)));
+                              }
+                            }}
+                          />
+                          <span>{p.name} (৳{p.price})</span>
+                        </label>
+                      ))
+                    }
                   </div>
                 </div>
 
