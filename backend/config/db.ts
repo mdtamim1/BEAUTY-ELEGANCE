@@ -259,6 +259,18 @@ function initializeDatabase() {
       )
     `);
 
+    db.get("SELECT COUNT(*) as count FROM campaigns", (err, row: any) => {
+      if (!err && row && row.count === 0) {
+        db.run(`
+          INSERT INTO campaigns (id, name, type, status, sent, opened, clicked, converted, revenue, start_date, end_date, product_ids)
+          VALUES ('CMP-001', 'ধামাকা ওপেনিং অফার', 'email', 'active', 5000, 2400, 1100, 320, 145000.0, ?, ?, '1,2,3,4')
+        `, [
+          new Date().toISOString().split('T')[0],
+          new Date(Date.now() + 15 * 24 * 3600 * 1000).toISOString().split('T')[0]
+        ]);
+      }
+    });
+
     // Seed default roles and super admin employee
     const defaultRoles = [
       { name: 'Super Admin', desc: 'System Administrator with full access', is_system: 1, permissions: ["dashboard", "analytics", "orders", "products", "storefront", "chats", "marketing", "employees", "finance", "security", "settings", "ai"] },

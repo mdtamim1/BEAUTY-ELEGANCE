@@ -473,6 +473,17 @@ function initializeDatabase() {
         product_ids TEXT
       )
     `);
+    db.get("SELECT COUNT(*) as count FROM campaigns", (err, row) => {
+      if (!err && row && row.count === 0) {
+        db.run(`
+          INSERT INTO campaigns (id, name, type, status, sent, opened, clicked, converted, revenue, start_date, end_date, product_ids)
+          VALUES ('CMP-001', '\u09A7\u09BE\u09AE\u09BE\u0995\u09BE \u0993\u09AA\u09C7\u09A8\u09BF\u0982 \u0985\u09AB\u09BE\u09B0', 'email', 'active', 5000, 2400, 1100, 320, 145000.0, ?, ?, '1,2,3,4')
+        `, [
+          (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
+          new Date(Date.now() + 15 * 24 * 3600 * 1e3).toISOString().split("T")[0]
+        ]);
+      }
+    });
     const defaultRoles = [
       { name: "Super Admin", desc: "System Administrator with full access", is_system: 1, permissions: ["dashboard", "analytics", "orders", "products", "storefront", "chats", "marketing", "employees", "finance", "security", "settings", "ai"] },
       { name: "Admin", desc: "Administrator with full management access", is_system: 1, permissions: ["dashboard", "analytics", "orders", "products", "storefront", "chats", "marketing", "employees", "finance", "security", "settings", "ai"] },
