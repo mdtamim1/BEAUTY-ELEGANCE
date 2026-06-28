@@ -3512,3 +3512,71 @@
 .campaign-modal-card .timer-sep {
   color: white !important;
 }
+
+/* Campaign Modal Card Countdown Timer Contrast & Shifting Overrides */
+.campaign-modal-card .collection-timer {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: white !important;
+  padding: 6px 12px !important;
+  border-radius: 10px !important;
+  display: inline-flex !important;
+  align-self: flex-start !important;
+}
+
+.campaign-modal-card .timer-value {
+  font-size: 1rem !important;
+  font-weight: 800 !important;
+  font-variant-numeric: tabular-nums !important;
+  color: white !important;
+}
+
+.campaign-modal-card .timer-unit {
+  min-width: 28px !important;
+}
+
+/* Sleek 3-dot dropdown popover */
+.store-more-dropdown {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  padding: 8px 0;
+  min-width: 180px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  animation: dropdownFadeIn 0.2s ease-out;
+}
+
+.store-more-dropdown a {
+  display: block;
+  padding: 10px 20px;
+  color: #1e293b !important;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.88rem;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.store-more-dropdown a:hover {
+  background: rgba(233, 43, 43, 0.05);
+  color: var(--sf-accent) !important;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

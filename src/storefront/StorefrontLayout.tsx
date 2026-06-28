@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, ShoppingCart, Heart, User, Zap, X, Minus, Plus, Phone, Mail, Menu, Home } from 'lucide-react';
+import { Search, ShoppingCart, Heart, User, Zap, X, Minus, Plus, Phone, Mail, Menu, Home, MoreVertical } from 'lucide-react';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import './storefront.css';
 import { replaceContactInfo } from '../utils/storefrontUtils';
@@ -16,6 +16,7 @@ export default function StorefrontLayout() {
   const [config] = useStorefrontConfig();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const { customer } = useCustomerAuth();
 
   // Filter enabled announcements
@@ -258,55 +259,49 @@ export default function StorefrontLayout() {
   return (
     <div className="storefront">
       <div className={`store-sticky-header-container ${isHome && !scrolled ? 'header-transparent' : ''}`}>
-        {/* ---- Announcement Bar ---- */}
-        {!isHome && (announcements.length > 0 || activeCampaigns.length > 0) && (
-          <div className="announcement-bar">
-            <div className="announcement-marquee">
-              <div className="announcement-marquee-content">
-                {announcements.map((ann) => (
-                  <div key={`ann-1-${ann.id}`} className="announcement-marquee-item">
-                    <span className="announcement-news-tag">বিজ্ঞপ্তি</span>
-                    <span className="announcement-text">{replaceContactInfo(ann.text, config.contactInfo)}</span>
-                  </div>
-                ))}
-                {activeCampaigns.map((camp) => (
-                  <div key={`camp-1-${camp.id}`} className="announcement-marquee-item">
-                    <span className="announcement-news-tag" style={{ backgroundColor: 'var(--sf-accent)' }}>অফার</span>
-                    <span className="announcement-text" style={{ fontWeight: 'bold' }}>{camp.name} — Limited Campaign Active!</span>
-                  </div>
-                ))}
-                {announcements.map((ann) => (
-                  <div key={`ann-2-${ann.id}`} className="announcement-marquee-item">
-                    <span className="announcement-news-tag">বিজ্ঞপ্তি</span>
-                    <span className="announcement-text">{replaceContactInfo(ann.text, config.contactInfo)}</span>
-                  </div>
-                ))}
-                {activeCampaigns.map((camp) => (
-                  <div key={`camp-2-${camp.id}`} className="announcement-marquee-item">
-                    <span className="announcement-news-tag" style={{ backgroundColor: 'var(--sf-accent)' }}>অফার</span>
-                    <span className="announcement-text" style={{ fontWeight: 'bold' }}>{camp.name} — Limited Campaign Active!</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* ---- Header ---- */}
         <header className="store-header">
           <div className="store-header-inner">
-            <div className="store-header-logo-row">
+            <div className="store-header-logo-row" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {isHome && (
+                <div style={{ position: 'relative' }}>
+                  <button 
+                    className="store-header-btn" 
+                    onClick={() => setMoreMenuOpen(!moreMenuOpen)}
+                    style={{ padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    title="Menu"
+                  >
+                    <MoreVertical size={20} />
+                  </button>
+                  {moreMenuOpen && (
+                    <div className="store-more-dropdown">
+                      {navLinks.map(link => (
+                        <Link 
+                          key={link.id} 
+                          to={link.url} 
+                          onClick={() => setMoreMenuOpen(false)}
+                        >
+                          {link.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <Link to="/" className="store-logo">
                 <div className="store-logo-icon"><Zap size={22} /></div>
                 <div className="store-logo-text">{branding.logoTextPrimary}<span>{branding.logoTextSecondary}</span></div>
               </Link>
             </div>
 
-            <nav className="store-nav">
-              {navLinks.map(link => (
-                <Link key={link.id} to={link.url} className="store-nav-link">{link.label}</Link>
-              ))}
-            </nav>
+            {!isHome && (
+              <nav className="store-nav">
+                {navLinks.map(link => (
+                  <Link key={link.id} to={link.url} className="store-nav-link">{link.label}</Link>
+                ))}
+              </nav>
+            )}
 
             <form className={`store-search ${mobileSearchOpen ? 'open' : ''}`} onSubmit={handleSearch}>
               <Search size={18} className="store-search-icon" />
@@ -346,7 +341,7 @@ export default function StorefrontLayout() {
                 {wishlist.length > 0 && <span className="cart-count">{wishlist.length}</span>}
               </button>
               <button 
-                className="store-header-btn store-desktop-only" 
+                className={`store-header-btn ${isHome ? '' : 'store-desktop-only'}`} 
                 title="Account"
                 onClick={() => navigate('/account')}
                 style={{ position: 'relative' }}
