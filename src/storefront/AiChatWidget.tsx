@@ -34,6 +34,7 @@ export default function AiChatWidget() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [hasNewReply, setHasNewReply] = useState(false);
+  const [lastMatchedProduct, setLastMatchedProduct] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -96,7 +97,7 @@ export default function AiChatWidget() {
       }
     } catch (e) {
       console.warn('AI Chat Error, using local fallback:', e);
-      const reply = generateClientFallbackResponse(text.trim(), config.products || []);
+      const reply = generateClientFallbackResponse(text.trim(), config.products || [], lastMatchedProduct, setLastMatchedProduct);
       const aiMsg: ChatMsg = { role: 'model', text: reply };
       setMessages(prev => [...prev, aiMsg]);
       if (!open) setHasNewReply(true);
@@ -253,9 +254,43 @@ export default function AiChatWidget() {
 // =========================================================
 // Heuristic Client-Side AI Response Generator (Fallback)
 // =========================================================
-function generateClientFallbackResponse(message: string, products: any[]): string {
+function generateClientFallbackResponse(
+  message: string, 
+  products: any[], 
+  lastMatchedProduct: any, 
+  setLastMatchedProduct: (p: any) => void
+): string {
   const query = message.toLowerCase().trim();
   const activeProducts = products.filter(p => p.published);
+
+  // Common follow-up queries if we have a context product
+  if (lastMatchedProduct) {
+    const isAskingForUse = query.includes('kaj ki') || query.includes('কাজ কি') || query.includes('কি কাজ') || query.includes('ব্যবহার') || query.includes('use') || query.includes('etar kaj') || query.includes('এটার কাজ') || query.includes('উপকার') || query.includes('কাজ করে');
+    const isAskingForDetails = query.includes('details') || query.includes('bistarito') || query.includes('details bolo') || query.includes('বিস্তারিত') || query.includes('বলুন') || query.includes('বলো') || query.includes('বল');
+    const isAskingForPrice = query.includes('price') || query.includes('দাম') || query.includes('কত') || query.includes('টাকা');
+    const isAskingForStock = query.includes('stock') || query.includes('আছে') || query.includes('পাব') || query.includes('পাওয়া');
+
+    if (isAskingForUse || isAskingForDetails) {
+      if (lastMatchedProduct.description) {
+        return `**${lastMatchedProduct.name}** এর কাজ ও বিবরণ:\n\n${lastMatchedProduct.description}`;
+      } else {
+        return `**${lastMatchedProduct.name}** এর নির্দিষ্ট কোনো বিবরণ দেওয়া নেই, তবে এটি আমাদের একটি অত্যন্ত জনপ্রিয় পণ্য!`;
+      }
+    }
+    
+    if (isAskingForPrice) {
+      let priceMsg = `**${lastMatchedProduct.name}** এর বর্তমান মূল্য ৳${lastMatchedProduct.price}।`;
+      if (lastMatchedProduct.originalPrice && lastMatchedProduct.originalPrice > lastMatchedProduct.price) {
+        priceMsg += ` (আগে মূল্য ছিল ৳${lastMatchedProduct.originalPrice})`;
+      }
+      return priceMsg;
+    }
+    
+    if (isAskingForStock) {
+      const inStock = lastMatchedProduct.in_stock === 1 || lastMatchedProduct.in_stock === true || lastMatchedProduct.stock > 0;
+      return `**${lastMatchedProduct.name}** পণ্যটি ${inStock ? `বর্তমানে স্টকে আছে (বাকি আছে ${lastMatchedProduct.stock || 1} টি)` : 'বর্তমানে স্টক আউট'}`;
+    }
+  }
 
   if (query.includes('হ্যালো') || query.includes('hi') || query.includes('hello') || query.includes('কেমন আছ') || query.includes('আছেন')) {
     return 'হ্যালো! আমি আপনার AI শপিং অ্যাসিস্ট্যান্ট। আমি আপনাকে স্টোরের পণ্য খুঁজে পেতে, দাম জানতে অথবা ছাড় ও অফার জানতে সাহায্য করতে পারি। আপনি কি খুঁজছেন বলুন?';
@@ -264,7 +299,7 @@ function generateClientFallbackResponse(message: string, products: any[]): strin
   if (query.includes('পণ্য') || query.includes('প্রোডাক্ট') || query.includes('product') || query.includes('list') || query.includes('কি কি আছে')) {
     if (activeProducts.length === 0) return 'দুঃখিত, এই মুহূর্তে আমাদের স্টোরে কোনো পণ্য পাওয়া যাচ্ছে না।';
     const listStr = activeProducts.slice(0, 10).map(p => `- **${p.name}** (৳${p.price})${p.category ? ` - *Category: ${p.category}*` : ''}`).join('\n');
-    return `আমাদের স্টোরের কিছু চমৎকার পণ্য নিচে দেওয়া হলো:\n\n${listStr}\n\nযেকোনো পণ্যের বিস্তারিত জানতে তার নাম লিখে প্রশ্ন করুন!`;
+    return `আমাদের স্টোরের পণ্যসমূহের তালিকা নিচে দেওয়া হলো:\n\n${listStr}\n\nযেকোনো পণ্যের বিস্তারিত জানতে তার নাম লিখে প্রশ্ন করুন!`;
   }
 
   if (query.includes('কম দাম') || query.includes('সস্তা') || query.includes('cheap') || query.includes('low price') || query.includes('কমদামি')) {
@@ -287,6 +322,7 @@ function generateClientFallbackResponse(message: string, products: any[]): strin
   // Search for specific product matches
   const matched = activeProducts.find(p => query.includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(query));
   if (matched) {
+    setLastMatchedProduct(matched);
     const inStock = matched.in_stock === 1 || matched.in_stock === true || matched.stock > 0;
     let reply = `**${matched.name}** সম্পর্কে বিস্তারিত তথ্য:\n\n`;
     reply += `- **মূল্য**: ৳${matched.price}\n`;
