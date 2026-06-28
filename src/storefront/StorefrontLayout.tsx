@@ -87,6 +87,7 @@ export default function StorefrontLayout() {
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
   const isHome = location.pathname === '/';
+  const isProductPage = location.pathname.startsWith('/product/');
 
   // Load active campaigns from localStorage
   const [activeCampaigns, setActiveCampaigns] = useState<any[]>([]);
@@ -579,53 +580,55 @@ export default function StorefrontLayout() {
       )}
 
       {/* ---- Premium Bottom Navigation Bar (Mobile) ---- */}
-      <nav className="store-bottom-nav">
-        <Link to="/" className="bottom-nav-item">
-          <div className="bottom-nav-icon">
-            <Home size={22} />
-          </div>
-          <span>হোম</span>
-        </Link>
-        <button 
-          className={`bottom-nav-item ${wishlist.length > 0 ? 'has-badge' : ''}`}
-          onClick={() => setWishlistOpen(true)}
-        >
-          <div className="bottom-nav-icon">
-            <Heart size={22} />
-            {wishlist.length > 0 && <span className="bottom-nav-badge">{wishlist.length}</span>}
-          </div>
-          <span>উইশলিস্ট</span>
-        </button>
-        <button 
-          className={`bottom-nav-item bottom-nav-cart-item ${cartCount > 0 ? 'has-badge' : ''}`}
-          onClick={() => setCartOpen(true)}
-        >
-          <div className="bottom-nav-cart-bubble">
-            <ShoppingCart size={24} />
-            {cartCount > 0 && <span className="bottom-nav-cart-count">{cartCount}</span>}
-          </div>
-          <span>কার্ট</span>
-        </button>
-        <button 
-          className="bottom-nav-item"
-          onClick={() => navigate('/account')}
-        >
-          <div className="bottom-nav-icon">
-            <User size={22} />
-            {customer && <span className="bottom-nav-active-dot" />}
-          </div>
-          <span>একাউন্ট</span>
-        </button>
-        <button 
-          className="bottom-nav-item"
-          onClick={() => setMobileMenuOpen(true)}
-        >
-          <div className="bottom-nav-icon">
-            <Menu size={22} />
-          </div>
-          <span>মেনু</span>
-        </button>
-      </nav>
+      {!isProductPage && (
+        <nav className="store-bottom-nav">
+          <Link to="/" className={`bottom-nav-item ${location.pathname === '/' ? 'active' : ''}`}>
+            <div className="bottom-nav-icon">
+              <Home size={22} />
+            </div>
+            <span>হোম</span>
+          </Link>
+          <button 
+            className={`bottom-nav-item ${wishlistOpen ? 'active' : ''} ${wishlist.length > 0 ? 'has-badge' : ''}`}
+            onClick={() => setWishlistOpen(true)}
+          >
+            <div className="bottom-nav-icon">
+              <Heart size={22} />
+              {wishlist.length > 0 && <span className="bottom-nav-badge">{wishlist.length}</span>}
+            </div>
+            <span>উইশলিস্ট</span>
+          </button>
+          <button 
+            className={`bottom-nav-item bottom-nav-cart-item ${cartOpen ? 'active' : ''} ${cartCount > 0 ? 'has-badge' : ''}`}
+            onClick={() => setCartOpen(true)}
+          >
+            <div className="bottom-nav-cart-bubble">
+              <ShoppingCart size={24} />
+              {cartCount > 0 && <span className="bottom-nav-cart-count">{cartCount}</span>}
+            </div>
+            <span>কার্ট</span>
+          </button>
+          <button 
+            className={`bottom-nav-item ${location.pathname === '/account' ? 'active' : ''}`}
+            onClick={() => navigate('/account')}
+          >
+            <div className="bottom-nav-icon">
+              <User size={22} />
+              {customer && <span className="bottom-nav-active-dot" />}
+            </div>
+            <span>একাউন্ট</span>
+          </button>
+          <button 
+            className={`bottom-nav-item ${mobileMenuOpen ? 'active' : ''}`}
+            onClick={() => setMobileMenuOpen(true)}
+          >
+            <div className="bottom-nav-icon">
+              <Menu size={22} />
+            </div>
+            <span>মেনু</span>
+          </button>
+        </nav>
+      )}
 
       {/* ---- AI Chat Assistant Widget ---- */}
       <AiChatWidget />
