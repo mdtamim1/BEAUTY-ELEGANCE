@@ -116,11 +116,16 @@ export default function Orders() {
     loadOrders();
     loadProducts();
   }, []);
+
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [page, setPage] = useState(1);
   const perPage = 12;
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [filterType]);
 
   // New Modal States
   const [modalOpen, setModalOpen] = useState(false);
@@ -377,10 +382,73 @@ export default function Orders() {
     printWindow.document.close();
   };
 
+  const handleExportOrders = () => {
+    const ordersToExport = selectedIds.length > 0 
+      ? filtered.filter(o => selectedIds.includes(o.id))
+      : filtered;
+
+    if (ordersToExport.length === 0) {
+      alert('No orders available to export.');
+      return;
+    }
+
+    const headers = [
+      'Order ID',
+      'Customer Name',
+      'Phone/Email',
+      'Store Name',
+      'Date',
+      'Amount (৳)',
+      'Status',
+      'Courier',
+      'City/District',
+      'Thana',
+      'Area',
+      'Address',
+      'Payment Type',
+      'Memo Number',
+      'Customer Note',
+      'Shop Note'
+    ];
+
+    const rows = ordersToExport.map(o => [
+      o.id,
+      `"${o.customer.replace(/"/g, '""')}"`,
+      `"${(o.email || o.phone || '').replace(/"/g, '""')}"`,
+      `"${(o.storeName || '').replace(/"/g, '""')}"`,
+      o.date,
+      o.amount,
+      o.status.toUpperCase(),
+      `"${(o.courier || '').replace(/"/g, '""')}"`,
+      `"${(o.city || '').replace(/"/g, '""')}"`,
+      `"${(o.thana || '').replace(/"/g, '""')}"`,
+      `"${(o.area || '').replace(/"/g, '""')}"`,
+      `"${(o.address || '').replace(/"/g, '""')}"`,
+      `"${(o.paymentType || o.paymentMethod || '').replace(/"/g, '""')}"`,
+      `"${(o.memoNumber || '').replace(/"/g, '""')}"`,
+      `"${(o.customerNote || '').replace(/"/g, '""')}"`,
+      `"${(o.shopNote || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(r => r.join(','))
+    ].join('\n');
+
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `orders_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handlePrintAllShippedOrders = () => {
-    const shippedOrders = filtered.filter(o => o.status === 'shipped');
+    const shippedOrders = filtered.filter(o => o.status === 'shipped' && selectedIds.includes(o.id));
     if (shippedOrders.length === 0) {
-      alert('No shipped orders found to print.');
+      alert('Please select shipped orders to print.');
       return;
     }
 
@@ -860,16 +928,32 @@ export default function Orders() {
               <input className="form-input" style={{ height: '34px', paddingLeft: '32px', width: '220px', fontSize: 'var(--text-xs)' }}
                 placeholder="Search orders..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
             </div>
-            {filterType === 'shipped' && filtered.length > 0 && (
+            {filterType === 'shipped' && (
               <button 
                 onClick={handlePrintAllShippedOrders} 
                 className="btn btn-secondary btn-sm"
-                style={{ background: '#0284c7', border: '1px solid #0284c7', color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}
+                disabled={selectedIds.length === 0}
+                style={{ 
+                  background: selectedIds.length === 0 ? '#64748b' : '#0284c7', 
+                  border: '1px solid ' + (selectedIds.length === 0 ? '#64748b' : '#0284c7'), 
+                  color: '#fff', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px',
+                  opacity: selectedIds.length === 0 ? 0.6 : 1,
+                  cursor: selectedIds.length === 0 ? 'not-allowed' : 'pointer'
+                }}
               >
-                <FileText size={14} /> Print Shipped Invoices ({filtered.length})
+                <FileText size={14} /> Print Selected Invoices ({selectedIds.length})
               </button>
             )}
-            <button className="btn btn-secondary btn-sm"><Download size={14} /> Export</button>
+            <button 
+              onClick={handleExportOrders} 
+              className="btn btn-secondary btn-sm"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Download size={14} /> Export ({selectedIds.length > 0 ? selectedIds.length : filtered.length})
+            </button>
           </div>
         </div>
 
