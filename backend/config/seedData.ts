@@ -41,9 +41,9 @@ export const seedProducts = [
     original_price: 1800,
     rating: 4.7,
     reviews: 180,
-    image: 'https://images.unsplash.com/photo-1601925260368-ae2f83cf8b7f?auto=format&fit=crop&w=600&q=80',
+    image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=600&q=80',
     gallery: [
-      'https://images.unsplash.com/photo-1601925260368-ae2f83cf8b7f?auto=format&fit=crop&w=600&q=80'
+      'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=600&q=80'
     ],
     features: [
       '4-wheel design for max stability',
@@ -71,8 +71,8 @@ export const seedProducts = [
     original_price: 2000,
     rating: 4.6,
     reviews: 120,
-    image: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80',
-    gallery: ['https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80'],
+    image: 'https://images.unsplash.com/photo-1519415943484-9fa1873496d4?auto=format&fit=crop&w=600&q=80',
+    gallery: ['https://images.unsplash.com/photo-1519415943484-9fa1873496d4?auto=format&fit=crop&w=600&q=80'],
     features: [
       'Premium textured casing for flight stability',
       'High-density rubber bladder for air retention',
@@ -98,8 +98,8 @@ export const seedProducts = [
     original_price: 3500,
     rating: 4.8,
     reviews: 98,
-    image: 'https://images.unsplash.com/photo-1617083934386-611b6985226b?auto=format&fit=crop&w=600&q=80',
-    gallery: ['https://images.unsplash.com/photo-1617083934386-611b6985226b?auto=format&fit=crop&w=600&q=80'],
+    image: 'https://images.unsplash.com/photo-1687360441372-757f8b2b6835?auto=format&fit=crop&w=600&q=80',
+    gallery: ['https://images.unsplash.com/photo-1687360441372-757f8b2b6835?auto=format&fit=crop&w=600&q=80'],
     features: [
       'Full carbon graphite frame',
       'Aerodynamic nanotechnology',
@@ -211,8 +211,8 @@ export const seedProducts = [
     original_price: 4500,
     rating: 4.5,
     reviews: 89,
-    image: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=600&q=80',
-    gallery: ['https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=600&q=80'],
+    image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=600&q=80',
+    gallery: ['https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=600&q=80'],
     features: [
       'Adjustable height stand',
       'Sturdy backboard and steel rim',

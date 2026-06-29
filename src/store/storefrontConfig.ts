@@ -280,9 +280,9 @@ const DEFAULT_PRODUCTS: ProductConfig[] = [
   {
     id: 2, name: '4-Wheels AB Roller for Core Strength', category: 'Fitness Item', brand: 'FitMax', sku: 'SSX-ABR-002',
     price: 1200, originalPrice: 1800, rating: 4.7, reviews: 180,
-    image: 'https://images.unsplash.com/photo-1601925260368-ae2f83cf8b7f?auto=format&fit=crop&w=600&q=80',
+    image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=600&q=80',
     gallery: [
-      'https://images.unsplash.com/photo-1601925260368-ae2f83cf8b7f?auto=format&fit=crop&w=600&q=80'
+      'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=600&q=80'
     ],
     badge: 'sale', inStock: true, published: true,
     description: 'Stabilized 4-wheels AB roller designed to build core strength and burn fat. Includes a comfortable knee pad.',
@@ -294,8 +294,8 @@ const DEFAULT_PRODUCTS: ProductConfig[] = [
   {
     id: 3, name: 'Professional Match Football (Size 5)', category: 'Sports Game', brand: 'Puma', sku: 'SSX-FTB-003',
     price: 1500, originalPrice: 2000, rating: 4.6, reviews: 120,
-    image: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80',
-    gallery: ['https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=600&q=80'],
+    image: 'https://images.unsplash.com/photo-1519415943484-9fa1873496d4?auto=format&fit=crop&w=600&q=80',
+    gallery: ['https://images.unsplash.com/photo-1519415943484-9fa1873496d4?auto=format&fit=crop&w=600&q=80'],
     badge: 'sale', inStock: true, published: true,
     description: 'Top-tier match football featuring textured casing for excellent flight control and shape retention.',
     features: ['Premium textured casing for flight stability','High-density rubber bladder for air retention','Durable panels for longevity'],
@@ -306,8 +306,8 @@ const DEFAULT_PRODUCTS: ProductConfig[] = [
   {
     id: 4, name: 'Professional Carbon Fiber Badminton Racket', category: 'Sports Game', brand: 'Yonex', sku: 'SSX-BAD-004',
     price: 2800, originalPrice: 3500, rating: 4.8, reviews: 98,
-    image: 'https://images.unsplash.com/photo-1617083934386-611b6985226b?auto=format&fit=crop&w=600&q=80',
-    gallery: ['https://images.unsplash.com/photo-1617083934386-611b6985226b?auto=format&fit=crop&w=600&q=80'],
+    image: 'https://images.unsplash.com/photo-1687360441372-757f8b2b6835?auto=format&fit=crop&w=600&q=80',
+    gallery: ['https://images.unsplash.com/photo-1687360441372-757f8b2b6835?auto=format&fit=crop&w=600&q=80'],
     badge: 'sale', inStock: true, published: true,
     description: 'Aerodynamic carbon fiber badminton racket designed for swift swing speed and heavy smash power.',
     features: ['Full carbon graphite frame','Aerodynamic nanotechnology','Isometric head shape for sweet spot expansion'],
@@ -358,8 +358,8 @@ const DEFAULT_PRODUCTS: ProductConfig[] = [
   {
     id: 8, name: 'Kids Adjustable Basketball Hoop Set', category: 'Sports Game', brand: 'KidSports', sku: 'SSX-BBH-008',
     price: 3200, originalPrice: 4500, rating: 4.5, reviews: 89,
-    image: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=600&q=80',
-    gallery: ['https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=600&q=80'],
+    image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=600&q=80',
+    gallery: ['https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=600&q=80'],
     badge: 'sale', inStock: true, published: true,
     description: 'Height-adjustable basketball hoop system perfect for indoor/outdoor kid fun and sports development.',
     features: ['Adjustable height stand','Sturdy backboard and steel rim','Water/Sand fillable base for stability'],
