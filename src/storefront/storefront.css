@@ -781,6 +781,7 @@
   border-radius: var(--sf-radius-full);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  z-index: 3;
 }
 
 .product-card-badge.sale {
@@ -2243,6 +2244,7 @@
   letter-spacing: 0.03em;
   box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25);
   animation: sfm-fadeIn 0.3s ease;
+  z-index: 3;
 }
 
 /* ---- Teaser Campaign Banner (Teaser for homepage) ---- */

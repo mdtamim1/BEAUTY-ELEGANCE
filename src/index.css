@@ -1516,7 +1516,6 @@ input, textarea, select {
   align-items: center;
   justify-content: center;
   animation: fadeIn 0.2s ease both;
-  backdrop-filter: blur(4px);
 }
 
 .modal {
