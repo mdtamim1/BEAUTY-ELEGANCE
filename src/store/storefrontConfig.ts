@@ -185,6 +185,7 @@ const DEFAULT_CATEGORIES: CategoryConfig[] = [
 const DEFAULT_NAV_LINKS: NavLinkItem[] = [
   { id: 1, label: 'Home', url: '/', enabled: true },
   { id: 3, label: 'Shop', url: '/collection/fitness-item', enabled: true },
+  { id: 15, label: 'Blogs', url: '/blogs', enabled: true },
   { id: 4, label: 'My account', url: '/account', enabled: true },
   { id: 5, label: 'Contact', url: '/page/6', enabled: true },
 ];
@@ -550,11 +551,28 @@ const getAuthHeaders = (): Record<string, string> => {
 
 async function syncWithBackend() {
   try {
-    const response = await fetch(`${API_BASE}/settings/storefront`);
+    const response = await fetch(`${API_BASE}/settings/storefront?t=${Date.now()}`);
     if (response.ok) {
       const res = await response.json();
       if (res.status === 'success' && res.data) {
         const serverConfig = res.data;
+        
+        // Preserve products from currently loaded memory config or localStorage
+        const currentProducts = _config?.products || [];
+        if (currentProducts.length > 0) {
+          serverConfig.products = currentProducts;
+        } else {
+          const localDataStr = localStorage.getItem(STORAGE_KEY);
+          if (localDataStr) {
+            try {
+              const localData = JSON.parse(localDataStr);
+              if (localData.products && localData.products.length > 0) {
+                serverConfig.products = localData.products;
+              }
+            } catch (e) {}
+          }
+        }
+
         const localData = localStorage.getItem(STORAGE_KEY);
         if (JSON.stringify(serverConfig) !== localData) {
           _config = serverConfig;
@@ -567,6 +585,7 @@ async function syncWithBackend() {
     console.warn("Failed to sync storefront config from backend:", err);
   }
 }
+
 
 // ============================================================
 // PUBLIC API
@@ -588,6 +607,11 @@ export function setStorefrontConfig(config: StorefrontConfig): void {
     },
     body: JSON.stringify(config),
   }).catch(e => console.warn("Failed to save config to backend:", e));
+}
+
+/** Update the full config locally only (does not PUT to backend) */
+export function setStorefrontConfigLocally(config: StorefrontConfig): void {
+  saveConfig(config);
 }
 
 /** Update a specific section of the config */

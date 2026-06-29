@@ -33,7 +33,7 @@ import CustomerAccount from './storefront/CustomerAccount';
 import CampaignPage from './storefront/CampaignPage';
 import Inbox from './features/chats/Inbox';
 import { CustomerAuthProvider } from './context/CustomerAuthContext';
-import { useStorefrontConfig } from './store/storefrontConfig';
+import { useStorefrontConfig, setStorefrontConfigLocally, getStorefrontConfig } from './store/storefrontConfig';
 import { fetchProductsFromBackend } from './services/api';
 
 // Blog pages
@@ -127,13 +127,14 @@ function AdminLayout() {
 }
 
 export default function App() {
-  const [config, setConfig] = useStorefrontConfig();
+  const [config] = useStorefrontConfig();
 
   useEffect(() => {
     const loadProducts = async () => {
       const dbProducts = await fetchProductsFromBackend();
       if (dbProducts && dbProducts.length > 0) {
-        setConfig({ ...config, products: dbProducts });
+        const currentConfig = getStorefrontConfig();
+        setStorefrontConfigLocally({ ...currentConfig, products: dbProducts });
       }
     };
     loadProducts();

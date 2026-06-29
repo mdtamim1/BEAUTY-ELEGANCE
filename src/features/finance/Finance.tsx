@@ -140,6 +140,92 @@ export default function Finance() {
     setShowExpenseModal(false);
   };
 
+  const handleExportFinanceReports = () => {
+    const csvLines = [];
+    const reportDate = new Date().toLocaleString();
+    
+    csvLines.push(`"VIP Commerce - Financial Report Summary"`);
+    csvLines.push(`"Generated on:","${reportDate}"`);
+    csvLines.push(``);
+    
+    // Summary
+    csvLines.push(`"FINANCIAL KPI SUMMARY"`);
+    csvLines.push(`"KPI","Value"`);
+    csvLines.push(`"Total Revenue","৳${totalRevenueVal}"`);
+    csvLines.push(`"Total Expenses","৳${totalExpensesVal}"`);
+    csvLines.push(`"Net Profit","৳${netProfitVal}"`);
+    csvLines.push(`"Vendor Payouts Paid","৳${totalPayoutsVal}"`);
+    csvLines.push(``);
+
+    // Expenses List
+    csvLines.push(`"EXPENSES DETAIL"`);
+    csvLines.push(`"Expense ID","Name","Category","Amount (৳)","Date"`);
+    expenses.forEach(e => {
+      csvLines.push(`"${e.id}","${e.name.replace(/"/g, '""')}","${e.category}",${e.amount},"${e.date}"`);
+    });
+    csvLines.push(``);
+
+    // Tax reports
+    csvLines.push(`"TAX FILINGS"`);
+    csvLines.push(`"Period","Revenue (৳)","Taxable Income (৳)","Tax Collected (৳)","Tax Rate (%)","Status"`);
+    taxReports.forEach(t => {
+      csvLines.push(`"${t.period}",${t.revenue},${t.taxable},${t.taxCollected},${t.taxRate},"${t.status}"`);
+    });
+    csvLines.push(``);
+
+    // Vendor payouts
+    csvLines.push(`"VENDOR PAYOUTS"`);
+    csvLines.push(`"Payout ID","Vendor","Amount (৳)","Status","Date"`);
+    vendorPayouts.forEach(v => {
+      csvLines.push(`"${v.id}","${v.vendor.replace(/"/g, '""')}",${v.amount},"${v.status}","${v.date}"`);
+    });
+
+    const csvContent = csvLines.join('\n');
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `financial_report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleGeneratePL = () => {
+    const csvLines = [];
+    const reportDate = new Date().toLocaleString();
+    
+    csvLines.push(`"VIP Commerce - Profit & Loss (P&L) Statement"`);
+    csvLines.push(`"Generated on:","${reportDate}"`);
+    csvLines.push(``);
+    
+    csvLines.push(`"REVENUE"`);
+    csvLines.push(`"Gross Sales","৳${totalRevenueVal}"`);
+    csvLines.push(`"Total Revenue","৳${totalRevenueVal}"`);
+    csvLines.push(``);
+
+    csvLines.push(`"EXPENSES (OPERATING COSTS)"`);
+    expenseChartData.forEach((row: any) => {
+      csvLines.push(`"${row.name}","৳${row.value}"`);
+    });
+    csvLines.push(`"Total Operating Expenses","৳${totalExpensesVal}"`);
+    csvLines.push(``);
+
+    csvLines.push(`"NET INCOME / PROFIT"`);
+    csvLines.push(`"Net Profit","৳${netProfitVal}"`);
+    csvLines.push(`"Net Profit Margin","${((netProfitVal / totalRevenueVal) * 100).toFixed(2)}%"`);
+
+    const csvContent = csvLines.join('\n');
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `profit_loss_sheet_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -155,10 +241,10 @@ export default function Finance() {
             <button className="btn btn-primary" onClick={() => window.print()}><Printer size={16} /> Print Projections</button>
           ) : (
             <>
-              <button className="btn btn-secondary" onClick={() => alert('Exporting financial reports...')}>
+              <button className="btn btn-secondary" onClick={handleExportFinanceReports}>
                 <Download size={16} /> Export Reports
               </button>
-              <button className="btn btn-primary" onClick={() => alert('Generating full profit & loss balance sheets...')}>
+              <button className="btn btn-primary" onClick={handleGeneratePL}>
                 <FileText size={16} /> Generate P&L
               </button>
             </>

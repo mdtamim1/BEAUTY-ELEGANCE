@@ -125,6 +125,14 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Disable caching for all API responses to prevent browser caching of dynamic settings/data
+app.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // Apply rate limiters
 app.use('/api/', apiLimiter);
 app.use('/api/v1/auth', authLimiter);

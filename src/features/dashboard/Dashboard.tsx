@@ -164,6 +164,84 @@ export default function Dashboard() {
     },
   ];
 
+  const handleExportReport = () => {
+    const reportDate = new Date().toLocaleString();
+    const csvLines = [];
+
+    // Title
+    csvLines.push(`"VIP Commerce - Dashboard Summary Report"`);
+    csvLines.push(`"Generated on:","${reportDate}"`);
+    csvLines.push(``);
+
+    // Summary Metrics
+    csvLines.push(`"SUMMARY METRICS"`);
+    csvLines.push(`"Metric","Value","Change"`);
+
+    const revenueVal = stats ? stats.totalRevenue : mockRevenueData.total;
+    const todayRevenueVal = stats ? stats.todayRevenue : mockRevenueData.today;
+    const monthlyRevenueVal = stats ? stats.monthlyRevenue : mockRevenueData.monthly;
+    const yearlyRevenueVal = stats ? stats.yearlyRevenue : mockRevenueData.yearly;
+    const netProfitVal = stats ? stats.netProfit : mockRevenueData.netProfit;
+    const grossProfitVal = stats ? stats.grossProfit : mockRevenueData.grossProfit;
+    const totalOrdersVal = stats ? stats.totalOrders : generateOrders().length;
+    const liveVisitorsVal = visitorData.current;
+
+    const netProfitMarg = stats ? stats.netProfitMargin : mockRevenueData.netProfitMargin;
+    const grossProfitMarg = stats ? stats.grossProfitMargin : mockRevenueData.grossProfitMargin;
+
+    csvLines.push(`"Total Revenue","৳${revenueVal}","${stats ? stats.yearlyChange : mockRevenueData.yearlyChange}%"`);
+    csvLines.push(`"Today's Revenue","৳${todayRevenueVal}","${stats ? stats.todayChange : mockRevenueData.todayChange}%"`);
+    csvLines.push(`"Monthly Revenue","৳${monthlyRevenueVal}","${stats ? stats.monthlyChange : mockRevenueData.monthlyChange}%"`);
+    csvLines.push(`"Yearly Revenue","৳${yearlyRevenueVal}","${stats ? stats.yearlyChange : mockRevenueData.yearlyChange}%"`);
+    csvLines.push(`"Net Profit","৳${netProfitVal}","${netProfitMarg}% margin"`);
+    csvLines.push(`"Gross Profit","৳${grossProfitVal}","${grossProfitMarg}% margin"`);
+    csvLines.push(`"Total Orders","${totalOrdersVal}","-"`);
+    csvLines.push(`"Live Visitors","${liveVisitorsVal}","-"`);
+    csvLines.push(``);
+
+    // Monthly Revenue Trend
+    csvLines.push(`"MONTHLY REVENUE TREND"`);
+    csvLines.push(`"Month","Revenue (৳)","Profit (৳)"`);
+    monthlyRevenueData.forEach((row: any) => {
+      csvLines.push(`"${row.name}",${row.value},${row.value2}`);
+    });
+    csvLines.push(``);
+
+    // Daily Revenue Trend
+    csvLines.push(`"DAILY REVENUE TREND"`);
+    csvLines.push(`"Date","Revenue (৳)","Profit (৳)"`);
+    dailyRevenueData.forEach((row: any) => {
+      csvLines.push(`"${row.name}",${row.value},${row.value2}`);
+    });
+    csvLines.push(``);
+
+    // Expenses
+    csvLines.push(`"EXPENSE BREAKDOWN"`);
+    csvLines.push(`"Category","Amount (৳)"`);
+    expenseData.forEach((row: any) => {
+      csvLines.push(`"${row.name}",${row.value}`);
+    });
+    csvLines.push(``);
+
+    // Category distribution
+    csvLines.push(`"REVENUE BY CATEGORY"`);
+    csvLines.push(`"Category","Revenue (৳)"`);
+    categoryRevenueData.forEach((row: any) => {
+      csvLines.push(`"${row.name}",${row.value}`);
+    });
+
+    // Join all
+    const csvContent = csvLines.join('\n');
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `dashboard_report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -179,7 +257,7 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="page-header-actions">
-          <button className="btn btn-secondary">
+          <button className="btn btn-secondary" onClick={handleExportReport}>
             <Activity size={16} />
             Export Report
           </button>

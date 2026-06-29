@@ -25,6 +25,53 @@ export default function Customers() {
   const paginated = filtered.slice((page - 1) * perPage, page * perPage);
   const totalPages = Math.ceil(filtered.length / perPage);
 
+  const handleExportCustomers = () => {
+    if (filtered.length === 0) {
+      alert('No customers available to export.');
+      return;
+    }
+
+    const headers = [
+      'Customer ID',
+      'Name',
+      'Email',
+      'Segment',
+      'Total Spent (৳)',
+      'Orders',
+      'LTV (৳)',
+      'Loyalty Points',
+      'Risk Score',
+      'Last Active'
+    ];
+
+    const rows = filtered.map(c => [
+      c.id,
+      `"${c.name.replace(/"/g, '""')}"`,
+      `"${c.email.replace(/"/g, '""')}"`,
+      c.segment,
+      c.totalSpent,
+      c.orders,
+      c.ltv,
+      c.loyaltyPoints,
+      c.riskScore,
+      `"${c.lastActive}"`
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(r => r.join(','))
+    ].join('\n');
+
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `customers_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -34,7 +81,7 @@ export default function Customers() {
           <p className="page-subtitle">Manage {customers.length.toLocaleString()} customers across all segments</p>
         </div>
         <div className="page-header-actions">
-          <button className="btn btn-secondary"><Download size={16} /> Export</button>
+          <button className="btn btn-secondary" onClick={handleExportCustomers}><Download size={16} /> Export</button>
           <button className="btn btn-primary"><UserPlus size={16} /> Add Customer</button>
         </div>
       </div>
