@@ -4,12 +4,14 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import { createServer } from "http";
-import dotenv from "dotenv";
+import dotenv3 from "dotenv";
 import path2 from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
 
 // backend/config/db.ts
 import sqlite3 from "sqlite3";
+import mysql from "mysql2";
+import pg from "pg";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
@@ -247,22 +249,241 @@ var seedProducts = [
 ];
 
 // backend/config/db.ts
+import dotenv from "dotenv";
+dotenv.config();
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = path.dirname(__filename);
-var dbPath = process.env.DATABASE_PATH || path.resolve(__dirname, "../../database/database.sqlite");
-var dbDir = path.dirname(dbPath);
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
-}
-var sqlite = sqlite3.verbose();
-var db = new sqlite.Database(dbPath, (err) => {
-  if (err) {
-    console.error("\u274C Failed to connect to SQLite database:", err.message);
-  } else {
-    console.log("\u{1F50C} Connected to local SQLite database.");
-    initializeDatabase();
+var DB_TYPE = process.env.DB_TYPE || "sqlite";
+var MockStatement = class {
+  sql;
+  db;
+  constructor(sql, db2) {
+    this.sql = sql;
+    this.db = db2;
   }
-});
+  run(params = [], cb) {
+    this.db.run(this.sql, params, cb);
+    return this;
+  }
+  finalize(cb) {
+    if (cb) cb(null);
+  }
+};
+function translateSchemaForMysql(sql) {
+  let translatedSql = sql;
+  translatedSql = translatedSql.replace(/INTEGER PRIMARY KEY AUTOINCREMENT/gi, "INT AUTO_INCREMENT PRIMARY KEY");
+  translatedSql = translatedSql.replace(/TEXT PRIMARY KEY/gi, "VARCHAR(255) PRIMARY KEY");
+  translatedSql = translatedSql.replace(/TEXT UNIQUE/gi, "VARCHAR(255) UNIQUE");
+  translatedSql = translatedSql.replace(/REAL/gi, "DOUBLE");
+  return translatedSql;
+}
+function translateSchemaForPostgres(sql) {
+  let translatedSql = sql;
+  translatedSql = translatedSql.replace(/INTEGER PRIMARY KEY AUTOINCREMENT/gi, "SERIAL PRIMARY KEY");
+  translatedSql = translatedSql.replace(/TEXT PRIMARY KEY/gi, "VARCHAR(255) PRIMARY KEY");
+  translatedSql = translatedSql.replace(/TEXT UNIQUE/gi, "VARCHAR(255) UNIQUE");
+  translatedSql = translatedSql.replace(/DATETIME/gi, "TIMESTAMP");
+  translatedSql = translatedSql.replace(/REAL/gi, "DOUBLE PRECISION");
+  return translatedSql;
+}
+function translateSqlForMysql(sql) {
+  let translatedSql = sql;
+  translatedSql = translatedSql.replace(/INSERT OR REPLACE/gi, "REPLACE");
+  translatedSql = translatedSql.replace(/INSERT OR IGNORE/gi, "INSERT IGNORE");
+  if (translatedSql.toUpperCase().trim() === "BEGIN TRANSACTION") {
+    translatedSql = "START TRANSACTION";
+  }
+  return translatedSql;
+}
+function translateSqlForPostgres(sql, params = []) {
+  let translatedSql = sql;
+  let index = 1;
+  translatedSql = translatedSql.replace(/\?/g, () => `$${index++}`);
+  if (translatedSql.toUpperCase().includes("INSERT OR REPLACE INTO SYSTEM_SETTINGS")) {
+    if (translatedSql.includes("group_name") && translatedSql.includes("is_public")) {
+      translatedSql = `
+        INSERT INTO system_settings (setting_key, setting_value, group_name, is_public)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (setting_key) 
+        DO UPDATE SET setting_value = EXCLUDED.setting_value, group_name = EXCLUDED.group_name, is_public = EXCLUDED.is_public
+      `;
+    } else {
+      translatedSql = `
+        INSERT INTO system_settings (setting_key, setting_value)
+        VALUES ($1, $2)
+        ON CONFLICT (setting_key) 
+        DO UPDATE SET setting_value = EXCLUDED.setting_value
+      `;
+    }
+  }
+  if (translatedSql.toUpperCase().includes("INSERT OR IGNORE INTO PRODUCT_GALLERY")) {
+    translatedSql = translatedSql.replace(/INSERT OR IGNORE INTO/gi, "INSERT INTO") + " ON CONFLICT DO NOTHING";
+  }
+  if (translatedSql.toUpperCase().trim() === "BEGIN TRANSACTION") {
+    translatedSql = "BEGIN";
+  }
+  if (translatedSql.trim().toUpperCase().startsWith("INSERT INTO ") && !translatedSql.toUpperCase().includes(" RETURNING ")) {
+    translatedSql = translatedSql.trim() + " RETURNING id";
+  }
+  return { sql: translatedSql, params };
+}
+function parseArgs(args) {
+  let params = [];
+  let cb = void 0;
+  if (args.length === 1) {
+    if (typeof args[0] === "function") {
+      cb = args[0];
+    } else if (Array.isArray(args[0])) {
+      params = args[0];
+    }
+  } else if (args.length === 2) {
+    params = args[0];
+    cb = args[1];
+  }
+  return { params, cb };
+}
+var dbInstance = null;
+var mysqlPool = null;
+var pgPool = null;
+if (DB_TYPE === "sqlite") {
+  const dbPath = process.env.DATABASE_PATH || path.resolve(__dirname, "../../database/database.sqlite");
+  const dbDir = path.dirname(dbPath);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+  const sqlite = sqlite3.verbose();
+  dbInstance = new sqlite.Database(dbPath, (err) => {
+    if (err) {
+      console.error("\u274C Failed to connect to SQLite database:", err.message);
+    } else {
+      console.log("\u{1F50C} Connected to local SQLite database.");
+      initializeDatabase();
+    }
+  });
+} else if (DB_TYPE === "mysql") {
+  mysqlPool = mysql.createPool({
+    host: process.env.DB_HOST || "localhost",
+    port: parseInt(process.env.DB_PORT || "3306"),
+    user: process.env.DB_USER || "root",
+    password: process.env.DB_PASSWORD || "",
+    database: process.env.DB_NAME || "beauty_elegance",
+    connectionLimit: 10,
+    multipleStatements: true
+  });
+  console.log("\u{1F50C} Connected to MySQL database pool.");
+  initializeDatabase();
+} else if (DB_TYPE === "postgres") {
+  pgPool = new pg.Pool({
+    host: process.env.DB_HOST || "localhost",
+    port: parseInt(process.env.DB_PORT || "5432"),
+    user: process.env.DB_USER || "postgres",
+    password: process.env.DB_PASSWORD || "",
+    database: process.env.DB_NAME || "beauty_elegance",
+    max: 10
+  });
+  console.log("\u{1F50C} Connected to PostgreSQL database pool.");
+  initializeDatabase();
+}
+var db = {
+  run(sql, ...args) {
+    const { params, cb } = parseArgs(args);
+    if (sql.toUpperCase().includes("CREATE TABLE")) {
+      if (DB_TYPE === "mysql") sql = translateSchemaForMysql(sql);
+      else if (DB_TYPE === "postgres") sql = translateSchemaForPostgres(sql);
+    }
+    if (DB_TYPE === "sqlite") {
+      dbInstance.run(sql, params, cb);
+    } else if (DB_TYPE === "mysql") {
+      const translatedSql = translateSqlForMysql(sql);
+      mysqlPool.query(translatedSql, params, function(err, result) {
+        if (cb) {
+          const context = {
+            lastID: result ? result.insertId : void 0,
+            changes: result ? result.affectedRows : void 0
+          };
+          cb.call(context, err);
+        }
+      });
+    } else if (DB_TYPE === "postgres") {
+      const { sql: translatedSql, params: translatedParams } = translateSqlForPostgres(sql, params);
+      pgPool.query(translatedSql, translatedParams, function(err, result) {
+        if (cb) {
+          const context = {
+            lastID: result && result.rows && result.rows[0] ? result.rows[0].id : void 0,
+            changes: result ? result.rowCount : void 0
+          };
+          cb.call(context, err);
+        }
+      });
+    }
+  },
+  get(sql, ...args) {
+    const { params, cb } = parseArgs(args);
+    if (DB_TYPE === "sqlite") {
+      dbInstance.get(sql, params, cb);
+    } else if (DB_TYPE === "mysql") {
+      const translatedSql = translateSqlForMysql(sql);
+      mysqlPool.query(translatedSql, params, function(err, results) {
+        if (cb) {
+          const row = results && results.length > 0 ? results[0] : void 0;
+          cb(err, row);
+        }
+      });
+    } else if (DB_TYPE === "postgres") {
+      const { sql: translatedSql, params: translatedParams } = translateSqlForPostgres(sql, params);
+      pgPool.query(translatedSql, translatedParams, function(err, result) {
+        if (cb) {
+          const row = result && result.rows && result.rows.length > 0 ? result.rows[0] : void 0;
+          cb(err, row);
+        }
+      });
+    }
+  },
+  all(sql, ...args) {
+    const { params, cb } = parseArgs(args);
+    if (DB_TYPE === "sqlite") {
+      dbInstance.all(sql, params, cb);
+    } else if (DB_TYPE === "mysql") {
+      const translatedSql = translateSqlForMysql(sql);
+      mysqlPool.query(translatedSql, params, function(err, results) {
+        if (cb) {
+          cb(err, results || []);
+        }
+      });
+    } else if (DB_TYPE === "postgres") {
+      const { sql: translatedSql, params: translatedParams } = translateSqlForPostgres(sql, params);
+      pgPool.query(translatedSql, translatedParams, function(err, result) {
+        if (cb) {
+          cb(err, result ? result.rows : []);
+        }
+      });
+    }
+  },
+  serialize(cb) {
+    if (DB_TYPE === "sqlite") {
+      dbInstance.serialize(cb);
+    } else {
+      cb();
+    }
+  },
+  prepare(sql, cb) {
+    if (DB_TYPE === "sqlite") {
+      return dbInstance.prepare(sql, cb);
+    } else {
+      if (cb) cb(null);
+      return new MockStatement(sql, this);
+    }
+  },
+  close(cb) {
+    if (DB_TYPE === "sqlite") {
+      dbInstance.close(cb);
+    } else if (DB_TYPE === "mysql") {
+      mysqlPool.end(cb);
+    } else if (DB_TYPE === "postgres") {
+      pgPool.end().then(() => cb && cb(null)).catch((err) => cb && cb(err));
+    }
+  }
+};
 function initializeDatabase() {
   db.serialize(() => {
     db.run(`
@@ -272,6 +493,20 @@ function initializeDatabase() {
         setting_value TEXT,
         group_name TEXT DEFAULT 'general',
         is_public INTEGER DEFAULT 0,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    db.run(`
+      CREATE TABLE IF NOT EXISTS blog_posts (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        slug TEXT UNIQUE NOT NULL,
+        summary TEXT,
+        content TEXT NOT NULL,
+        banner_image TEXT,
+        author_name TEXT DEFAULT 'Admin',
+        published INTEGER DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -881,6 +1116,79 @@ function initializeDatabase() {
         });
       }
     });
+    db.get("SELECT COUNT(*) as count FROM blog_posts", (err, row) => {
+      if (!err && row && row.count === 0) {
+        const defaultBlogs = [
+          {
+            id: "blog-1",
+            title: "\u09EB\u099F\u09BF \u09B8\u09B9\u099C \u0989\u09AA\u09BE\u09DF\u09C7 \u0986\u09AA\u09A8\u09BE\u09B0 \u09B8\u09CD\u0995\u09BF\u09A8 \u0997\u09CD\u09B2\u09CB\u09DF\u09BF\u0982 \u0993 \u09B9\u09C7\u09B2\u09A6\u09BF \u09B0\u09BE\u0996\u09C1\u09A8",
+            slug: "5-ways-glowing-healthy-skin",
+            summary: "\u09B8\u09CD\u0995\u09BF\u09A8 \u0995\u09C7\u09DF\u09BE\u09B0 \u09AC\u09BE \u09A4\u09CD\u09AC\u0995\u09C7\u09B0 \u09AF\u09A4\u09CD\u09A8 \u09A8\u09C7\u0993\u09DF\u09BE \u0995\u09A0\u09BF\u09A8 \u0995\u09BF\u099B\u09C1 \u09A8\u09DF\u0964 \u09AE\u09BE\u09A4\u09CD\u09B0 \u0995\u09DF\u09C7\u0995\u099F\u09BF \u09B8\u09BE\u09A7\u09BE\u09B0\u09A3 \u09A8\u09BF\u09DF\u09AE \u09AE\u09C7\u09A8\u09C7 \u099A\u09B2\u09B2\u09C7 \u0986\u09AA\u09A8\u09BF\u0993 \u09AA\u09C7\u09A4\u09C7 \u09AA\u09BE\u09B0\u09C7\u09A8 \u0989\u099C\u09CD\u099C\u09CD\u09AC\u09B2 \u0993 \u09B8\u09A4\u09C7\u099C \u09A4\u09CD\u09AC\u0995\u0964 \u09AC\u09BF\u09B8\u09CD\u09A4\u09BE\u09B0\u09BF\u09A4 \u09AA\u09DC\u09C1\u09A8 \u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u0986\u099C\u0995\u09C7\u09B0 \u09AC\u09CD\u09B2\u0997\u09C7\u0964",
+            content: `<p>\u09B8\u09C1\u09A8\u09CD\u09A6\u09B0, \u0989\u099C\u09CD\u099C\u09CD\u09AC\u09B2 \u0993 \u09B8\u09C1\u09B8\u09CD\u09A5 \u09A4\u09CD\u09AC\u0995 \u09B8\u09AC\u09BE\u09B0\u0987 \u0995\u09BE\u09AE\u09CD\u09AF\u0964 \u09A4\u09AC\u09C7 \u09AC\u09CD\u09AF\u09B8\u09CD\u09A4 \u099C\u09C0\u09AC\u09A8\u09C7\u09B0 \u09A7\u0995\u09B2, \u09A6\u09C2\u09B7\u09A3 \u0993 \u09B8\u09A0\u09BF\u0995 \u09AF\u09A4\u09CD\u09A8\u09C7\u09B0 \u0985\u09AD\u09BE\u09AC\u09C7 \u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u09A4\u09CD\u09AC\u0995 \u09AA\u09CD\u09B0\u09BE\u09DF\u09B6\u0987 \u09B8\u09A4\u09C7\u099C\u09A4\u09BE \u09B9\u09BE\u09B0\u09BF\u09DF\u09C7 \u09AB\u09C7\u09B2\u09C7\u0964 \u09A4\u09CD\u09AC\u0995\u0995\u09C7 \u09AA\u09CD\u09B0\u09BE\u0995\u09C3\u09A4\u09BF\u0995\u09AD\u09BE\u09AC\u09C7 \u0997\u09CD\u09B2\u09CB\u09DF\u09BF\u0982 \u0993 \u09B9\u09C7\u09B2\u09A6\u09BF \u09B0\u09BE\u0996\u09BE\u09B0 \u099C\u09A8\u09CD\u09AF \u098F\u0996\u09BE\u09A8\u09C7 \u09EB\u099F\u09BF \u0985\u09A4\u09CD\u09AF\u09A8\u09CD\u09A4 \u0995\u09BE\u09B0\u09CD\u09AF\u0995\u09B0 \u0993 \u09B8\u09B9\u099C \u0989\u09AA\u09BE\u09DF \u0986\u09B2\u09CB\u099A\u09A8\u09BE \u0995\u09B0\u09BE \u09B9\u09B2\u09CB:</p>
+
+<h3>\u09E7. \u09AA\u09B0\u09CD\u09AF\u09BE\u09AA\u09CD\u09A4 \u09AA\u09BE\u09A8\u09BF \u09AA\u09BE\u09A8 \u0995\u09B0\u09C1\u09A8</h3>
+<p>\u09A4\u09CD\u09AC\u0995\u09C7\u09B0 \u0986\u09B0\u09CD\u09A6\u09CD\u09B0\u09A4\u09BE \u09A7\u09B0\u09C7 \u09B0\u09BE\u0996\u09BE\u09B0 \u09B8\u09AC\u099A\u09C7\u09DF\u09C7 \u09B8\u09B9\u099C \u0989\u09AA\u09BE\u09DF \u09B9\u09B2\u09CB \u09AA\u09CD\u09B0\u099A\u09C1\u09B0 \u09AA\u09BE\u09A8\u09BF \u09AA\u09BE\u09A8 \u0995\u09B0\u09BE\u0964 \u09AA\u09CD\u09B0\u09A4\u09BF\u09A6\u09BF\u09A8 \u0985\u09A8\u09CD\u09A4\u09A4 \u09EE-\u09E7\u09E6 \u0997\u09CD\u09B2\u09BE\u09B8 \u09AA\u09BE\u09A8\u09BF \u09AA\u09BE\u09A8 \u0995\u09B0\u09C1\u09A8\u0964 \u098F\u099F\u09BF \u0986\u09AA\u09A8\u09BE\u09B0 \u09B6\u09B0\u09C0\u09B0 \u09A5\u09C7\u0995\u09C7 \u0995\u09CD\u09B7\u09A4\u09BF\u0995\u09B0 \u099F\u0995\u09CD\u09B8\u09BF\u09A8 \u09AC\u09C7\u09B0 \u0995\u09B0\u09C7 \u09A6\u09BF\u09A4\u09C7 \u09B8\u09BE\u09B9\u09BE\u09AF\u09CD\u09AF \u0995\u09B0\u09C7 \u098F\u09AC\u0982 \u09A4\u09CD\u09AC\u0995\u09C7 \u09AA\u09CD\u09B0\u09BE\u0995\u09C3\u09A4\u09BF\u0995 \u0989\u099C\u09CD\u099C\u09CD\u09AC\u09B2\u09A4\u09BE \u098F\u09A8\u09C7 \u09A6\u09C7\u09DF\u0964</p>
+
+<h3>\u09E8. \u09A1\u09BE\u09AC\u09B2 \u0995\u09CD\u09B2\u09BF\u09A8\u099C\u09BF\u0982 \u09AA\u09A6\u09CD\u09A7\u09A4\u09BF \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0 \u0995\u09B0\u09C1\u09A8</h3>
+<p>\u09B8\u09BE\u09B0\u09BE\u09A6\u09BF\u09A8\u09C7\u09B0 \u09A7\u09C1\u09B2\u09CB\u09AC\u09BE\u09B2\u09BF \u0993 \u09AE\u09C7\u0995\u0986\u09AA \u09A6\u09C2\u09B0 \u0995\u09B0\u09BE\u09B0 \u099C\u09A8\u09CD\u09AF \u09B6\u09C1\u09A7\u09C1 \u09AB\u09C7\u09B8\u0993\u09DF\u09BE\u09B6 \u09AF\u09A5\u09C7\u09B7\u09CD\u099F \u09A8\u09DF\u0964 \u09AA\u09CD\u09B0\u09A5\u09AE\u09C7 \u098F\u0995\u099F\u09BF \u0985\u09DF\u09C7\u09B2-\u09AC\u09C7\u09B8\u09A1 \u0995\u09CD\u09B2\u09BF\u09A8\u09BE\u09B0 \u09AC\u09BE \u09AE\u09BE\u0987\u09B8\u09C7\u09B2\u09BE\u09B0 \u0993\u09DF\u09BE\u099F\u09BE\u09B0 \u09A6\u09BF\u09DF\u09C7 \u09A4\u09CD\u09AC\u0995 \u09AA\u09B0\u09BF\u09B7\u09CD\u0995\u09BE\u09B0 \u0995\u09B0\u09C1\u09A8\u0964 \u098F\u09B0\u09AA\u09B0 \u0986\u09AA\u09A8\u09BE\u09B0 \u09B8\u09CD\u0995\u09BF\u09A8 \u099F\u09BE\u0987\u09AA \u0985\u09A8\u09C1\u09AF\u09BE\u09DF\u09C0 \u09AB\u09C7\u09B8\u0993\u09DF\u09BE\u09B6 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0 \u0995\u09B0\u09C1\u09A8\u0964</p>
+
+<h3>\u09E9. \u09B0\u09C7\u0997\u09C1\u09B2\u09BE\u09B0 \u09AE\u09DF\u09C7\u09B6\u09CD\u099A\u09BE\u09B0\u09BE\u0987\u099C\u09BE\u09B0 \u0993 \u09B8\u09BE\u09A8\u09B8\u09CD\u0995\u09CD\u09B0\u09BF\u09A8 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0</h3>
+<p>\u09B8\u09CD\u0995\u09BF\u09A8 \u099F\u09BE\u0987\u09AA \u09AF\u09C7\u09AE\u09A8\u0987 \u09B9\u09CB\u0995 \u09A8\u09BE \u0995\u09C7\u09A8, \u09AE\u09DF\u09C7\u09B6\u09CD\u099A\u09BE\u09B0\u09BE\u0987\u099C\u09BE\u09B0 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0 \u0995\u09B0\u09BE \u099C\u09B0\u09C1\u09B0\u09BF\u0964 \u0986\u09B0 \u09A6\u09BF\u09A8\u09C7\u09B0 \u09AC\u09C7\u09B2\u09BE \u0998\u09B0\u09C7\u09B0 \u09AC\u09BE\u0987\u09B0\u09C7 \u09AC\u09BE \u09AD\u09C7\u09A4\u09B0\u09C7 \u09AF\u09C7\u0996\u09BE\u09A8\u09C7\u0987 \u09A5\u09BE\u0995\u09C1\u09A8 \u09A8\u09BE \u0995\u09C7\u09A8, \u0985\u09A8\u09CD\u09A4\u09A4 SPF 30+ \u09B8\u09AE\u09C3\u09A6\u09CD\u09A7 \u09B8\u09BE\u09A8\u09B8\u09CD\u0995\u09CD\u09B0\u09BF\u09A8 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0 \u0995\u09B0\u09A4\u09C7 \u09AD\u09C1\u09B2\u09AC\u09C7\u09A8 \u09A8\u09BE\u0964 \u098F\u099F\u09BF \u09A4\u09CD\u09AC\u0995\u09C7 \u09B8\u09BE\u09A8\u09AC\u09BE\u09B0\u09CD\u09A8 \u0993 \u0985\u0995\u09BE\u09B2 \u09AC\u09BE\u09B0\u09CD\u09A7\u0995\u09CD\u09AF \u09AA\u09CD\u09B0\u09A4\u09BF\u09B0\u09CB\u09A7 \u0995\u09B0\u09C7\u0964</p>
+
+<h3>\u09EA. \u09B8\u09C1\u09B7\u09AE \u0996\u09BE\u09AC\u09BE\u09B0 \u0993 \u09AA\u09B0\u09CD\u09AF\u09BE\u09AA\u09CD\u09A4 \u0998\u09C1\u09AE</h3>
+<p>\u09AD\u09BF\u099F\u09BE\u09AE\u09BF\u09A8 \u09B8\u09BF \u098F\u09AC\u0982 \u0987 \u09B8\u09AE\u09C3\u09A6\u09CD\u09A7 \u09AB\u09B2\u09AE\u09C2\u09B2 \u09AF\u09C7\u09AE\u09A8 \u09B2\u09C7\u09AC\u09C1, \u09AA\u09C7\u09DF\u09BE\u09B0\u09BE, \u0995\u09AE\u09B2\u09BE \u0987\u09A4\u09CD\u09AF\u09BE\u09A6\u09BF \u0986\u09AA\u09A8\u09BE\u09B0 \u0996\u09BE\u09A6\u09CD\u09AF\u09A4\u09BE\u09B2\u09BF\u0995\u09BE\u09DF \u09B0\u09BE\u0996\u09C1\u09A8\u0964 \u098F\u099B\u09BE\u09DC\u09BE\u0993 \u09AA\u09CD\u09B0\u09A4\u09BF\u09A6\u09BF\u09A8 \u09ED-\u09EE \u0998\u09A3\u09CD\u099F\u09BE\u09B0 \u09AD\u09BE\u09B2\u09CB \u0998\u09C1\u09AE \u09A4\u09CD\u09AC\u0995 \u0995\u09CB\u09B7\u09C7\u09B0 \u09AA\u09C1\u09A8\u09B0\u09CD\u0997\u09A0\u09A8\u09C7 \u0985\u09A4\u09CD\u09AF\u09A8\u09CD\u09A4 \u09B8\u09BE\u09B9\u09BE\u09AF\u09CD\u09AF \u0995\u09B0\u09C7\u0964</p>
+
+<h3>\u09EB. \u0998\u09B0\u09CB\u09DF\u09BE \u09AB\u09C7\u09B8\u09AA\u09CD\u09AF\u09BE\u0995\u09C7\u09B0 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0</h3>
+<p>\u09B8\u09AA\u09CD\u09A4\u09BE\u09B9\u09C7 \u0985\u09A8\u09CD\u09A4\u09A4 \u098F\u0995\u09A6\u09BF\u09A8 \u09AC\u09C7\u09B8\u09A8, \u09AE\u09A7\u09C1 \u098F\u09AC\u0982 \u099F\u0995\u09A6\u0987 \u09AE\u09BF\u09B6\u09BF\u09DF\u09C7 \u0995\u09BE\u09B8\u09CD\u099F\u09AE \u09AB\u09C7\u09B8\u09AA\u09CD\u09AF\u09BE\u0995 \u09A4\u09C8\u09B0\u09BF \u0995\u09B0\u09C7 \u09AE\u09C1\u0996\u09C7 \u09B2\u09BE\u0997\u09BE\u09A4\u09C7 \u09AA\u09BE\u09B0\u09C7\u09A8\u0964 \u098F\u099F\u09BF \u09A4\u09CD\u09AC\u0995\u0995\u09C7 \u09AA\u09CD\u09B0\u09BE\u0995\u09C3\u09A4\u09BF\u0995\u09AD\u09BE\u09AC\u09C7 \u098F\u0995\u09CD\u09B8\u09AB\u09CB\u09B2\u09BF\u09DF\u09C7\u099F \u0995\u09B0\u09C7 \u098F\u09AC\u0982 \u0987\u09A8\u09B8\u09CD\u099F\u09CD\u09AF\u09BE\u09A8\u09CD\u099F \u0997\u09CD\u09B2\u09CB \u098F\u09A8\u09C7 \u09A6\u09C7\u09DF\u0964</p>
+
+<p>\u09A4\u09CD\u09AC\u0995\u09C7\u09B0 \u09AF\u09A4\u09CD\u09A8 \u09A8\u09C7\u0993\u09DF\u09BE\u09B0 \u0995\u09CD\u09B7\u09C7\u09A4\u09CD\u09B0\u09C7 \u09A7\u09BE\u09B0\u09BE\u09AC\u09BE\u09B9\u09BF\u0995\u09A4\u09BE \u09B8\u09AC\u099A\u09C7\u09DF\u09C7 \u0997\u09C1\u09B0\u09C1\u09A4\u09CD\u09AC\u09AA\u09C2\u09B0\u09CD\u09A3\u0964 \u0986\u099C \u09A5\u09C7\u0995\u09C7\u0987 \u098F\u0987 \u09A8\u09BF\u09DF\u09AE\u0997\u09C1\u09B2\u09CB \u09AE\u09C7\u09A8\u09C7 \u099A\u09B2\u09BE \u09B6\u09C1\u09B0\u09C1 \u0995\u09B0\u09C1\u09A8 \u098F\u09AC\u0982 \u0985\u09B2\u09CD\u09AA \u0995\u09BF\u099B\u09C1\u09A6\u09BF\u09A8\u09C7\u09B0 \u09AE\u09A7\u09CD\u09AF\u09C7\u0987 \u0986\u09AA\u09A8\u09BE\u09B0 \u09A4\u09CD\u09AC\u0995\u09C7\u09B0 \u09AA\u09B0\u09BF\u09AC\u09B0\u09CD\u09A4\u09A8 \u09B2\u0995\u09CD\u09B7\u09CD\u09AF \u0995\u09B0\u09C1\u09A8!</p>`,
+            banner_image: "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=800&q=80",
+            author_name: "\u09B8\u09BE\u09AC\u09BF\u09B9\u09BE \u0987\u09DF\u09BE\u09B8\u09AE\u09BF\u09A8",
+            published: 1
+          },
+          {
+            id: "blog-2",
+            title: "\u09AE\u09C7\u0995\u0986\u09AA \u09AC\u09CD\u09B0\u09BE\u09B6 \u09AA\u09B0\u09BF\u09B7\u09CD\u0995\u09BE\u09B0 \u0995\u09B0\u09BE\u09B0 \u09B8\u09A0\u09BF\u0995 \u09A8\u09BF\u09DF\u09AE \u0993 \u0997\u09C1\u09B0\u09C1\u09A4\u09CD\u09AC",
+            slug: "how-to-clean-makeup-brushes-correctly",
+            summary: "\u0985\u09AA\u09B0\u09BF\u09B7\u09CD\u0995\u09BE\u09B0 \u09AE\u09C7\u0995\u0986\u09AA \u09AC\u09CD\u09B0\u09BE\u09B6 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0 \u0995\u09B0\u09B2\u09C7 \u09A4\u09CD\u09AC\u0995\u09C7 \u09AC\u09CD\u09B0\u09A3 \u0993 \u0985\u09A8\u09CD\u09AF\u09BE\u09A8\u09CD\u09AF \u09B8\u09AE\u09B8\u09CD\u09AF\u09BE \u09B9\u09A4\u09C7 \u09AA\u09BE\u09B0\u09C7\u0964 \u09AC\u09CD\u09B0\u09BE\u09B6 \u09AA\u09B0\u09BF\u09B7\u09CD\u0995\u09BE\u09B0 \u0995\u09B0\u09BE\u09B0 \u09B8\u09B9\u099C \u0993 \u09B8\u09A0\u09BF\u0995 \u09A8\u09BF\u09DF\u09AE\u099F\u09BF \u099C\u09C7\u09A8\u09C7 \u09A8\u09BF\u09A8 \u098F\u0987 \u09AC\u09CD\u09B2\u0997\u09C7\u09B0 \u09AE\u09BE\u09A7\u09CD\u09AF\u09AE\u09C7\u0964",
+            content: `<p>\u09AE\u09C7\u0995\u0986\u09AA\u09AA\u09CD\u09B0\u09C7\u09AE\u09C0\u09A6\u09C7\u09B0 \u0995\u09BE\u099B\u09C7 \u09AE\u09C7\u0995\u0986\u09AA \u09AC\u09CD\u09B0\u09BE\u09B6 \u098F\u09AC\u0982 \u09AC\u09CD\u09B2\u09C7\u09A8\u09CD\u09A1\u09BE\u09B0 \u0985\u09A4\u09CD\u09AF\u09A8\u09CD\u09A4 \u09AE\u09C2\u09B2\u09CD\u09AF\u09AC\u09BE\u09A8 \u09B8\u09B0\u099E\u09CD\u099C\u09BE\u09AE\u0964 \u09A4\u09AC\u09C7 \u098F\u0997\u09C1\u09B2\u09CB \u09B8\u09A0\u09BF\u0995 \u09B8\u09AE\u09DF\u09C7 \u09AA\u09B0\u09BF\u09B7\u09CD\u0995\u09BE\u09B0 \u09A8\u09BE \u0995\u09B0\u09BE \u09B9\u09B2\u09C7 \u09A4\u09BE \u0986\u09AA\u09A8\u09BE\u09B0 \u09A4\u09CD\u09AC\u0995\u09C7\u09B0 \u099C\u09A8\u09CD\u09AF \u09AE\u09BE\u09B0\u09BE\u09A4\u09CD\u09AE\u0995 \u0995\u09CD\u09B7\u09A4\u09BF\u0995\u09B0 \u09B9\u09A4\u09C7 \u09AA\u09BE\u09B0\u09C7\u0964 \u09A8\u09CB\u0982\u09B0\u09BE \u09AC\u09CD\u09B0\u09BE\u09B6\u09C7 \u09AC\u09CD\u09AF\u09BE\u0995\u099F\u09C7\u09B0\u09BF\u09DF\u09BE \u099C\u09AE\u09C7 \u09A5\u09BE\u0995\u09C7, \u09AF\u09BE \u09A4\u09CD\u09AC\u0995\u09C7 \u09AC\u09CD\u09B0\u09A3, \u09AB\u09C1\u09B8\u0995\u09C1\u09DC\u09BF \u0993 \u0987\u09A8\u09AB\u09C7\u0995\u09B6\u09A8 \u09A4\u09C8\u09B0\u09BF \u0995\u09B0\u09A4\u09C7 \u09AA\u09BE\u09B0\u09C7\u0964</p>
+
+<h3>\u0995\u09C7\u09A8 \u09AE\u09C7\u0995\u0986\u09AA \u09AC\u09CD\u09B0\u09BE\u09B6 \u09AA\u09B0\u09BF\u09B7\u09CD\u0995\u09BE\u09B0 \u0995\u09B0\u09AC\u09C7\u09A8?</h3>
+<ul>
+  <li><strong>\u09A4\u09CD\u09AC\u0995\u09C7\u09B0 \u09B8\u09C1\u09B0\u0995\u09CD\u09B7\u09BE\u09DF:</strong> \u09AC\u09CD\u09B0\u09BE\u09B6\u09C7 \u09A5\u09BE\u0995\u09BE \u0985\u09A4\u09BF\u09B0\u09BF\u0995\u09CD\u09A4 \u09A4\u09C7\u09B2, \u09AE\u09C3\u09A4 \u099A\u09BE\u09AE\u09DC\u09BE \u098F\u09AC\u0982 \u09A7\u09C1\u09B2\u09BE\u09AC\u09BE\u09B2\u09BF \u09B8\u09B0\u09BE\u09B8\u09B0\u09BF \u09A4\u09CD\u09AC\u0995\u09C7\u09B0 \u09B8\u0982\u09B8\u09CD\u09AA\u09B0\u09CD\u09B6\u09C7 \u0986\u09B8\u09C7, \u09AF\u09BE \u09AA\u09CB\u09B0\u09B8 \u09AC\u09CD\u09B2\u0995 \u0995\u09B0\u09C7 \u09A6\u09C7\u09DF\u0964</li>
+  <li><strong>\u09AE\u09C7\u0995\u0986\u09AA\u09C7\u09B0 \u09AA\u09BE\u09B0\u09AB\u09C7\u0995\u09B6\u09A8\u09C7\u09B0 \u099C\u09A8\u09CD\u09AF:</strong> \u09A8\u09CB\u0982\u09B0\u09BE \u09AC\u09CD\u09B0\u09BE\u09B6\u09C7 \u0986\u0997\u09C7 \u09B2\u09C7\u0997\u09C7 \u09A5\u09BE\u0995\u09BE \u09AE\u09C7\u0995\u0986\u09AA\u09C7\u09B0 \u0995\u09BE\u09B0\u09A3\u09C7 \u09A8\u09A4\u09C1\u09A8 \u09AE\u09C7\u0995\u0986\u09AA \u09AC\u09CD\u09B2\u09C7\u09A8\u09CD\u09A1 \u0995\u09B0\u09A4\u09C7 \u09B8\u09AE\u09B8\u09CD\u09AF\u09BE \u09B9\u09DF\u0964</li>
+  <li><strong>\u09AC\u09CD\u09B0\u09BE\u09B6\u09C7\u09B0 \u09B8\u09CD\u09A5\u09BE\u09DF\u09BF\u09A4\u09CD\u09AC \u09AC\u09BE\u09DC\u09BE\u09A4\u09C7:</strong> \u09A8\u09BF\u09DF\u09AE\u09BF\u09A4 \u09AA\u09B0\u09BF\u09B7\u09CD\u0995\u09BE\u09B0 \u0995\u09B0\u09B2\u09C7 \u09AC\u09CD\u09B0\u09BE\u09B6\u09C7\u09B0 \u09AC\u09CD\u09B0\u09BF\u09B8\u09B2\u09B8 \u09A8\u09B0\u09AE \u0993 \u099F\u09C7\u0995\u09B8\u0987 \u09A5\u09BE\u0995\u09C7\u0964</li>
+</ul>
+
+<h3>\u09AA\u09B0\u09BF\u09B7\u09CD\u0995\u09BE\u09B0 \u0995\u09B0\u09BE\u09B0 \u09B8\u09B9\u099C \u09A7\u09BE\u09AA\u09B8\u09AE\u09C2\u09B9:</h3>
+<ol>
+  <li><strong>\u09AC\u09CD\u09B0\u09BE\u09B6 \u09AD\u09C7\u099C\u09BE\u09A8\u09CB:</strong> \u09B9\u09BE\u09B2\u0995\u09BE \u0997\u09B0\u09AE \u09AA\u09BE\u09A8\u09BF\u09A4\u09C7 \u09AC\u09CD\u09B0\u09BE\u09B6\u09C7\u09B0 \u09AC\u09CD\u09B0\u09BF\u09B8\u09B2\u09B8 \u09AC\u09BE \u099A\u09C1\u09B2\u0997\u09C1\u09B2\u09CB \u09AD\u09BF\u099C\u09BF\u09DF\u09C7 \u09A8\u09BF\u09A8\u0964 \u09B2\u0995\u09CD\u09B7\u09CD\u09AF \u09B0\u09BE\u0996\u09AC\u09C7\u09A8 \u09AF\u09C7\u09A8 \u09B9\u09CD\u09AF\u09BE\u09A8\u09CD\u09A1\u09C7\u09B2 \u098F\u09AC\u0982 \u09AC\u09CD\u09B0\u09BF\u09B8\u09B2\u09B8\u09C7\u09B0 \u09B8\u0982\u09AF\u09CB\u0997\u09B8\u09CD\u09A5\u09B2\u09C7 \u09AA\u09BE\u09A8\u09BF \u09A8\u09BE \u09AF\u09BE\u09DF, \u098F\u09A4\u09C7 \u0986\u09A0\u09BE \u0986\u09B2\u0997\u09BE \u09B9\u09DF\u09C7 \u099A\u09C1\u09B2 \u09AA\u09DC\u09C7 \u09AF\u09C7\u09A4\u09C7 \u09AA\u09BE\u09B0\u09C7\u0964</li>
+  <li><strong>\u0995\u09CD\u09B2\u09BF\u09A8\u099C\u09BE\u09B0 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0:</strong> \u098F\u0995\u099F\u09BF \u09AA\u09BE\u09A4\u09CD\u09B0\u09C7 \u09B8\u09BE\u09AE\u09BE\u09A8\u09CD\u09AF \u09AC\u09C7\u09AC\u09BF \u09B6\u09CD\u09AF\u09BE\u09AE\u09CD\u09AA\u09C1 \u0985\u09A5\u09AC\u09BE \u09AC\u09CD\u09B0\u09BE\u09B6 \u0995\u09CD\u09B2\u09BF\u09A8\u099C\u09BE\u09B0 \u09A8\u09BF\u09A8\u0964 \u09B8\u09C7\u0996\u09BE\u09A8\u09C7 \u09AC\u09CD\u09B0\u09BE\u09B6\u099F\u09BF \u0986\u09B2\u09A4\u09CB\u09AD\u09BE\u09AC\u09C7 \u0998\u09C1\u09B0\u09BF\u09DF\u09C7 \u09AB\u09C7\u09A8\u09BE \u09A4\u09C8\u09B0\u09BF \u0995\u09B0\u09C1\u09A8\u0964</li>
+  <li><strong>\u09B8\u09CD\u0995\u09CD\u09B0\u09BE\u09AC\u09BF\u0982:</strong> \u09B9\u09BE\u09A4\u09C7\u09B0 \u09A4\u09BE\u09B2\u09C1\u09A4\u09C7 \u0985\u09A5\u09AC\u09BE \u098F\u0995\u099F\u09BF \u09B8\u09BF\u09B2\u09BF\u0995\u09A8 \u09B8\u09CD\u0995\u09CD\u09B0\u09BE\u09AC \u09AA\u09CD\u09AF\u09BE\u09A1\u09C7 \u09AC\u09CD\u09B0\u09BE\u09B6\u09C7\u09B0 \u09AE\u09BE\u09A5\u09BE\u099F\u09BF \u0986\u09B2\u09A4\u09CB \u0995\u09B0\u09C7 \u0998\u09B7\u09C1\u09A8 \u09AF\u09BE\u09A4\u09C7 \u099C\u09AE\u09C7 \u09A5\u09BE\u0995\u09BE \u09AE\u09C7\u0995\u0986\u09AA \u0989\u09A0\u09C7 \u0986\u09B8\u09C7\u0964</li>
+  <li><strong>\u09A7\u09C1\u09DF\u09C7 \u09AB\u09C7\u09B2\u09BE:</strong> \u09AA\u09B0\u09BF\u09B7\u09CD\u0995\u09BE\u09B0 \u09AA\u09BE\u09A8\u09BF \u09A6\u09BF\u09DF\u09C7 \u09AC\u09CD\u09B0\u09BE\u09B6\u09C7\u09B0 \u09AE\u09BE\u09A5\u09BE\u099F\u09BF \u09A7\u09C1\u09DF\u09C7 \u09AB\u09C7\u09B2\u09C1\u09A8 \u09AF\u09A4\u0995\u09CD\u09B7\u09A3 \u09A8\u09BE \u09AA\u09B0\u09CD\u09AF\u09A8\u09CD\u09A4 \u09AB\u09C7\u09A8\u09BE \u099A\u09B2\u09C7 \u09AF\u09BE\u09DF\u0964</li>
+  <li><strong>\u09B6\u09C1\u0995\u09BE\u09A8\u09CB:</strong> \u0985\u09A4\u09BF\u09B0\u09BF\u0995\u09CD\u09A4 \u09AA\u09BE\u09A8\u09BF \u099A\u09BF\u09AA\u09C7 \u09AC\u09C7\u09B0 \u0995\u09B0\u09C7 \u098F\u0995\u099F\u09BF \u09B6\u09C1\u0995\u09A8\u09BE \u09A4\u09CB\u09DF\u09BE\u09B2\u09C7\u09A4\u09C7 \u09AC\u09CD\u09B0\u09BE\u09B6\u0997\u09C1\u09B2\u09CB \u09B8\u09AE\u09BE\u09A8 \u0995\u09B0\u09C7 \u09AC\u09BF\u099B\u09BF\u09DF\u09C7 \u09A6\u09BF\u09A8\u0964 \u0995\u0996\u09A8\u09CB\u0987 \u09AC\u09CD\u09B0\u09BE\u09B6 \u09B8\u09CB\u099C\u09BE \u0996\u09BE\u09DC\u09BE \u0995\u09B0\u09C7 \u09B6\u09C1\u0995\u09BE\u09AC\u09C7\u09A8 \u09A8\u09BE, \u098F\u09A4\u09C7 \u09AA\u09BE\u09A8\u09BF \u09B9\u09CD\u09AF\u09BE\u09A8\u09CD\u09A1\u09C7\u09B2\u09C7\u09B0 \u09AD\u09C7\u09A4\u09B0\u09C7 \u099A\u09B2\u09C7 \u09AF\u09BE\u09DF\u0964</li>
+</ol>
+
+<p>\u09A8\u09BF\u09DF\u09AE\u09BF\u09A4 \u09B8\u09AA\u09CD\u09A4\u09BE\u09B9\u09C7 \u0985\u09A8\u09CD\u09A4\u09A4 \u098F\u0995\u09AC\u09BE\u09B0 \u0986\u09AA\u09A8\u09BE\u09B0 \u09AC\u09CD\u09AF\u09AC\u09B9\u09C3\u09A4 \u09AE\u09C7\u0995\u0986\u09AA \u09AC\u09CD\u09B0\u09BE\u09B6 \u0993 \u09B8\u09CD\u09AA\u099E\u09CD\u099C \u09AA\u09B0\u09BF\u09B7\u09CD\u0995\u09BE\u09B0 \u0995\u09B0\u09BE\u09B0 \u0985\u09AD\u09CD\u09AF\u09BE\u09B8 \u0997\u09DC\u09C7 \u09A4\u09C1\u09B2\u09C1\u09A8 \u098F\u09AC\u0982 \u09A4\u09CD\u09AC\u0995\u0995\u09C7 \u09B0\u09BE\u0996\u09C1\u09A8 \u09B0\u09CB\u0997\u09AE\u09C1\u0995\u09CD\u09A4 \u0993 \u09B8\u09A4\u09C7\u099C!</p>`,
+            banner_image: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=800&q=80",
+            author_name: "\u09A4\u09BE\u09A8\u09BF\u09DF\u09BE \u09B0\u09B9\u09AE\u09BE\u09A8",
+            published: 1
+          }
+        ];
+        db.serialize(() => {
+          const stmt = db.prepare(`
+            INSERT INTO blog_posts (id, title, slug, summary, content, banner_image, author_name, published)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `);
+          defaultBlogs.forEach((b) => {
+            stmt.run([b.id, b.title, b.slug, b.summary, b.content, b.banner_image, b.author_name, b.published]);
+          });
+          stmt.finalize(() => {
+            console.log("\u{1F331} Seeded 2 default blog posts into database.");
+          });
+        });
+      }
+    });
     console.log("\u2705 SQLite Schema verification & seeding completed.");
   });
 }
@@ -1008,48 +1316,199 @@ var auth_default = router;
 // backend/routes/products.ts
 import { Router as Router2 } from "express";
 
-// backend/controllers/productsController.ts
-var getProducts = (req, res) => {
-  db_default.all(`SELECT * FROM products`, [], (err, rows) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ status: "error", message: "Database error" });
+// backend/services/cacheService.ts
+import { createClient } from "redis";
+import dotenv2 from "dotenv";
+dotenv2.config();
+var InMemoryCache = class {
+  cache = /* @__PURE__ */ new Map();
+  set(key, value, ttlSeconds) {
+    const expiresAt = Date.now() + ttlSeconds * 1e3;
+    this.cache.set(key, { value, expiresAt });
+  }
+  get(key) {
+    const item = this.cache.get(key);
+    if (!item) return null;
+    if (Date.now() > item.expiresAt) {
+      this.cache.delete(key);
+      return null;
     }
-    const parsedRows = (rows || []).map((row) => ({
-      ...row,
-      features: row.features ? JSON.parse(row.features) : [],
-      specs: row.specs ? JSON.parse(row.specs) : [],
-      published: row.published === 1,
-      in_stock: row.in_stock === 1
-    }));
-    res.json({ status: "success", data: parsedRows });
-  });
+    return item.value;
+  }
+  del(key) {
+    this.cache.delete(key);
+  }
+  delPattern(pattern) {
+    const cleanPattern = pattern.replace(/\*/g, ".*");
+    const regex = new RegExp("^" + cleanPattern + "$");
+    for (const key of this.cache.keys()) {
+      if (regex.test(key)) {
+        this.cache.delete(key);
+      }
+    }
+  }
 };
-var getProductById = (req, res) => {
+var memoryCache = new InMemoryCache();
+var redisUrl = process.env.REDIS_URL || "redis://127.0.0.1:6379";
+var DEFAULT_TTL = parseInt(process.env.CACHE_TTL || "3600");
+var redisClient = null;
+var isRedisConnected = false;
+if (process.env.REDIS_ENABLED !== "false") {
+  redisClient = createClient({ url: redisUrl });
+  redisClient.on("error", (err) => {
+    if (isRedisConnected) {
+      console.warn("\u26A0\uFE0F Redis connection lost. Falling back to In-Memory Cache.");
+    }
+    isRedisConnected = false;
+  });
+  redisClient.on("connect", () => {
+    console.log("\u{1F50C} Connected to Redis cache server.");
+    isRedisConnected = true;
+  });
+  redisClient.connect().catch(() => {
+    console.warn("\u26A0\uFE0F Redis server unreachable. Falling back to In-Memory Cache.");
+    isRedisConnected = false;
+  });
+}
+var cacheService = {
+  /**
+   * Get value from cache
+   */
+  async get(key) {
+    try {
+      if (isRedisConnected && redisClient) {
+        const data = await redisClient.get(key);
+        return data ? JSON.parse(data) : null;
+      }
+    } catch (err) {
+      console.error(`Error reading key "${key}" from Redis:`, err);
+    }
+    return memoryCache.get(key);
+  },
+  /**
+   * Set value in cache
+   */
+  async set(key, value, ttlSeconds = DEFAULT_TTL) {
+    const serialized = JSON.stringify(value);
+    try {
+      if (isRedisConnected && redisClient) {
+        await redisClient.set(key, serialized, {
+          EX: ttlSeconds
+        });
+        return;
+      }
+    } catch (err) {
+      console.error(`Error writing key "${key}" to Redis:`, err);
+    }
+    memoryCache.set(key, value, ttlSeconds);
+  },
+  /**
+   * Delete specific key from cache
+   */
+  async del(key) {
+    try {
+      if (isRedisConnected && redisClient) {
+        await redisClient.del(key);
+        return;
+      }
+    } catch (err) {
+      console.error(`Error deleting key "${key}" from Redis:`, err);
+    }
+    memoryCache.del(key);
+  },
+  /**
+   * Delete keys matching a pattern (e.g. "products:*")
+   */
+  async delPattern(pattern) {
+    try {
+      if (isRedisConnected && redisClient) {
+        const keys = await redisClient.keys(pattern);
+        if (keys.length > 0) {
+          await redisClient.del(keys);
+        }
+        return;
+      }
+    } catch (err) {
+      console.error(`Error deleting pattern "${pattern}" from Redis:`, err);
+    }
+    memoryCache.delPattern(pattern);
+  },
+  /**
+   * Wrapper helper: Checks if key exists, if not, runs fetchFn, caches result, and returns
+   */
+  async getOrSet(key, ttlSeconds, fetchFn) {
+    const cached = await this.get(key);
+    if (cached !== null && cached !== void 0) {
+      return cached;
+    }
+    const freshData = await fetchFn();
+    await this.set(key, freshData, ttlSeconds);
+    return freshData;
+  }
+};
+
+// backend/controllers/productsController.ts
+var getProducts = async (req, res) => {
+  try {
+    const cacheKey = "products:all";
+    const cachedData = await cacheService.get(cacheKey);
+    if (cachedData) {
+      return res.json({ status: "success", data: cachedData });
+    }
+    db_default.all(`SELECT * FROM products`, [], (err, rows) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ status: "error", message: "Database error" });
+      }
+      const parsedRows = (rows || []).map((row) => ({
+        ...row,
+        features: row.features ? JSON.parse(row.features) : [],
+        specs: row.specs ? JSON.parse(row.specs) : [],
+        published: row.published === 1,
+        in_stock: row.in_stock === 1
+      }));
+      cacheService.set(cacheKey, parsedRows, 300).catch(console.error);
+      res.json({ status: "success", data: parsedRows });
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: "error", message: "Internal server error" });
+  }
+};
+var getProductById = async (req, res) => {
   const { id } = req.params;
-  db_default.get(`SELECT * FROM products WHERE id = ?`, [id], (err, product) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ status: "error", message: "Database error" });
+  const cacheKey = `products:id:${id}`;
+  try {
+    const cachedProduct = await cacheService.get(cacheKey);
+    if (cachedProduct) {
+      return res.json({ status: "success", data: cachedProduct });
     }
-    if (!product) {
-      return res.status(404).json({ status: "error", message: "Product not found" });
-    }
-    db_default.all(`SELECT image_url FROM product_gallery WHERE product_id = ?`, [id], (err2, galleryRows) => {
-      const gallery = galleryRows ? galleryRows.map((r) => r.image_url) : [];
-      res.json({
-        status: "success",
-        data: {
+    db_default.get(`SELECT * FROM products WHERE id = ?`, [id], (err, product) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ status: "error", message: "Database error" });
+      }
+      if (!product) {
+        return res.status(404).json({ status: "error", message: "Product not found" });
+      }
+      db_default.all(`SELECT image_url FROM product_gallery WHERE product_id = ?`, [id], (err2, galleryRows) => {
+        const gallery = galleryRows ? galleryRows.map((r) => r.image_url) : [];
+        const resultData = {
           ...product,
           features: product.features ? JSON.parse(product.features) : [],
           specs: product.specs ? JSON.parse(product.specs) : [],
           published: product.published === 1,
           in_stock: product.in_stock === 1,
           gallery: gallery.length > 0 ? gallery : [product.image]
-        }
+        };
+        cacheService.set(cacheKey, resultData, 300).catch(console.error);
+        res.json({ status: "success", data: resultData });
       });
     });
-  });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: "error", message: "Internal server error" });
+  }
 };
 var createProduct = (req, res) => {
   const { name, slug, sku, brand, category, price, original_price, image, description, stock, published, features, specs, gallery } = req.body;
@@ -1095,6 +1554,7 @@ var createProduct = (req, res) => {
             db_default.run("ROLLBACK");
             return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
           }
+          cacheService.delPattern("products:*").catch(console.error);
           res.json({ status: "success", message: "Product created", data: { id } });
         });
       }
@@ -1158,6 +1618,7 @@ var updateProduct = (req, res) => {
                 db_default.run("ROLLBACK");
                 return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
               }
+              cacheService.delPattern("products:*").catch(console.error);
               res.json({ status: "success", message: "Product updated" });
             });
           });
@@ -1167,6 +1628,7 @@ var updateProduct = (req, res) => {
               db_default.run("ROLLBACK");
               return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
             }
+            cacheService.delPattern("products:*").catch(console.error);
             res.json({ status: "success", message: "Product updated" });
           });
         }
@@ -1181,6 +1643,7 @@ var deleteProduct = (req, res) => {
       console.error(err);
       return res.status(500).json({ status: "error", message: "Database error" });
     }
+    cacheService.delPattern("products:*").catch(console.error);
     res.json({ status: "success", message: "Product deleted" });
   });
 };
@@ -1412,6 +1875,7 @@ var createOrder = (req, res) => {
             db_default.run("ROLLBACK");
             return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
           }
+          cacheService.del("dashboard:stats").catch(console.error);
           res.json({ status: "success", message: "Order created successfully", data: { id } });
         });
       }
@@ -1426,6 +1890,7 @@ var updateOrderStatus = (req, res) => {
       console.error(err);
       return res.status(500).json({ status: "error", message: "Database error" });
     }
+    cacheService.del("dashboard:stats").catch(console.error);
     res.json({ status: "success", message: "Order status updated" });
   });
 };
@@ -1514,6 +1979,7 @@ var updateOrder = (req, res) => {
               db_default.run("ROLLBACK");
               return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
             }
+            cacheService.del("dashboard:stats").catch(console.error);
             res.json({ status: "success", message: "Order updated successfully" });
           });
         });
@@ -1998,6 +2464,14 @@ var dbGet = (sql, params = []) => {
 };
 var getDashboardStats = async (req, res) => {
   try {
+    const cacheKey = "dashboard:stats";
+    const cachedStats = await cacheService.get(cacheKey);
+    if (cachedStats) {
+      const currentVisitors2 = Math.floor(1800 + Math.random() * 800);
+      cachedStats.stats.liveVisitors = currentVisitors2;
+      cachedStats.visitorStats.current = currentVisitors2;
+      return res.json({ status: "success", data: cachedStats });
+    }
     const totalRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned')`);
     const totalRevenue = totalRevRow?.sum || 0;
     const todayRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned') AND date(created_at, 'localtime') = date('now', 'localtime')`);
@@ -2147,34 +2621,36 @@ var getDashboardStats = async (req, res) => {
       bounceRate: 38.5,
       pagesPerSession: 4.2
     };
+    const resultData = {
+      stats: {
+        totalRevenue,
+        todayRevenue,
+        monthlyRevenue,
+        yearlyRevenue,
+        netProfit,
+        grossProfit,
+        totalOrders,
+        totalCustomers,
+        liveVisitors: currentVisitors,
+        todayChange,
+        monthlyChange,
+        yearlyChange
+      },
+      charts: {
+        monthlyRevenueData,
+        dailyRevenueData,
+        hourlySalesData,
+        categoryRevenueData,
+        expenseData
+      },
+      recentOrders,
+      recentActivities,
+      visitorStats
+    };
+    cacheService.set(cacheKey, resultData, 300).catch(console.error);
     res.json({
       status: "success",
-      data: {
-        stats: {
-          totalRevenue,
-          todayRevenue,
-          monthlyRevenue,
-          yearlyRevenue,
-          netProfit,
-          grossProfit,
-          totalOrders,
-          totalCustomers,
-          liveVisitors: currentVisitors,
-          todayChange,
-          monthlyChange,
-          yearlyChange
-        },
-        charts: {
-          monthlyRevenueData,
-          dailyRevenueData,
-          hourlySalesData,
-          categoryRevenueData,
-          expenseData
-        },
-        recentOrders,
-        recentActivities,
-        visitorStats
-      }
+      data: resultData
     });
   } catch (error) {
     console.error("Failed to aggregate dashboard statistics:", error);
@@ -3452,11 +3928,228 @@ var initChatSocket = (server2) => {
   });
 };
 
+// backend/routes/blogs.ts
+import { Router as Router12 } from "express";
+
+// backend/controllers/blogsController.ts
+var getBlogs = async (req, res) => {
+  try {
+    const cacheKey = "blogs:all";
+    const cachedBlogs = await cacheService.get(cacheKey);
+    if (cachedBlogs) {
+      return res.json({ status: "success", data: cachedBlogs });
+    }
+    db_default.all(`SELECT * FROM blog_posts ORDER BY created_at DESC`, [], (err, rows) => {
+      if (err) {
+        console.error("Failed to get blogs:", err);
+        return res.status(500).json({ status: "error", message: "Database error" });
+      }
+      const parsedRows = (rows || []).map((r) => ({
+        ...r,
+        published: r.published === 1
+      }));
+      cacheService.set(cacheKey, parsedRows, 300).catch(console.error);
+      res.json({ status: "success", data: parsedRows });
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: "error", message: "Internal server error" });
+  }
+};
+var getBlogBySlug = async (req, res) => {
+  const { slug } = req.params;
+  try {
+    const cacheKey = `blogs:slug:${slug}`;
+    const cachedBlog = await cacheService.get(cacheKey);
+    if (cachedBlog) {
+      return res.json({ status: "success", data: cachedBlog });
+    }
+    db_default.get(`SELECT * FROM blog_posts WHERE slug = ?`, [slug], (err, row) => {
+      if (err) {
+        console.error("Failed to get blog:", err);
+        return res.status(500).json({ status: "error", message: "Database error" });
+      }
+      if (!row) {
+        return res.status(404).json({ status: "error", message: "Blog post not found" });
+      }
+      const parsedRow = {
+        ...row,
+        published: row.published === 1
+      };
+      cacheService.set(cacheKey, parsedRow, 300).catch(console.error);
+      res.json({ status: "success", data: parsedRow });
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: "error", message: "Internal server error" });
+  }
+};
+var createBlog = (req, res) => {
+  const { title, slug, summary, content, banner_image, author_name, published } = req.body;
+  if (!title || !slug || !content) {
+    return res.status(400).json({ status: "error", message: "Title, slug, and content are required" });
+  }
+  const id = "post-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+  const isPublished = published ? 1 : 0;
+  db_default.run(
+    `INSERT INTO blog_posts (id, title, slug, summary, content, banner_image, author_name, published)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      title,
+      slug,
+      summary || "",
+      content,
+      banner_image || "",
+      author_name || "Admin",
+      isPublished
+    ],
+    function(err) {
+      if (err) {
+        console.error("Failed to create blog:", err);
+        return res.status(500).json({ status: "error", message: err.message || "Database error" });
+      }
+      cacheService.delPattern("blogs:*").catch(console.error);
+      res.json({
+        status: "success",
+        message: "Blog post created successfully",
+        data: { id }
+      });
+    }
+  );
+};
+var updateBlog = (req, res) => {
+  const { id } = req.params;
+  const { title, slug, summary, content, banner_image, author_name, published } = req.body;
+  if (!title || !slug || !content) {
+    return res.status(400).json({ status: "error", message: "Title, slug, and content are required" });
+  }
+  const isPublished = published ? 1 : 0;
+  db_default.run(
+    `UPDATE blog_posts 
+     SET title = ?, slug = ?, summary = ?, content = ?, banner_image = ?, author_name = ?, published = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`,
+    [
+      title,
+      slug,
+      summary || "",
+      content,
+      banner_image || "",
+      author_name || "Admin",
+      isPublished,
+      id
+    ],
+    function(err) {
+      if (err) {
+        console.error("Failed to update blog:", err);
+        return res.status(500).json({ status: "error", message: "Database error" });
+      }
+      cacheService.delPattern("blogs:*").catch(console.error);
+      res.json({
+        status: "success",
+        message: "Blog post updated successfully"
+      });
+    }
+  );
+};
+var deleteBlog = (req, res) => {
+  const { id } = req.params;
+  db_default.run(`DELETE FROM blog_posts WHERE id = ?`, [id], function(err) {
+    if (err) {
+      console.error("Failed to delete blog:", err);
+      return res.status(500).json({ status: "error", message: "Database error" });
+    }
+    cacheService.delPattern("blogs:*").catch(console.error);
+    res.json({
+      status: "success",
+      message: "Blog post deleted successfully"
+    });
+  });
+};
+
+// backend/routes/blogs.ts
+var router12 = Router12();
+router12.get("/", getBlogs);
+router12.get("/:slug", getBlogBySlug);
+router12.post("/", authenticateToken, requireRole(["Super Admin", "Admin"]), createBlog);
+router12.put("/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), updateBlog);
+router12.delete("/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteBlog);
+var blogs_default = router12;
+
+// backend/routes/seo.ts
+import { Router as Router13 } from "express";
+var router13 = Router13();
+router13.get("/sitemap.xml", (req, res) => {
+  const domain = "https://beauty-elegance-ec88f.web.app";
+  db_default.all("SELECT id, created_at FROM products WHERE published = 1", [], (err, products) => {
+    if (err) {
+      console.error("Sitemap products fetch error:", err);
+      return res.status(500).send("Error generating sitemap");
+    }
+    db_default.all("SELECT slug, created_at FROM blog_posts WHERE published = 1", [], (err2, blogs) => {
+      if (err2) {
+        console.error("Sitemap blogs fetch error:", err2);
+        return res.status(500).send("Error generating sitemap");
+      }
+      let xml = `<?xml version="1.0" encoding="UTF-8"?>
+`;
+      xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+`;
+      const staticRoutes = [
+        { path: "", priority: "1.0" },
+        { path: "checkout", priority: "0.8" },
+        { path: "account", priority: "0.8" },
+        { path: "blogs", priority: "0.9" }
+      ];
+      staticRoutes.forEach((r) => {
+        xml += `  <url>
+`;
+        xml += `    <loc>${domain}/${r.path}</loc>
+`;
+        xml += `    <changefreq>daily</changefreq>
+`;
+        xml += `    <priority>${r.priority}</priority>
+`;
+        xml += `  </url>
+`;
+      });
+      (products || []).forEach((p) => {
+        xml += `  <url>
+`;
+        xml += `    <loc>${domain}/product/${p.id}</loc>
+`;
+        xml += `    <changefreq>weekly</changefreq>
+`;
+        xml += `    <priority>0.8</priority>
+`;
+        xml += `  </url>
+`;
+      });
+      (blogs || []).forEach((b) => {
+        xml += `  <url>
+`;
+        xml += `    <loc>${domain}/blog/${b.slug}</loc>
+`;
+        xml += `    <changefreq>weekly</changefreq>
+`;
+        xml += `    <priority>0.7</priority>
+`;
+        xml += `  </url>
+`;
+      });
+      xml += `</urlset>`;
+      res.header("Content-Type", "application/xml");
+      res.status(200).send(xml);
+    });
+  });
+});
+var seo_default = router13;
+
 // backend/server.ts
 import { rateLimit } from "express-rate-limit";
 var __filename2 = fileURLToPath2(import.meta.url);
 var __dirname2 = path2.dirname(__filename2);
-dotenv.config();
+dotenv3.config();
 var app = express();
 var server = createServer(app);
 var PORT = process.env.PORT || 5e3;
@@ -3554,6 +4247,8 @@ app.use("/api/v1/ai", ai_default);
 app.use("/api/v1/employees", employees_default);
 app.use("/api/v1/marketing", marketing_default);
 app.use("/api/v1/analytics", analytics_default);
+app.use("/api/v1/blogs", blogs_default);
+app.use("/", seo_default);
 app.use("/api/v1/customers", customers_default);
 app.use("/api/v1/settings", settings_default);
 app.use("/api/v1/vendors", (_req, res) => res.json({ status: "success", data: [] }));

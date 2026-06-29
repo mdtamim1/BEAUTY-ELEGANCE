@@ -5,6 +5,8 @@ import { useStorefrontConfig } from '../store/storefrontConfig';
 import { addOrder } from '../mock/data';
 import { sendOrderToBackend, fetchProductByIdFromBackend, fetchChatHistory, validateCouponCode } from '../services/api';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
+import { OptimizedImage } from '../components/layout/OptimizedImage';
+import { SEOMeta } from '../components/layout/SEOMeta';
 import './storefront-pdp.css';
 import './storefront-checkout.css';
 import './storefront-account.css';
@@ -582,6 +584,12 @@ export default function ProductDetails() {
 
   return (
     <div className="pdp-container">
+      <SEOMeta 
+        title={product.name} 
+        description={product.description ? product.description.replace(/<[^>]*>/g, '').slice(0, 160) : `Buy ${product.name} at premium price.`}
+        image={product.image}
+        slug={`product/${product.id}`}
+      />
       {/* Breadcrumbs */}
       <nav className="pdp-breadcrumbs">
         <Link to="/">Home</Link>
@@ -596,7 +604,7 @@ export default function ProductDetails() {
         {/* Gallery */}
         <div className="pdp-gallery">
           <div className="pdp-main-image-container">
-            <img src={activeImage} alt={product.name} className="pdp-main-image" />
+            <OptimizedImage src={activeImage} alt={product.name} className="pdp-main-image" width={800} height={800} />
             {product.badge && (
               <span className={`pdp-badge ${product.badge}`}>
                 {product.badge === 'sale' ? `Sale! -${Math.round((1 - product.price / (product.originalPrice || product.price)) * 100)}%` : 'NEW'}
@@ -610,7 +618,7 @@ export default function ProductDetails() {
                 className={`pdp-thumbnail ${activeImage === img ? 'active' : ''}`}
                 onClick={() => setActiveImage(img)}
               >
-                <img src={img} alt={`Thumbnail ${i+1}`} />
+                <OptimizedImage src={img} alt={`Thumbnail ${i+1}`} width={100} height={100} />
               </button>
             ))}
           </div>
@@ -907,7 +915,7 @@ export default function ProductDetails() {
                 return (
                   <Link to={`/product/${relatedProduct.id}`} key={relatedProduct.id} className="product-card" style={{ textDecoration: 'none' }}>
                     <div style={{ position: 'relative' }}>
-                      <img src={relatedProduct.image} alt={relatedProduct.name} className="product-card-image" />
+                      <OptimizedImage src={relatedProduct.image} alt={relatedProduct.name} className="product-card-image" width={400} height={400} />
                       {relatedProduct.badge && (
                         <span className={`product-card-badge ${relatedProduct.badge}`}>
                           {relatedProduct.badge === 'sale' ? `Sale! -${Math.round((1 - relatedProduct.price / (relatedProduct.originalPrice || relatedProduct.price)) * 100)}%` : 'New'}

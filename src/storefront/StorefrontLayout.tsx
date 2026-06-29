@@ -6,6 +6,7 @@ import './storefront.css';
 import { replaceContactInfo } from '../utils/storefrontUtils';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import AiChatWidget from './AiChatWidget';
+import { OptimizedImage } from '../components/layout/OptimizedImage';
 
 interface CartItem {
   product: any;
@@ -429,7 +430,7 @@ export default function StorefrontLayout() {
               ) : (
                 cart.map((item) => (
                   <div key={item.product.id} className="cart-item">
-                    <img src={item.product.image} alt={item.product.name} className="cart-item-image" />
+                    <OptimizedImage src={item.product.image} alt={item.product.name} className="cart-item-image" width={100} height={100} />
                     <div className="cart-item-info">
                       <div className="cart-item-name">{item.product.name}</div>
                       <div className="cart-item-price">৳{(item.product.price * item.quantity).toFixed(2)}</div>
@@ -489,7 +490,7 @@ export default function StorefrontLayout() {
                   .filter(product => wishlist.some(id => String(id) === String(product.id)))
                   .map((product) => (
                     <div key={product.id} className="wishlist-item">
-                      <img src={product.image} alt={product.name} className="wishlist-item-image" />
+                      <OptimizedImage src={product.image} alt={product.name} className="wishlist-item-image" width={100} height={100} />
                       <div className="wishlist-item-info">
                         <Link 
                           to={`/product/${product.id}`} 

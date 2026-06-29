@@ -780,6 +780,75 @@ export const deleteCampaignFromBackend = async (id: string): Promise<any> => {
   }
 };
 
+// --- BLOG APIS ---
+
+export const fetchBlogsFromBackend = async (): Promise<any[]> => {
+  try {
+    const res = await fetch(`${API_BASE}/blogs`);
+    const result = await res.json();
+    return result.status === 'success' ? result.data : [];
+  } catch (e) {
+    console.error('Failed to fetch blogs:', e);
+    return [];
+  }
+};
+
+export const fetchBlogBySlugFromBackend = async (slug: string): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/blogs/${slug}`);
+    const result = await res.json();
+    return result.status === 'success' ? result.data : null;
+  } catch (e) {
+    console.error(`Failed to fetch blog with slug "${slug}":`, e);
+    return null;
+  }
+};
+
+export const createBlogInBackend = async (blogData: any): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/blogs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
+      body: JSON.stringify(blogData)
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to create blog' };
+  }
+};
+
+export const updateBlogInBackend = async (id: string, blogData: any): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/blogs/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
+      body: JSON.stringify(blogData)
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to update blog' };
+  }
+};
+
+export const deleteBlogFromBackend = async (id: string): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/blogs/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to delete blog' };
+  }
+};
+
+
 
 
 

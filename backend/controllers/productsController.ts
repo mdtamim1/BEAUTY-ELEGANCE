@@ -1,49 +1,74 @@
 import { Request, Response } from 'express';
 import db from '../config/db';
+import { cacheService } from '../services/cacheService';
 
-export const getProducts = (req: Request, res: Response) => {
-  db.all(`SELECT * FROM products`, [], (err, rows) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ status: 'error', message: 'Database error' });
+export const getProducts = async (req: Request, res: Response) => {
+  try {
+    const cacheKey = 'products:all';
+    const cachedData = await cacheService.get<any[]>(cacheKey);
+    if (cachedData) {
+      return res.json({ status: 'success', data: cachedData });
     }
-    const parsedRows = (rows || []).map((row: any) => ({
-      ...row,
-      features: row.features ? JSON.parse(row.features) : [],
-      specs: row.specs ? JSON.parse(row.specs) : [],
-      published: row.published === 1,
-      in_stock: row.in_stock === 1
-    }));
-    res.json({ status: 'success', data: parsedRows });
-  });
+
+    db.all(`SELECT * FROM products`, [], (err, rows) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ status: 'error', message: 'Database error' });
+      }
+      const parsedRows = (rows || []).map((row: any) => ({
+        ...row,
+        features: row.features ? JSON.parse(row.features) : [],
+        specs: row.specs ? JSON.parse(row.specs) : [],
+        published: row.published === 1,
+        in_stock: row.in_stock === 1
+      }));
+
+      cacheService.set(cacheKey, parsedRows, 300).catch(console.error);
+      res.json({ status: 'success', data: parsedRows });
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
 };
 
-export const getProductById = (req: Request, res: Response) => {
+export const getProductById = async (req: Request, res: Response) => {
   const { id } = req.params;
-  db.get(`SELECT * FROM products WHERE id = ?`, [id], (err, product: any) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ status: 'error', message: 'Database error' });
+  const cacheKey = `products:id:${id}`;
+  try {
+    const cachedProduct = await cacheService.get<any>(cacheKey);
+    if (cachedProduct) {
+      return res.json({ status: 'success', data: cachedProduct });
     }
-    if (!product) {
-      return res.status(404).json({ status: 'error', message: 'Product not found' });
-    }
-    // Fetch product gallery
-    db.all(`SELECT image_url FROM product_gallery WHERE product_id = ?`, [id], (err, galleryRows: any[]) => {
-      const gallery = galleryRows ? galleryRows.map(r => r.image_url) : [];
-      res.json({
-        status: 'success',
-        data: {
+
+    db.get(`SELECT * FROM products WHERE id = ?`, [id], (err, product: any) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ status: 'error', message: 'Database error' });
+      }
+      if (!product) {
+        return res.status(404).json({ status: 'error', message: 'Product not found' });
+      }
+      // Fetch product gallery
+      db.all(`SELECT image_url FROM product_gallery WHERE product_id = ?`, [id], (err, galleryRows: any[]) => {
+        const gallery = galleryRows ? galleryRows.map(r => r.image_url) : [];
+        const resultData = {
           ...product,
           features: product.features ? JSON.parse(product.features) : [],
           specs: product.specs ? JSON.parse(product.specs) : [],
           published: product.published === 1,
           in_stock: product.in_stock === 1,
           gallery: gallery.length > 0 ? gallery : [product.image]
-        }
+        };
+
+        cacheService.set(cacheKey, resultData, 300).catch(console.error);
+        res.json({ status: 'success', data: resultData });
       });
     });
-  });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
 };
 
 export const createProduct = (req: Request, res: Response) => {
@@ -82,6 +107,8 @@ export const createProduct = (req: Request, res: Response) => {
             db.run('ROLLBACK');
             return res.status(500).json({ status: 'error', message: 'Failed to commit transaction' });
           }
+          // Invalidate cache
+          cacheService.delPattern('products:*').catch(console.error);
           res.json({ status: 'success', message: 'Product created', data: { id } });
         });
       }
@@ -143,6 +170,8 @@ export const updateProduct = (req: Request, res: Response) => {
                 db.run('ROLLBACK');
                 return res.status(500).json({ status: 'error', message: 'Failed to commit transaction' });
               }
+              // Invalidate cache
+              cacheService.delPattern('products:*').catch(console.error);
               res.json({ status: 'success', message: 'Product updated' });
             });
           });
@@ -152,6 +181,8 @@ export const updateProduct = (req: Request, res: Response) => {
               db.run('ROLLBACK');
               return res.status(500).json({ status: 'error', message: 'Failed to commit transaction' });
             }
+            // Invalidate cache
+            cacheService.delPattern('products:*').catch(console.error);
             res.json({ status: 'success', message: 'Product updated' });
           });
         }
@@ -167,6 +198,8 @@ export const deleteProduct = (req: Request, res: Response) => {
       console.error(err);
       return res.status(500).json({ status: 'error', message: 'Database error' });
     }
+    // Invalidate cache
+    cacheService.delPattern('products:*').catch(console.error);
     res.json({ status: 'success', message: 'Product deleted' });
   });
 };

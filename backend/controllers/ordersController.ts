@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import db from '../config/db';
+import { cacheService } from '../services/cacheService';
 
 export const getOrders = (req: Request, res: Response) => {
   db.all(`SELECT * FROM orders ORDER BY created_at DESC`, [], (err, orderRows: any[]) => {
@@ -126,6 +127,8 @@ export const createOrder = (req: Request, res: Response) => {
             db.run('ROLLBACK');
             return res.status(500).json({ status: 'error', message: 'Failed to commit transaction' });
           }
+          // Invalidate dashboard stats cache
+          cacheService.del('dashboard:stats').catch(console.error);
           res.json({ status: 'success', message: 'Order created successfully', data: { id } });
         });
       }
@@ -142,6 +145,8 @@ export const updateOrderStatus = (req: Request, res: Response) => {
       console.error(err);
       return res.status(500).json({ status: 'error', message: 'Database error' });
     }
+    // Invalidate dashboard stats cache
+    cacheService.del('dashboard:stats').catch(console.error);
     res.json({ status: 'success', message: 'Order status updated' });
   });
 };
@@ -219,6 +224,8 @@ export const updateOrder = (req: Request, res: Response) => {
               db.run('ROLLBACK');
               return res.status(500).json({ status: 'error', message: 'Failed to commit transaction' });
             }
+            // Invalidate dashboard stats cache
+            cacheService.del('dashboard:stats').catch(console.error);
             res.json({ status: 'success', message: 'Order updated successfully' });
           });
         });

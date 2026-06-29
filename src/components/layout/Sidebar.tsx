@@ -2,7 +2,7 @@ import { NavLink, useLocation, Link } from 'react-router-dom';
 import {
   LayoutDashboard, BarChart3, Users, ShoppingCart, Package, Store,
   Megaphone, UserCog, DollarSign, Shield, Settings, Brain,
-  ChevronLeft, ChevronRight, Zap, MessageSquare
+  ChevronLeft, ChevronRight, Zap, MessageSquare, BookOpen
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -44,6 +44,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         { id: 'products', label: 'Products', icon: Package, path: '/admin/products', badge: '', badgeType: '' },
         { id: 'customers', label: 'User Accounts', icon: Users, path: '/admin/customers', badge: '', badgeType: '' },
         { id: 'storefront', label: 'Storefront', icon: Store, path: '/admin/storefront-manager', badge: 'New', badgeType: 'success' },
+        { id: 'blogs', label: 'Blog Posts', icon: BookOpen, path: '/admin/blogs', badge: '', badgeType: '' },
         { id: 'chats', label: 'Inbox', icon: MessageSquare, path: '/admin/chats', badge: unreadChatsCount > 0 ? String(unreadChatsCount) : '', badgeType: 'danger' },
       ],
     },

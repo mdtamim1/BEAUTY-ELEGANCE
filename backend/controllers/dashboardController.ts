@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import db from '../config/db';
+import { cacheService } from '../services/cacheService';
 
 // Helper wrappers for database operations
 const dbAll = (sql: string, params: any[] = []): Promise<any[]> => {
@@ -22,6 +23,16 @@ const dbGet = (sql: string, params: any[] = []): Promise<any> => {
 
 export const getDashboardStats = async (req: Request, res: Response) => {
   try {
+    const cacheKey = 'dashboard:stats';
+    const cachedStats = await cacheService.get<any>(cacheKey);
+    if (cachedStats) {
+      // Keep live visitors count dynamic even when fetching from cache
+      const currentVisitors = Math.floor(1800 + Math.random() * 800);
+      cachedStats.stats.liveVisitors = currentVisitors;
+      cachedStats.visitorStats.current = currentVisitors;
+      return res.json({ status: 'success', data: cachedStats });
+    }
+
     // 1. Fetch Stat Metrics
     const totalRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned')`);
     const totalRevenue = totalRevRow?.sum || 0;
@@ -218,34 +229,39 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       pagesPerSession: 4.2
     };
 
+    const resultData = {
+      stats: {
+        totalRevenue,
+        todayRevenue,
+        monthlyRevenue,
+        yearlyRevenue,
+        netProfit,
+        grossProfit,
+        totalOrders,
+        totalCustomers,
+        liveVisitors: currentVisitors,
+        todayChange,
+        monthlyChange,
+        yearlyChange
+      },
+      charts: {
+        monthlyRevenueData,
+        dailyRevenueData,
+        hourlySalesData,
+        categoryRevenueData,
+        expenseData
+      },
+      recentOrders,
+      recentActivities,
+      visitorStats
+    };
+
+    // Cache the result for 5 minutes (300 seconds)
+    cacheService.set(cacheKey, resultData, 300).catch(console.error);
+
     res.json({
       status: 'success',
-      data: {
-        stats: {
-          totalRevenue,
-          todayRevenue,
-          monthlyRevenue,
-          yearlyRevenue,
-          netProfit,
-          grossProfit,
-          totalOrders,
-          totalCustomers,
-          liveVisitors: currentVisitors,
-          todayChange,
-          monthlyChange,
-          yearlyChange
-        },
-        charts: {
-          monthlyRevenueData,
-          dailyRevenueData,
-          hourlySalesData,
-          categoryRevenueData,
-          expenseData
-        },
-        recentOrders,
-        recentActivities,
-        visitorStats
-      }
+      data: resultData
     });
   } catch (error) {
     console.error('Failed to aggregate dashboard statistics:', error);

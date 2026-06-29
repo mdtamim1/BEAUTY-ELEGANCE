@@ -8,6 +8,8 @@ import { Truck, Shield, RotateCcw, Headphones, Star, Heart, ShoppingCart, Zap,
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import { CountdownTimer } from './CollectionPage';
 import { subscribeToNewsletter, fetchCampaignsFromBackend } from '../services/api';
+import { OptimizedImage } from '../components/layout/OptimizedImage';
+import { SEOMeta } from '../components/layout/SEOMeta';
 
 interface StorefrontContext {
   addToCart: (product: any) => void;
@@ -183,6 +185,10 @@ export default function StorefrontHome() {
 
   return (
     <>
+      <SEOMeta 
+        title="Premium Grooming & Cosmetic Store" 
+        description="Experience the ultimate beauty collection. Shop our premium face cleansers, dumbbells, smart watches, and makeup kits at unbeatable prices." 
+      />
       {/* ---- Hero Full-Width Carousel ---- */}
       {banners.length > 0 && (
         <section 
@@ -302,7 +308,7 @@ export default function StorefrontHome() {
               >
                 <div className="category-image-container">
                   {lastProductImage ? (
-                    <img src={lastProductImage} alt={cat.name} className="category-card-image" />
+                    <OptimizedImage src={lastProductImage} alt={cat.name} className="category-card-image" width={300} height={300} />
                   ) : (
                     <div className="category-icon-fallback"><Icon size={22} /></div>
                   )}
@@ -428,7 +434,7 @@ export default function StorefrontHome() {
                                 transition: 'all 0.2s'
                               }}
                             >
-                              <img src={product.image} alt={product.name} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '10px' }} />
+                              <OptimizedImage src={product.image} alt={product.name} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '10px' }} width={200} height={200} />
                               <Link 
                                 to={`/product/${product.id}`} 
                                 onClick={() => setShowCampaignsModal(false)}
@@ -502,7 +508,7 @@ export default function StorefrontHome() {
                 {filteredProducts.map((product: any) => (
                   <Link to={`/product/${product.id}`} key={product.id} className="product-card" style={{ textDecoration: 'none' }}>
                     <div style={{ position: 'relative' }}>
-                      <img src={product.image} alt={product.name} className="product-card-image" />
+                      <OptimizedImage src={product.image} alt={product.name} className="product-card-image" width={400} height={400} />
                       {product.badge && (
                         <span className={`product-card-badge ${product.badge}`}>
                           {product.badge === 'sale' ? `Sale! -${Math.round((1 - product.price / (product.originalPrice || product.price)) * 100)}%` : 'New'}

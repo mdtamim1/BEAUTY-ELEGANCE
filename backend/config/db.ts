@@ -1,31 +1,288 @@
 import sqlite3 from 'sqlite3';
+import mysql from 'mysql2';
+import pg from 'pg';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { seedProducts } from './seedData';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // Resolve __dirname in ESM node runtime
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dbPath = process.env.DATABASE_PATH || path.resolve(__dirname, '../../database/database.sqlite');
-
-// Make sure database folder exists
-const dbDir = path.dirname(dbPath);
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+const DB_TYPE = process.env.DB_TYPE || 'sqlite';
+interface DBWrapper {
+  run(sql: string, params?: any[], cb?: (this: any, err: Error | null) => void): void;
+  run(sql: string, cb?: (this: any, err: Error | null) => void): void;
+  get(sql: string, params?: any[], cb?: (err: Error | null, row: any) => void): void;
+  get(sql: string, cb?: (err: Error | null, row: any) => void): void;
+  all(sql: string, params?: any[], cb?: (err: Error | null, rows: any[]) => void): void;
+  all(sql: string, cb?: (err: Error | null, rows: any[]) => void): void;
+  serialize(cb: () => void): void;
+  prepare(sql: string, cb?: (err: Error | null) => void): any;
+  close(cb?: (err: Error | null) => void): void;
 }
 
-const sqlite = sqlite3.verbose();
+class MockStatement {
+  private sql: string;
+  private db: DBWrapper;
 
-const db = new sqlite.Database(dbPath, (err) => {
-  if (err) {
-    console.error('❌ Failed to connect to SQLite database:', err.message);
-  } else {
-    console.log('🔌 Connected to local SQLite database.');
-    initializeDatabase();
+  constructor(sql: string, db: DBWrapper) {
+    this.sql = sql;
+    this.db = db;
   }
-});
+
+  run(params: any[] = [], cb?: (this: any, err: Error | null) => void): this {
+    this.db.run(this.sql, params, cb);
+    return this;
+  }
+
+  finalize(cb?: (err: Error | null) => void): void {
+    if (cb) cb(null);
+  }
+}
+
+function translateSchemaForMysql(sql: string): string {
+  let translatedSql = sql;
+  translatedSql = translatedSql.replace(/INTEGER PRIMARY KEY AUTOINCREMENT/gi, 'INT AUTO_INCREMENT PRIMARY KEY');
+  translatedSql = translatedSql.replace(/TEXT PRIMARY KEY/gi, 'VARCHAR(255) PRIMARY KEY');
+  translatedSql = translatedSql.replace(/TEXT UNIQUE/gi, 'VARCHAR(255) UNIQUE');
+  translatedSql = translatedSql.replace(/REAL/gi, 'DOUBLE');
+  return translatedSql;
+}
+
+function translateSchemaForPostgres(sql: string): string {
+  let translatedSql = sql;
+  translatedSql = translatedSql.replace(/INTEGER PRIMARY KEY AUTOINCREMENT/gi, 'SERIAL PRIMARY KEY');
+  translatedSql = translatedSql.replace(/TEXT PRIMARY KEY/gi, 'VARCHAR(255) PRIMARY KEY');
+  translatedSql = translatedSql.replace(/TEXT UNIQUE/gi, 'VARCHAR(255) UNIQUE');
+  translatedSql = translatedSql.replace(/DATETIME/gi, 'TIMESTAMP');
+  translatedSql = translatedSql.replace(/REAL/gi, 'DOUBLE PRECISION');
+  return translatedSql;
+}
+
+function translateSqlForMysql(sql: string): string {
+  let translatedSql = sql;
+  translatedSql = translatedSql.replace(/INSERT OR REPLACE/gi, 'REPLACE');
+  translatedSql = translatedSql.replace(/INSERT OR IGNORE/gi, 'INSERT IGNORE');
+  if (translatedSql.toUpperCase().trim() === 'BEGIN TRANSACTION') {
+    translatedSql = 'START TRANSACTION';
+  }
+  return translatedSql;
+}
+
+function translateSqlForPostgres(sql: string, params: any[] = []): { sql: string, params: any[] } {
+  let translatedSql = sql;
+  
+  // Replace ? placeholders with $1, $2, ...
+  let index = 1;
+  translatedSql = translatedSql.replace(/\?/g, () => `$${index++}`);
+
+  // Replace SQLite upserts
+  if (translatedSql.toUpperCase().includes('INSERT OR REPLACE INTO SYSTEM_SETTINGS')) {
+    if (translatedSql.includes('group_name') && translatedSql.includes('is_public')) {
+      translatedSql = `
+        INSERT INTO system_settings (setting_key, setting_value, group_name, is_public)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (setting_key) 
+        DO UPDATE SET setting_value = EXCLUDED.setting_value, group_name = EXCLUDED.group_name, is_public = EXCLUDED.is_public
+      `;
+    } else {
+      translatedSql = `
+        INSERT INTO system_settings (setting_key, setting_value)
+        VALUES ($1, $2)
+        ON CONFLICT (setting_key) 
+        DO UPDATE SET setting_value = EXCLUDED.setting_value
+      `;
+    }
+  }
+
+  if (translatedSql.toUpperCase().includes('INSERT OR IGNORE INTO PRODUCT_GALLERY')) {
+    translatedSql = translatedSql.replace(/INSERT OR IGNORE INTO/gi, 'INSERT INTO') + ' ON CONFLICT DO NOTHING';
+  }
+
+  if (translatedSql.toUpperCase().trim() === 'BEGIN TRANSACTION') {
+    translatedSql = 'BEGIN';
+  }
+
+  if (translatedSql.trim().toUpperCase().startsWith('INSERT INTO ') && !translatedSql.toUpperCase().includes(' RETURNING ')) {
+    translatedSql = translatedSql.trim() + ' RETURNING id';
+  }
+
+  return { sql: translatedSql, params };
+}
+
+function parseArgs(args: any[]): { params: any[], cb: any } {
+  let params: any[] = [];
+  let cb: any = undefined;
+
+  if (args.length === 1) {
+    if (typeof args[0] === 'function') {
+      cb = args[0];
+    } else if (Array.isArray(args[0])) {
+      params = args[0];
+    }
+  } else if (args.length === 2) {
+    params = args[0];
+    cb = args[1];
+  }
+
+  return { params, cb };
+}
+
+let dbInstance: any = null;
+let mysqlPool: mysql.Pool | null = null;
+let pgPool: pg.Pool | null = null;
+
+if (DB_TYPE === 'sqlite') {
+  const dbPath = process.env.DATABASE_PATH || path.resolve(__dirname, '../../database/database.sqlite');
+  const dbDir = path.dirname(dbPath);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+  const sqlite = sqlite3.verbose();
+  dbInstance = new sqlite.Database(dbPath, (err) => {
+    if (err) {
+      console.error('❌ Failed to connect to SQLite database:', err.message);
+    } else {
+      console.log('🔌 Connected to local SQLite database.');
+      initializeDatabase();
+    }
+  });
+} else if (DB_TYPE === 'mysql') {
+  mysqlPool = mysql.createPool({
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '3306'),
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'beauty_elegance',
+    connectionLimit: 10,
+    multipleStatements: true
+  });
+  console.log('🔌 Connected to MySQL database pool.');
+  initializeDatabase();
+} else if (DB_TYPE === 'postgres') {
+  pgPool = new pg.Pool({
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '5432'),
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'beauty_elegance',
+    max: 10
+  });
+  console.log('🔌 Connected to PostgreSQL database pool.');
+  initializeDatabase();
+}
+
+const db: DBWrapper = {
+  run(sql: string, ...args: any[]): void {
+    const { params, cb } = parseArgs(args);
+    if (sql.toUpperCase().includes('CREATE TABLE')) {
+      if (DB_TYPE === 'mysql') sql = translateSchemaForMysql(sql);
+      else if (DB_TYPE === 'postgres') sql = translateSchemaForPostgres(sql);
+    }
+
+    if (DB_TYPE === 'sqlite') {
+      dbInstance.run(sql, params, cb);
+    } else if (DB_TYPE === 'mysql') {
+      const translatedSql = translateSqlForMysql(sql);
+      mysqlPool!.query(translatedSql, params, function (err, result) {
+        if (cb) {
+          const context = {
+            lastID: result ? (result as any).insertId : undefined,
+            changes: result ? (result as any).affectedRows : undefined
+          };
+          cb.call(context, err);
+        }
+      });
+    } else if (DB_TYPE === 'postgres') {
+      const { sql: translatedSql, params: translatedParams } = translateSqlForPostgres(sql, params);
+      pgPool!.query(translatedSql, translatedParams, function (err, result) {
+        if (cb) {
+          const context = {
+            lastID: result && result.rows && result.rows[0] ? result.rows[0].id : undefined,
+            changes: result ? result.rowCount : undefined
+          };
+          cb.call(context, err);
+        }
+      });
+    }
+  },
+
+  get(sql: string, ...args: any[]): void {
+    const { params, cb } = parseArgs(args);
+    if (DB_TYPE === 'sqlite') {
+      dbInstance.get(sql, params, cb);
+    } else if (DB_TYPE === 'mysql') {
+      const translatedSql = translateSqlForMysql(sql);
+      mysqlPool!.query(translatedSql, params, function (err, results: any) {
+        if (cb) {
+          const row = results && results.length > 0 ? results[0] : undefined;
+          cb(err, row);
+        }
+      });
+    } else if (DB_TYPE === 'postgres') {
+      const { sql: translatedSql, params: translatedParams } = translateSqlForPostgres(sql, params);
+      pgPool!.query(translatedSql, translatedParams, function (err, result) {
+        if (cb) {
+          const row = result && result.rows && result.rows.length > 0 ? result.rows[0] : undefined;
+          cb(err, row);
+        }
+      });
+    }
+  },
+
+  all(sql: string, ...args: any[]): void {
+    const { params, cb } = parseArgs(args);
+    if (DB_TYPE === 'sqlite') {
+      dbInstance.all(sql, params, cb);
+    } else if (DB_TYPE === 'mysql') {
+      const translatedSql = translateSqlForMysql(sql);
+      mysqlPool!.query(translatedSql, params, function (err, results: any) {
+        if (cb) {
+          cb(err, results || []);
+        }
+      });
+    } else if (DB_TYPE === 'postgres') {
+      const { sql: translatedSql, params: translatedParams } = translateSqlForPostgres(sql, params);
+      pgPool!.query(translatedSql, translatedParams, function (err, result) {
+        if (cb) {
+          cb(err, result ? result.rows : []);
+        }
+      });
+    }
+  },
+
+  serialize(cb: () => void): void {
+    if (DB_TYPE === 'sqlite') {
+      dbInstance.serialize(cb);
+    } else {
+      cb();
+    }
+  },
+
+  prepare(sql: string, cb?: (err: Error | null) => void): any {
+    if (DB_TYPE === 'sqlite') {
+      return dbInstance.prepare(sql, cb);
+    } else {
+      if (cb) cb(null);
+      return new MockStatement(sql, this);
+    }
+  },
+
+  close(cb?: (err: Error | null) => void): void {
+    if (DB_TYPE === 'sqlite') {
+      dbInstance.close(cb);
+    } else if (DB_TYPE === 'mysql') {
+      mysqlPool!.end(cb);
+    } else if (DB_TYPE === 'postgres') {
+      pgPool!.end().then(() => cb && cb(null)).catch(err => cb && cb(err));
+    }
+  }
+};
 
 // Run schema seeding
 function initializeDatabase() {
@@ -38,6 +295,21 @@ function initializeDatabase() {
         setting_value TEXT,
         group_name TEXT DEFAULT 'general',
         is_public INTEGER DEFAULT 0,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS blog_posts (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        slug TEXT UNIQUE NOT NULL,
+        summary TEXT,
+        content TEXT NOT NULL,
+        banner_image TEXT,
+        author_name TEXT DEFAULT 'Admin',
+        published INTEGER DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -649,6 +921,82 @@ function initializeDatabase() {
           });
           stmt.finalize(() => {
             console.log('🌱 Seeded default system settings into database.');
+          });
+        });
+      }
+    });
+
+    // Seed default blog posts if none exist
+    db.get("SELECT COUNT(*) as count FROM blog_posts", (err, row: any) => {
+      if (!err && row && row.count === 0) {
+        const defaultBlogs = [
+          {
+            id: 'blog-1',
+            title: '৫টি সহজ উপায়ে আপনার স্কিন গ্লোয়িং ও হেলদি রাখুন',
+            slug: '5-ways-glowing-healthy-skin',
+            summary: 'স্কিন কেয়ার বা ত্বকের যত্ন নেওয়া কঠিন কিছু নয়। মাত্র কয়েকটি সাধারণ নিয়ম মেনে চললে আপনিও পেতে পারেন উজ্জ্বল ও সতেজ ত্বক। বিস্তারিত পড়ুন আমাদের আজকের ব্লগে।',
+            content: `<p>সুন্দর, উজ্জ্বল ও সুস্থ ত্বক সবারই কাম্য। তবে ব্যস্ত জীবনের ধকল, দূষণ ও সঠিক যত্নের অভাবে আমাদের ত্বক প্রায়শই সতেজতা হারিয়ে ফেলে। ত্বককে প্রাকৃতিকভাবে গ্লোয়িং ও হেলদি রাখার জন্য এখানে ৫টি অত্যন্ত কার্যকর ও সহজ উপায় আলোচনা করা হলো:</p>
+
+<h3>১. পর্যাপ্ত পানি পান করুন</h3>
+<p>ত্বকের আর্দ্রতা ধরে রাখার সবচেয়ে সহজ উপায় হলো প্রচুর পানি পান করা। প্রতিদিন অন্তত ৮-১০ গ্লাস পানি পান করুন। এটি আপনার শরীর থেকে ক্ষতিকর টক্সিন বের করে দিতে সাহায্য করে এবং ত্বকে প্রাকৃতিক উজ্জ্বলতা এনে দেয়।</p>
+
+<h3>২. ডাবল ক্লিনজিং পদ্ধতি ব্যবহার করুন</h3>
+<p>সারাদিনের ধুলোবালি ও মেকআপ দূর করার জন্য শুধু ফেসওয়াশ যথেষ্ট নয়। প্রথমে একটি অয়েল-বেসড ক্লিনার বা মাইসেলার ওয়াটার দিয়ে ত্বক পরিষ্কার করুন। এরপর আপনার স্কিন টাইপ অনুযায়ী ফেসওয়াশ ব্যবহার করুন।</p>
+
+<h3>৩. রেগুলার ময়েশ্চারাইজার ও সানস্ক্রিন ব্যবহার</h3>
+<p>স্কিন টাইপ যেমনই হোক না কেন, ময়েশ্চারাইজার ব্যবহার করা জরুরি। আর দিনের বেলা ঘরের বাইরে বা ভেতরে যেখানেই থাকুন না কেন, অন্তত SPF 30+ সমৃদ্ধ সানস্ক্রিন ব্যবহার করতে ভুলবেন না। এটি ত্বকে সানবার্ন ও অকাল বার্ধক্য প্রতিরোধ করে।</p>
+
+<h3>৪. সুষম খাবার ও পর্যাপ্ত ঘুম</h3>
+<p>ভিটামিন সি এবং ই সমৃদ্ধ ফলমূল যেমন লেবু, পেয়ারা, কমলা ইত্যাদি আপনার খাদ্যতালিকায় রাখুন। এছাড়াও প্রতিদিন ৭-৮ ঘণ্টার ভালো ঘুম ত্বক কোষের পুনর্গঠনে অত্যন্ত সাহায্য করে।</p>
+
+<h3>৫. ঘরোয়া ফেসপ্যাকের ব্যবহার</h3>
+<p>সপ্তাহে অন্তত একদিন বেসন, মধু এবং টকদই মিশিয়ে কাস্টম ফেসপ্যাক তৈরি করে মুখে লাগাতে পারেন। এটি ত্বককে প্রাকৃতিকভাবে এক্সফোলিয়েট করে এবং ইনস্ট্যান্ট গ্লো এনে দেয়।</p>
+
+<p>ত্বকের যত্ন নেওয়ার ক্ষেত্রে ধারাবাহিকতা সবচেয়ে গুরুত্বপূর্ণ। আজ থেকেই এই নিয়মগুলো মেনে চলা শুরু করুন এবং অল্প কিছুদিনের মধ্যেই আপনার ত্বকের পরিবর্তন লক্ষ্য করুন!</p>`,
+            banner_image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=800&q=80',
+            author_name: 'সাবিহা ইয়াসমিন',
+            published: 1
+          },
+          {
+            id: 'blog-2',
+            title: 'মেকআপ ব্রাশ পরিষ্কার করার সঠিক নিয়ম ও গুরুত্ব',
+            slug: 'how-to-clean-makeup-brushes-correctly',
+            summary: 'অপরিষ্কার মেকআপ ব্রাশ ব্যবহার করলে ত্বকে ব্রণ ও অন্যান্য সমস্যা হতে পারে। ব্রাশ পরিষ্কার করার সহজ ও সঠিক নিয়মটি জেনে নিন এই ব্লগের মাধ্যমে।',
+            content: `<p>মেকআপপ্রেমীদের কাছে মেকআপ ব্রাশ এবং ব্লেন্ডার অত্যন্ত মূল্যবান সরঞ্জাম। তবে এগুলো সঠিক সময়ে পরিষ্কার না করা হলে তা আপনার ত্বকের জন্য মারাত্মক ক্ষতিকর হতে পারে। নোংরা ব্রাশে ব্যাকটেরিয়া জমে থাকে, যা ত্বকে ব্রণ, ফুসকুড়ি ও ইনফেকশন তৈরি করতে পারে।</p>
+
+<h3>কেন মেকআপ ব্রাশ পরিষ্কার করবেন?</h3>
+<ul>
+  <li><strong>ত্বকের সুরক্ষায়:</strong> ব্রাশে থাকা অতিরিক্ত তেল, মৃত চামড়া এবং ধুলাবালি সরাসরি ত্বকের সংস্পর্শে আসে, যা পোরস ব্লক করে দেয়।</li>
+  <li><strong>মেকআপের পারফেকশনের জন্য:</strong> নোংরা ব্রাশে আগে লেগে থাকা মেকআপের কারণে নতুন মেকআপ ব্লেন্ড করতে সমস্যা হয়।</li>
+  <li><strong>ব্রাশের স্থায়িত্ব বাড়াতে:</strong> নিয়মিত পরিষ্কার করলে ব্রাশের ব্রিসলস নরম ও টেকসই থাকে।</li>
+</ul>
+
+<h3>পরিষ্কার করার সহজ ধাপসমূহ:</h3>
+<ol>
+  <li><strong>ব্রাশ ভেজানো:</strong> হালকা গরম পানিতে ব্রাশের ব্রিসলস বা চুলগুলো ভিজিয়ে নিন। লক্ষ্য রাখবেন যেন হ্যান্ডেল এবং ব্রিসলসের সংযোগস্থলে পানি না যায়, এতে আঠা আলগা হয়ে চুল পড়ে যেতে পারে।</li>
+  <li><strong>ক্লিনজার ব্যবহার:</strong> একটি পাত্রে সামান্য বেবি শ্যাম্পু অথবা ব্রাশ ক্লিনজার নিন। সেখানে ব্রাশটি আলতোভাবে ঘুরিয়ে ফেনা তৈরি করুন।</li>
+  <li><strong>স্ক্রাবিং:</strong> হাতের তালুতে অথবা একটি সিলিকন স্ক্রাব প্যাডে ব্রাশের মাথাটি আলতো করে ঘষুন যাতে জমে থাকা মেকআপ উঠে আসে।</li>
+  <li><strong>ধুয়ে ফেলা:</strong> পরিষ্কার পানি দিয়ে ব্রাশের মাথাটি ধুয়ে ফেলুন যতক্ষণ না পর্যন্ত ফেনা চলে যায়।</li>
+  <li><strong>শুকানো:</strong> অতিরিক্ত পানি চিপে বের করে একটি শুকনা তোয়ালেতে ব্রাশগুলো সমান করে বিছিয়ে দিন। কখনোই ব্রাশ সোজা খাড়া করে শুকাবেন না, এতে পানি হ্যান্ডেলের ভেতরে চলে যায়।</li>
+</ol>
+
+<p>নিয়মিত সপ্তাহে অন্তত একবার আপনার ব্যবহৃত মেকআপ ব্রাশ ও স্পঞ্জ পরিষ্কার করার অভ্যাস গড়ে তুলুন এবং ত্বককে রাখুন রোগমুক্ত ও সতেজ!</p>`,
+            banner_image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=800&q=80',
+            author_name: 'তানিয়া রহমান',
+            published: 1
+          }
+        ];
+
+        db.serialize(() => {
+          const stmt = db.prepare(`
+            INSERT INTO blog_posts (id, title, slug, summary, content, banner_image, author_name, published)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `);
+          defaultBlogs.forEach(b => {
+            stmt.run([b.id, b.title, b.slug, b.summary, b.content, b.banner_image, b.author_name, b.published]);
+          });
+          stmt.finalize(() => {
+            console.log('🌱 Seeded 2 default blog posts into database.');
           });
         });
       }

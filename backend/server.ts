@@ -31,6 +31,8 @@ import employeeRoutes from './routes/employees';
 import marketingRoutes from './routes/marketing';
 import analyticsRoutes from './routes/analytics';
 import { initChatSocket } from './websocket/chatSocket';
+import blogRoutes from './routes/blogs';
+import seoRoutes from './routes/seo';
 
 dotenv.config();
 
@@ -147,6 +149,8 @@ app.use('/api/v1/ai', aiRoutes);
 app.use('/api/v1/employees', employeeRoutes);
 app.use('/api/v1/marketing', marketingRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
+app.use('/api/v1/blogs', blogRoutes);
+app.use('/', seoRoutes);
 
 // Fallback stubs for other routes to prevent breaks
 app.use('/api/v1/customers', customerRoutes);

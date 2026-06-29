@@ -36,6 +36,11 @@ import { CustomerAuthProvider } from './context/CustomerAuthContext';
 import { useStorefrontConfig } from './store/storefrontConfig';
 import { fetchProductsFromBackend } from './services/api';
 
+// Blog pages
+import BlogList from './storefront/BlogList';
+import BlogDetails from './storefront/BlogDetails';
+import BlogManager from './features/blogs/BlogManager';
+
 // Guard wrapper to protect admin routes
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -113,6 +118,7 @@ function AdminLayout() {
             <Route path="storefront-manager" element={<StorefrontManager />} />
             <Route path="chats" element={<Inbox />} />
             <Route path="customers" element={<Customers />} />
+            <Route path="blogs" element={<BlogManager />} />
           </Routes>
         </main>
       </div>
@@ -152,6 +158,8 @@ export default function App() {
             <Route path="campaign/:id" element={<CampaignPage />} />
             <Route path="checkout" element={<Checkout />} />
             <Route path="account" element={<CustomerAccount />} />
+            <Route path="blogs" element={<BlogList />} />
+            <Route path="blog/:slug" element={<BlogDetails />} />
           </Route>
           
           {/* Admin Panel (all other routes protected under /admin) */}
