@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { NavLink, useLocation, Link } from 'react-router-dom';
 import {
   LayoutDashboard, BarChart3, Users, ShoppingCart, Package, Store,
@@ -5,6 +6,7 @@ import {
   ChevronLeft, ChevronRight, Zap, MessageSquare, BookOpen
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { fetchOrdersFromBackend } from '../../services/api';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -16,7 +18,34 @@ import { generateOrders } from '../../mock/data';
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { user } = useAuth();
   const location = useLocation();
-  const ordersCount = generateOrders().length;
+  const [ordersCount, setOrdersCount] = useState(0);
+
+  useEffect(() => {
+    // Set fallback mock order count initially
+    setOrdersCount(generateOrders().length);
+
+    const loadActualOrdersCount = async () => {
+      try {
+        const dbOrders = await fetchOrdersFromBackend();
+        if (dbOrders) {
+          setOrdersCount(dbOrders.length);
+        }
+      } catch (e) {
+        console.error('Failed to load actual orders count in sidebar:', e);
+      }
+    };
+
+    loadActualOrdersCount();
+
+    // Listen to changes in case orders are added/updated elsewhere
+    const handleStorageChange = () => {
+      setOrdersCount(generateOrders().length);
+      loadActualOrdersCount();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [location.pathname]);
 
   // Calculate unread customer messages
   const storedChats = localStorage.getItem('storefront_chats');
