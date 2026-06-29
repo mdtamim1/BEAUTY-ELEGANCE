@@ -265,45 +265,123 @@ function generateClientFallbackResponse(
   const query = message.toLowerCase().trim();
   const activeProducts = products.filter(p => p.published);
 
-  // Common follow-up queries if we have a context product
-  if (lastMatchedProduct) {
-    const isAskingForUse = query.includes('kaj ki') || query.includes('কাজ কি') || query.includes('কি কাজ') || query.includes('ব্যবহার') || query.includes('use') || query.includes('etar kaj') || query.includes('এটার কাজ') || query.includes('উপকার') || query.includes('কাজ করে');
-    const isAskingForDetails = query.includes('details') || query.includes('bistarito') || query.includes('details bolo') || query.includes('বিস্তারিত') || query.includes('বলুন') || query.includes('বলো') || query.includes('বল');
-    const isAskingForPrice = query.includes('price') || query.includes('দাম') || query.includes('কত') || query.includes('টাকা');
-    const isAskingForStock = query.includes('stock') || query.includes('আছে') || query.includes('পাব') || query.includes('পাওয়া');
+  // Common intent checks
+  const isAskingForUse = query.includes('use') || query.includes('kivabe') || query.includes('কিভাবে') || query.includes('নিয়ম') || query.includes('rules') || query.includes('kaj') || query.includes('কাজ') || query.includes('ব্যবহার') || query.includes('work') || query.includes('hobe');
+  const isAskingForBenefits = query.includes('upokarita') || query.includes('উপকার') || query.includes('সুবিধা') || query.includes('benefit') || query.includes('feature') || query.includes('ফিচার');
+  const isAskingForSpecs = query.includes('spec') || query.includes('মাপ') || query.includes('size') || query.includes('সাইজ') || query.includes('material') || query.includes('উপাদান') || query.includes('বিবরণ') || query.includes('details') || query.includes('বিস্তারিত');
+  const isAskingForPrice = query.includes('price') || query.includes('দাম') || query.includes('কত') || query.includes('টাকা') || query.includes('cost');
+  const isAskingForStock = query.includes('stock') || query.includes('আছে') || query.includes('পাব') || query.includes('পাওয়া');
 
-    if (isAskingForUse || isAskingForDetails) {
-      if (lastMatchedProduct.description) {
-        return `**${lastMatchedProduct.name}** এর কাজ ও বিবরণ:\n\n${lastMatchedProduct.description}`;
+  // Helper function to build a tailored response for a matched product based on intent
+  const buildTailoredResponse = (product: any): string => {
+    const inStock = product.in_stock === 1 || product.in_stock === true || product.stock > 0;
+    
+    if (isAskingForUse) {
+      let reply = `**${product.name}** এর ব্যবহার ও কাজের বিবরণ:\n\n`;
+      if (product.description) {
+        reply += `${product.description}\n\n`;
+      }
+      if (product.features && product.features.length > 0) {
+        reply += `**ব্যবহারের সুবিধা ও বৈশিষ্ট্যসমূহ:**\n`;
+        product.features.forEach((f: string) => {
+          reply += `- ${f}\n`;
+        });
+      }
+      return reply;
+    }
+
+    if (isAskingForBenefits) {
+      let reply = `**${product.name}** এর উপকারিতা ও বিশেষ ফিচারসমূহ:\n\n`;
+      if (product.features && product.features.length > 0) {
+        product.features.forEach((f: string) => {
+          reply += `- ${f}\n`;
+        });
+      } else if (product.description) {
+        reply += `${product.description}\n`;
       } else {
-        return `**${lastMatchedProduct.name}** এর নির্দিষ্ট কোনো বিবরণ দেওয়া নেই, তবে এটি আমাদের একটি অত্যন্ত জনপ্রিয় পণ্য!`;
+        reply += `এটি একটি অত্যন্ত মানসম্পন্ন ও কার্যকরী পণ্য।\n`;
       }
+      return reply;
     }
-    
+
+    if (isAskingForSpecs) {
+      let reply = `**${product.name}** এর স্পেসিফিকেশন ও বিস্তারিত তথ্য:\n\n`;
+      if (product.specs && product.specs.length > 0) {
+        product.specs.forEach((s: any) => {
+          reply += `- **${s.name}**: ${s.value}\n`;
+        });
+      } else if (product.description) {
+        reply += `**বিবরণ:** ${product.description}\n`;
+      }
+      return reply;
+    }
+
     if (isAskingForPrice) {
-      let priceMsg = `**${lastMatchedProduct.name}** এর বর্তমান মূল্য ৳${lastMatchedProduct.price}।`;
-      if (lastMatchedProduct.originalPrice && lastMatchedProduct.originalPrice > lastMatchedProduct.price) {
-        priceMsg += ` (আগে মূল্য ছিল ৳${lastMatchedProduct.originalPrice})`;
+      let reply = `**${product.name}** এর বর্তমান মূল্য ৳${product.price}।`;
+      if (product.originalPrice && product.originalPrice > product.price) {
+        reply += ` (পূর্বে এর মূল্য ছিল ৳${product.originalPrice}, যা এখন ${Math.round((1 - product.price / product.originalPrice) * 100)}% ছাড়ে পাওয়া যাচ্ছে!)`;
       }
-      return priceMsg;
+      return reply;
     }
-    
+
     if (isAskingForStock) {
-      const inStock = lastMatchedProduct.in_stock === 1 || lastMatchedProduct.in_stock === true || lastMatchedProduct.stock > 0;
-      return `**${lastMatchedProduct.name}** পণ্যটি ${inStock ? `বর্তমানে স্টকে আছে (বাকি আছে ${lastMatchedProduct.stock || 1} টি)` : 'বর্তমানে স্টক আউট'}`;
+      return `**${product.name}** পণ্যটি ${inStock ? `বর্তমানে স্টকে আছে (বাকি আছে ${product.stock || 1} টি)` : 'বর্তমানে স্টক আউট'}`;
     }
+
+    // Default detailed product info card
+    let reply = `**${product.name}** সম্পর্কে বিস্তারিত তথ্য:\n\n`;
+    reply += `- **মূল্য**: ৳${product.price}\n`;
+    if (product.originalPrice && product.originalPrice > product.price) {
+      reply += `- **অরিজিনাল প্রাইস**: ৳${product.originalPrice} (${Math.round((1 - product.price / product.originalPrice) * 100)}% ছাড়!)\n`;
+    }
+    reply += `- **স্টক**: ${inStock ? `স্টকে আছে (বাকি আছে ${product.stock || 1} টি)` : 'স্টক আউট'}\n`;
+    if (product.description) reply += `- **বিবরণ**: ${product.description}\n`;
+    
+    if (product.features && product.features.length > 0) {
+      reply += `\n**ফিচারসমূহ:**\n`;
+      product.features.forEach((f: string) => {
+        reply += `- ${f}\n`;
+      });
+    }
+
+    if (product.specs && product.specs.length > 0) {
+      reply += `\n**স্পেসিফিকেশন:**\n`;
+      product.specs.forEach((s: any) => {
+        reply += `- **${s.name}**: ${s.value}\n`;
+      });
+    }
+
+    // Find related products in the same category
+    if (product.category) {
+      const related = activeProducts.filter(p => p.id !== product.id && p.category === product.category).slice(0, 3);
+      if (related.length > 0) {
+        reply += `\n🔗 **সম্পর্কিত অন্যান্য পণ্য (Related Products):**\n`;
+        related.forEach(p => {
+          reply += `- **${p.name}** (৳${p.price})\n`;
+        });
+      }
+    }
+    return reply;
+  };
+
+  // 1. First, check if user is asking follow-up questions about the last matched product
+  if (lastMatchedProduct && (isAskingForUse || isAskingForBenefits || isAskingForSpecs || isAskingForPrice || isAskingForStock)) {
+    return buildTailoredResponse(lastMatchedProduct);
   }
 
+  // 2. Common Greetings
   if (query.includes('হ্যালো') || query.includes('hi') || query.includes('hello') || query.includes('কেমন আছ') || query.includes('আছেন')) {
     return 'হ্যালো! আমি আপনার AI শপিং অ্যাসিস্ট্যান্ট। আমি আপনাকে স্টোরের পণ্য খুঁজে পেতে, দাম জানতে অথবা ছাড় ও অফার জানতে সাহায্য করতে পারি। আপনি কি খুঁজছেন বলুন?';
   }
 
+  // 3. Product Catalog Queries
   if (query.includes('পণ্য') || query.includes('প্রোডাক্ট') || query.includes('product') || query.includes('list') || query.includes('কি কি আছে')) {
     if (activeProducts.length === 0) return 'দুঃখিত, এই মুহূর্তে আমাদের স্টোরে কোনো পণ্য পাওয়া যাচ্ছে না।';
     const listStr = activeProducts.slice(0, 10).map(p => `- **${p.name}** (৳${p.price})${p.category ? ` - *Category: ${p.category}*` : ''}`).join('\n');
     return `আমাদের স্টোরের পণ্যসমূহের তালিকা নিচে দেওয়া হলো:\n\n${listStr}\n\nযেকোনো পণ্যের বিস্তারিত জানতে তার নাম লিখে প্রশ্ন করুন!`;
   }
 
+  // 4. Low Price Queries
   if (query.includes('কম দাম') || query.includes('সস্তা') || query.includes('cheap') || query.includes('low price') || query.includes('কমদামি')) {
     if (activeProducts.length === 0) return 'দুঃখিত, এই মুহূর্তে কোনো পণ্য পাওয়া যাচ্ছে না।';
     const sorted = [...activeProducts].sort((a, b) => a.price - b.price);
@@ -311,6 +389,7 @@ function generateClientFallbackResponse(
     return `আমাদের স্টোরের সবচেয়ে কম দামের পণ্যসমূহ:\n\n${listStr}`;
   }
 
+  // 5. Discount / Offers Queries
   if (query.includes('ছাড়') || query.includes('অফার') || query.includes('discount') || query.includes('sale') || query.includes('ক্যাম্পেইন') || query.includes('কমাবে')) {
     const discounted = activeProducts.filter(p => p.originalPrice && p.originalPrice > p.price);
     if (discounted.length === 0) return 'এই মুহূর্তে কোনো পণ্যে সরাসরি মূল্যছাড় নেই, তবে আমাদের সব পণ্যের দামই অত্যন্ত সাশ্রয়ী!';
@@ -321,33 +400,14 @@ function generateClientFallbackResponse(
     return `আমাদের আকর্ষণীয় অফার ও ডিসকাউন্টযুক্ত পণ্যসমূহ:\n\n${listStr}`;
   }
 
-  // Search for specific product matches
+  // 6. Direct product name matches
   const matched = activeProducts.find(p => query.includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(query));
   if (matched) {
     setLastMatchedProduct(matched);
-    const inStock = matched.in_stock === 1 || matched.in_stock === true || matched.stock > 0;
-    let reply = `**${matched.name}** সম্পর্কে বিস্তারিত তথ্য:\n\n`;
-    reply += `- **মূল্য**: ৳${matched.price}\n`;
-    if (matched.originalPrice && matched.originalPrice > matched.price) {
-      reply += `- **অরিজিনাল প্রাইস**: ৳${matched.originalPrice} (${Math.round((1 - matched.price / matched.originalPrice) * 100)}% ছাড়!)\n`;
-    }
-    reply += `- **স্টক**: ${inStock ? `স্টকে আছে (বাকি আছে ${matched.stock || 1} টি)` : 'স্টক আউট'}\n`;
-    if (matched.description) reply += `- **বিবরণ**: ${matched.description}\n`;
-    
-    // Find related products in the same category
-    if (matched.category) {
-      const related = activeProducts.filter(p => p.id !== matched.id && p.category === matched.category).slice(0, 3);
-      if (related.length > 0) {
-        reply += `\n🔗 **সম্পর্কিত অন্যান্য পণ্য (Related Products):**\n`;
-        related.forEach(p => {
-          reply += `- **${p.name}** (৳${p.price})\n`;
-        });
-      }
-    }
-    return reply;
+    return buildTailoredResponse(matched);
   }
 
-  // Check if query is asking for a category
+  // 7. Category queries
   const categoryMatched = activeProducts.filter(p => p.category && query.includes(p.category.toLowerCase()));
   if (categoryMatched.length > 0) {
     const listStr = categoryMatched.slice(0, 5).map(p => `- **${p.name}** (৳${p.price})`).join('\n');
