@@ -5,10 +5,11 @@ import {
   User, Mail, Phone, Calendar, ShoppingBag, MessageSquare, LogOut, 
   Lock, ArrowRight, ShieldCheck, MapPin, Truck, CheckCircle2, 
   Clock, AlertCircle, HelpCircle, Send, Plus, ArrowLeft, RefreshCw,
-  Trash2, Edit, X
+  Trash2, Edit, X, Heart, ShoppingCart
 } from 'lucide-react';
 import { fetchOrdersFromBackend, fetchChatHistory } from '../services/api';
 import { generateOrders as getOrders } from '../mock/data';
+import { useStorefrontConfig } from '../store/storefrontConfig';
 import './storefront-account.css';
 
 interface OrderItem {
@@ -50,6 +51,8 @@ export default function CustomerAccount() {
     setDefaultCustomerAddress
   } = useCustomerAuth();
   const navigate = useNavigate();
+  const { addToCart, toggleWishlist, wishlist, cart, cartTotal, updateQuantity } = useOutletContext<any>() || { wishlist: [], cart: [], cartTotal: 0, addToCart: () => {}, toggleWishlist: () => {}, updateQuantity: () => {} };
+  const [config] = useStorefrontConfig();
 
   // Auth UI Form states
   const [isRegister, setIsRegister] = useState(false);
@@ -66,7 +69,7 @@ export default function CustomerAccount() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   // Dashboard state
-  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'chat'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'wishlist' | 'cart' | 'chat'>('profile');
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
@@ -640,11 +643,31 @@ export default function CustomerAccount() {
             <ShoppingBag size={18} /> আমার অর্ডারসমূহ ({orders.length})
           </button>
           <button 
-            onClick={() => { setActiveTab('chat'); setSelectedOrder(null); }}
-            style={{ width: '100%', padding: '12px 16px', background: activeTab === 'chat' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'chat' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+            onClick={() => { setActiveTab('wishlist'); setSelectedOrder(null); }}
+            style={{ width: '100%', padding: '12px 16px', background: activeTab === 'wishlist' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'wishlist' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
           >
-            <MessageSquare size={18} /> কাস্টমার সাপোর্ট চ্যাট
+            <Heart size={18} /> আমার উইশলিস্ট ({wishlist.length})
           </button>
+          <button 
+            onClick={() => { setActiveTab('cart'); setSelectedOrder(null); }}
+            style={{ width: '100%', padding: '12px 16px', background: activeTab === 'cart' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'cart' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+          >
+            <ShoppingCart size={18} /> শপিং কার্ট ({cart.reduce((s: number, i: any) => s + i.quantity, 0)})
+          </button>
+
+          {/* Divider */}
+          <div style={{ margin: '12px 0', borderTop: '1px solid var(--sf-border)' }} />
+
+          {/* Prominent Support Box */}
+          <div style={{ padding: '10px', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0.03) 100%)', border: '1px dashed var(--sf-accent)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--sf-accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>কাস্টমার সাপোর্ট</div>
+            <button 
+              onClick={() => { setActiveTab('chat'); setSelectedOrder(null); }}
+              style={{ width: '100%', padding: '10px 12px', background: activeTab === 'chat' ? 'var(--sf-accent)' : 'white', color: activeTab === 'chat' ? 'white' : 'var(--sf-accent)', border: '1px solid var(--sf-accent)', borderRadius: '6px', textAlign: 'left', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.2s', fontSize: '0.85rem' }}
+            >
+              <MessageSquare size={16} /> লাইভ চ্যাট অ্যাসিস্ট্যান্ট
+            </button>
+          </div>
         </div>
 
         {/* Tab Contents */}
@@ -819,6 +842,93 @@ export default function CustomerAccount() {
                 )}
               </div>
 
+            </div>
+          )}
+
+          {/* WISHLIST TAB */}
+          {activeTab === 'wishlist' && (
+            <div>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '20px', borderBottom: '1px solid var(--sf-border)', paddingBottom: '10px' }}>আমার উইশলিস্ট</h3>
+              {wishlist.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--sf-text-tertiary)' }}>
+                  <Heart size={48} style={{ marginBottom: '16px', opacity: 0.3 }} />
+                  <p style={{ fontWeight: 600, color: 'var(--sf-text-secondary)' }}>আপনার উইশলিস্টটি খালি।</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {config.products
+                    .filter((product: any) => wishlist.some((id: any) => String(id) === String(product.id)))
+                    .map((product: any) => (
+                      <div key={product.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px', border: '1px solid var(--sf-border)', borderRadius: '8px', background: 'var(--sf-bg-card)' }}>
+                        <img src={product.image} alt={product.name} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} />
+                        <div style={{ flexGrow: 1 }}>
+                          <Link to={`/product/${product.id}`} style={{ textDecoration: 'none', color: 'var(--sf-text-primary)', fontWeight: 700 }}>{product.name}</Link>
+                          <div style={{ color: 'var(--sf-accent)', fontWeight: 800, marginTop: '4px' }}>৳{product.price}</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button 
+                            onClick={() => { addToCart(product); toggleWishlist(product.id); }} 
+                            style={{ padding: '8px 12px', background: 'var(--sf-accent)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
+                          >
+                            কার্টে যোগ করুন
+                          </button>
+                          <button 
+                            onClick={() => toggleWishlist(product.id)} 
+                            style={{ padding: '8px 12px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
+                          >
+                            মুছুন
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* CART TAB */}
+          {activeTab === 'cart' && (
+            <div>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '20px', borderBottom: '1px solid var(--sf-border)', paddingBottom: '10px' }}>শপিং কার্ট</h3>
+              {cart.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--sf-text-tertiary)' }}>
+                  <ShoppingCart size={48} style={{ marginBottom: '16px', opacity: 0.3 }} />
+                  <p style={{ fontWeight: 600, color: 'var(--sf-text-secondary)' }}>আপনার কার্টটি খালি।</p>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+                    {cart.map((item: any) => (
+                      <div key={item.product.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px', border: '1px solid var(--sf-border)', borderRadius: '8px', background: 'var(--sf-bg-card)' }}>
+                        <img src={item.product.image} alt={item.product.name} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} />
+                        <div style={{ flexGrow: 1 }}>
+                          <Link to={`/product/${item.product.id}`} style={{ textDecoration: 'none', color: 'var(--sf-text-primary)', fontWeight: 700 }}>{item.product.name}</Link>
+                          <div style={{ color: 'var(--sf-accent)', fontWeight: 800, marginTop: '4px' }}>৳{(item.product.price * item.quantity).toFixed(2)}</div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--sf-border)', borderRadius: '4px', overflow: 'hidden' }}>
+                            <button onClick={() => updateQuantity(item.product.id, -1)} style={{ padding: '4px 8px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sf-text-primary)' }}>-</button>
+                            <span style={{ padding: '0 8px', fontWeight: 600 }}>{item.quantity}</span>
+                            <button onClick={() => updateQuantity(item.product.id, 1)} style={{ padding: '4px 8px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sf-text-primary)' }}>+</button>
+                          </div>
+                          <button 
+                            onClick={() => updateQuantity(item.product.id, -item.quantity)} 
+                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderTop: '1px solid var(--sf-border)', marginTop: '20px' }}>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>মোট পরিমাণ: ৳{cartTotal.toFixed(2)}</div>
+                    <Link to="/checkout" style={{ padding: '10px 24px', background: 'var(--sf-accent)', color: 'white', borderRadius: '6px', fontWeight: 700, textDecoration: 'none', fontSize: '0.95rem' }}>
+                      চেকআউট করুন
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

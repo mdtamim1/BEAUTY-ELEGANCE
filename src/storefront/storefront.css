@@ -757,6 +757,9 @@
   text-decoration: none;
   color: var(--sf-text-primary);
   position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .product-card:hover {
@@ -817,6 +820,7 @@
   box-shadow: var(--sf-shadow-sm);
   color: var(--sf-text-tertiary);
   transition: all 0.2s;
+  z-index: 3;
 }
 
 .product-card-wishlist:hover {
@@ -826,6 +830,9 @@
 
 .product-card-body {
   padding: 16px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
 }
 
 .product-card-category {
@@ -872,6 +879,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-top: auto;
+  padding-top: 12px;
 }
 
 .product-card-price {
