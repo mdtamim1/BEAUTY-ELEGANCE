@@ -111,26 +111,54 @@ export const createOrder = (req: Request, res: Response) => {
         }
 
         // Insert order items
-        if (productsList && Array.isArray(productsList)) {
+        if (productsList && Array.isArray(productsList) && productsList.length > 0) {
           const stmt = db.prepare(
             `INSERT INTO order_items (order_id, product_name, color, size, code, quantity, price) 
              VALUES (?, ?, ?, ?, ?, ?, ?)`
           );
-          productsList.forEach((item: any) => {
-            stmt.run([id, item.name, item.color || 'Default', item.size || 'Free Size', item.code, item.quantity, item.price]);
-          });
-          stmt.finalize();
-        }
+          
+          let hasError = false;
+          let pending = productsList.length;
 
-        db.run('COMMIT', (err) => {
-          if (err) {
-            db.run('ROLLBACK');
-            return res.status(500).json({ status: 'error', message: 'Failed to commit transaction' });
-          }
-          // Invalidate dashboard stats cache
-          cacheService.del('dashboard:stats').catch(console.error);
-          res.json({ status: 'success', message: 'Order created successfully', data: { id } });
-        });
+          productsList.forEach((item: any) => {
+            stmt.run(
+              [id, item.name, item.color || 'Default', item.size || 'Free Size', item.code, item.quantity, item.price],
+              (runErr) => {
+                if (runErr) {
+                  console.error('Error inserting order item:', runErr);
+                  hasError = true;
+                }
+                pending--;
+                if (pending === 0) {
+                  stmt.finalize((finalizeErr) => {
+                    if (hasError || finalizeErr) {
+                      db.run('ROLLBACK');
+                      return res.status(500).json({ status: 'error', message: 'Failed to insert order items' });
+                    }
+                    
+                    db.run('COMMIT', (commitErr) => {
+                      if (commitErr) {
+                        db.run('ROLLBACK');
+                        return res.status(500).json({ status: 'error', message: 'Failed to commit transaction' });
+                      }
+                      cacheService.del('dashboard:stats').catch(console.error);
+                      res.json({ status: 'success', message: 'Order created successfully', data: { id } });
+                    });
+                  });
+                }
+              }
+            );
+          });
+        } else {
+          db.run('COMMIT', (commitErr) => {
+            if (commitErr) {
+              db.run('ROLLBACK');
+              return res.status(500).json({ status: 'error', message: 'Failed to commit transaction' });
+            }
+            cacheService.del('dashboard:stats').catch(console.error);
+            res.json({ status: 'success', message: 'Order created successfully', data: { id } });
+          });
+        }
       }
     );
   });
@@ -208,26 +236,54 @@ export const updateOrder = (req: Request, res: Response) => {
           }
 
           // Insert new order items
-          if (productsList && Array.isArray(productsList)) {
+          if (productsList && Array.isArray(productsList) && productsList.length > 0) {
             const stmt = db.prepare(
               `INSERT INTO order_items (order_id, product_name, color, size, code, quantity, price) 
                VALUES (?, ?, ?, ?, ?, ?, ?)`
             );
-            productsList.forEach((item: any) => {
-              stmt.run([id, item.name, item.color || 'Default', item.size || 'Free Size', item.code, item.quantity, item.price]);
-            });
-            stmt.finalize();
-          }
+            
+            let hasError = false;
+            let pending = productsList.length;
 
-          db.run('COMMIT', (err) => {
-            if (err) {
-              db.run('ROLLBACK');
-              return res.status(500).json({ status: 'error', message: 'Failed to commit transaction' });
-            }
-            // Invalidate dashboard stats cache
-            cacheService.del('dashboard:stats').catch(console.error);
-            res.json({ status: 'success', message: 'Order updated successfully' });
-          });
+            productsList.forEach((item: any) => {
+              stmt.run(
+                [id, item.name, item.color || 'Default', item.size || 'Free Size', item.code, item.quantity, item.price],
+                (runErr) => {
+                  if (runErr) {
+                    console.error('Error updating order item:', runErr);
+                    hasError = true;
+                  }
+                  pending--;
+                  if (pending === 0) {
+                    stmt.finalize((finalizeErr) => {
+                      if (hasError || finalizeErr) {
+                        db.run('ROLLBACK');
+                        return res.status(500).json({ status: 'error', message: 'Failed to insert updated order items' });
+                      }
+
+                      db.run('COMMIT', (commitErr) => {
+                        if (commitErr) {
+                          db.run('ROLLBACK');
+                          return res.status(500).json({ status: 'error', message: 'Failed to commit transaction' });
+                        }
+                        cacheService.del('dashboard:stats').catch(console.error);
+                        res.json({ status: 'success', message: 'Order updated successfully' });
+                      });
+                    });
+                  }
+                }
+              );
+            });
+          } else {
+            db.run('COMMIT', (commitErr) => {
+              if (commitErr) {
+                db.run('ROLLBACK');
+                return res.status(500).json({ status: 'error', message: 'Failed to commit transaction' });
+              }
+              cacheService.del('dashboard:stats').catch(console.error);
+              res.json({ status: 'success', message: 'Order updated successfully' });
+            });
+          }
         });
       }
     );

@@ -1886,24 +1886,51 @@ var createOrder = (req, res) => {
           console.error(err);
           return res.status(500).json({ status: "error", message: "Failed to create order" });
         }
-        if (productsList && Array.isArray(productsList)) {
+        if (productsList && Array.isArray(productsList) && productsList.length > 0) {
           const stmt = db_default.prepare(
             `INSERT INTO order_items (order_id, product_name, color, size, code, quantity, price) 
              VALUES (?, ?, ?, ?, ?, ?, ?)`
           );
+          let hasError = false;
+          let pending = productsList.length;
           productsList.forEach((item) => {
-            stmt.run([id, item.name, item.color || "Default", item.size || "Free Size", item.code, item.quantity, item.price]);
+            stmt.run(
+              [id, item.name, item.color || "Default", item.size || "Free Size", item.code, item.quantity, item.price],
+              (runErr) => {
+                if (runErr) {
+                  console.error("Error inserting order item:", runErr);
+                  hasError = true;
+                }
+                pending--;
+                if (pending === 0) {
+                  stmt.finalize((finalizeErr) => {
+                    if (hasError || finalizeErr) {
+                      db_default.run("ROLLBACK");
+                      return res.status(500).json({ status: "error", message: "Failed to insert order items" });
+                    }
+                    db_default.run("COMMIT", (commitErr) => {
+                      if (commitErr) {
+                        db_default.run("ROLLBACK");
+                        return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
+                      }
+                      cacheService.del("dashboard:stats").catch(console.error);
+                      res.json({ status: "success", message: "Order created successfully", data: { id } });
+                    });
+                  });
+                }
+              }
+            );
           });
-          stmt.finalize();
+        } else {
+          db_default.run("COMMIT", (commitErr) => {
+            if (commitErr) {
+              db_default.run("ROLLBACK");
+              return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
+            }
+            cacheService.del("dashboard:stats").catch(console.error);
+            res.json({ status: "success", message: "Order created successfully", data: { id } });
+          });
         }
-        db_default.run("COMMIT", (err2) => {
-          if (err2) {
-            db_default.run("ROLLBACK");
-            return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
-          }
-          cacheService.del("dashboard:stats").catch(console.error);
-          res.json({ status: "success", message: "Order created successfully", data: { id } });
-        });
       }
     );
   });
@@ -1990,24 +2017,51 @@ var updateOrder = (req, res) => {
             console.error(err2);
             return res.status(500).json({ status: "error", message: "Failed to update order items" });
           }
-          if (productsList && Array.isArray(productsList)) {
+          if (productsList && Array.isArray(productsList) && productsList.length > 0) {
             const stmt = db_default.prepare(
               `INSERT INTO order_items (order_id, product_name, color, size, code, quantity, price) 
                VALUES (?, ?, ?, ?, ?, ?, ?)`
             );
+            let hasError = false;
+            let pending = productsList.length;
             productsList.forEach((item) => {
-              stmt.run([id, item.name, item.color || "Default", item.size || "Free Size", item.code, item.quantity, item.price]);
+              stmt.run(
+                [id, item.name, item.color || "Default", item.size || "Free Size", item.code, item.quantity, item.price],
+                (runErr) => {
+                  if (runErr) {
+                    console.error("Error updating order item:", runErr);
+                    hasError = true;
+                  }
+                  pending--;
+                  if (pending === 0) {
+                    stmt.finalize((finalizeErr) => {
+                      if (hasError || finalizeErr) {
+                        db_default.run("ROLLBACK");
+                        return res.status(500).json({ status: "error", message: "Failed to insert updated order items" });
+                      }
+                      db_default.run("COMMIT", (commitErr) => {
+                        if (commitErr) {
+                          db_default.run("ROLLBACK");
+                          return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
+                        }
+                        cacheService.del("dashboard:stats").catch(console.error);
+                        res.json({ status: "success", message: "Order updated successfully" });
+                      });
+                    });
+                  }
+                }
+              );
             });
-            stmt.finalize();
+          } else {
+            db_default.run("COMMIT", (commitErr) => {
+              if (commitErr) {
+                db_default.run("ROLLBACK");
+                return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
+              }
+              cacheService.del("dashboard:stats").catch(console.error);
+              res.json({ status: "success", message: "Order updated successfully" });
+            });
           }
-          db_default.run("COMMIT", (err3) => {
-            if (err3) {
-              db_default.run("ROLLBACK");
-              return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
-            }
-            cacheService.del("dashboard:stats").catch(console.error);
-            res.json({ status: "success", message: "Order updated successfully" });
-          });
         });
       }
     );
