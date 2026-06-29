@@ -367,6 +367,175 @@ export default function Orders() {
     printWindow.document.close();
   };
 
+  const handlePrintAllShippedOrders = () => {
+    const shippedOrders = filtered.filter(o => o.status === 'shipped');
+    if (shippedOrders.length === 0) {
+      alert('No shipped orders found to print.');
+      return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const invoicesHTML = shippedOrders.map((order) => {
+      const subtotal = (order.productsList || []).reduce((sum, p) => sum + (p.price * p.quantity), 0);
+      const total = subtotal + (order.deliveryCharge || 60) - (order.discount || 0);
+      const paidAmount = order.paidAmount || 0;
+      const netPayable = total - paidAmount;
+
+      return `
+        <div class="invoice-page">
+          <div class="invoice-box">
+            <table class="header-table">
+              <tr>
+                <td>
+                  <h1 class="store-name">${order.storeName || 'BEAUTY GLOWRY'}</h1>
+                  <div style="font-size: 13px; color: #64748b; margin-top: 5px;">Reliable & Premium Shopping</div>
+                </td>
+                <td>
+                  <h2 class="invoice-title">INVOICE</h2>
+                  <div class="invoice-details">
+                    <strong>Invoice #:</strong> ${order.id}<br>
+                    <strong>Date:</strong> ${formatDate(order.date)}<br>
+                    <strong>Courier:</strong> ${order.courier || 'Pathao'}
+                  </div>
+                </td>
+              </tr>
+            </table>
+
+            <table class="billing-table">
+              <tr>
+                <td>
+                  <div class="billing-title">Billing To</div>
+                  <div class="billing-info">
+                    <strong>${order.customer}</strong><br>
+                    Phone: ${order.email || order.phone || 'N/A'}<br>
+                    Address: ${order.address || 'N/A'}<br>
+                    District: ${order.city || 'N/A'}
+                  </div>
+                </td>
+                <td>
+                  <div class="billing-title">Order Info</div>
+                  <div class="billing-info">
+                    <strong>Payment Method:</strong> ${(order.paymentMethod || order.paymentType || 'cod') === 'cod' ? 'Cash on Delivery' : (order.paymentMethod || order.paymentType || '').toUpperCase()}<br>
+                    <strong>Memo Number:</strong> ${order.memoNumber || 'N/A'}<br>
+                    <strong>Status:</strong> ${order.status.toUpperCase()}
+                  </div>
+                </td>
+              </tr>
+            </table>
+
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>SKU</th>
+                  <th>Product Details</th>
+                  <th>Variant</th>
+                  <th style="text-align: center;">Qty</th>
+                  <th style="text-align: right;">Unit Price</th>
+                  <th style="text-align: right;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(order.productsList || []).map(p => `
+                  <tr>
+                    <td style="font-family: monospace; font-size: 12px; color: #475569;">${p.code || 'N/A'}</td>
+                    <td><strong>${p.name}</strong></td>
+                    <td style="font-size: 12px; color: #64748b;">Color: ${p.color || 'Default'}, Size: ${p.size || 'Free Size'}</td>
+                    <td style="text-align: center;">${p.quantity}</td>
+                    <td style="text-align: right;">৳${p.price.toFixed(2)}</td>
+                    <td style="text-align: right; font-weight: bold;">৳${(p.price * p.quantity).toFixed(2)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+
+            <table class="totals-table">
+              <tr>
+                <td style="color: #64748b;">Subtotal:</td>
+                <td>৳${subtotal.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td style="color: #64748b;">Delivery Charge:</td>
+                <td>৳${(order.deliveryCharge || 60).toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td style="color: #64748b;">Discount:</td>
+                <td style="color: #10b981;">-৳${(order.discount || 0).toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td style="color: #64748b;">Paid Amount:</td>
+                <td>৳${paidAmount.toFixed(2)}</td>
+              </tr>
+              <tr class="total-row">
+                <td>Net Payable:</td>
+                <td>৳${netPayable.toFixed(2)}</td>
+              </tr>
+            </table>
+
+            ${(order.customerNote || order.shopNote) ? `
+              <div class="notes-section">
+                ${order.customerNote ? `<strong>Customer Note:</strong> ${order.customerNote}<br>` : ''}
+                ${order.shopNote ? `<strong>Shop Note:</strong> ${order.shopNote}<br>` : ''}
+              </div>
+            ` : ''}
+
+            <div class="footer">
+              Thank you for your business!<br>
+              <span style="font-size: 10px; color: #cbd5e1; margin-top: 5px; display: block;">Generated by VIP Commerce Platforms</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Shipped Orders Invoices</title>
+          <style>
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; margin: 0; padding: 0; font-size: 14px; }
+            .invoice-page { padding: 40px; page-break-after: always; box-sizing: border-box; }
+            .invoice-page:last-child { page-break-after: avoid; }
+            .invoice-box { max-width: 800px; margin: auto; padding: 30px; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0, 0, 0, 0.05); border-radius: 8px; box-sizing: border-box; }
+            .header-table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
+            .header-table td { vertical-align: top; }
+            .store-name { font-size: 28px; font-weight: bold; color: #6366f1; text-transform: uppercase; margin: 0; }
+            .invoice-title { font-size: 24px; font-weight: bold; text-align: right; color: #475569; margin: 0; }
+            .invoice-details { text-align: right; font-size: 13px; color: #64748b; margin-top: 10px; }
+            .billing-table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
+            .billing-table td { width: 50%; vertical-align: top; }
+            .billing-title { font-size: 12px; text-transform: uppercase; font-weight: bold; color: #94a3b8; margin-bottom: 8px; letter-spacing: 1px; }
+            .billing-info { line-height: 1.5; color: #1e293b; }
+            .items-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; text-align: left; }
+            .items-table th { padding: 12px; background: #f8fafc; border-bottom: 2px solid #e2e8f0; font-size: 11px; text-transform: uppercase; font-weight: bold; color: #64748b; }
+            .items-table td { padding: 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+            .totals-table { width: 300px; margin-left: auto; border-collapse: collapse; font-size: 13px; }
+            .totals-table td { padding: 8px 12px; text-align: right; }
+            .totals-table tr.total-row { font-size: 16px; font-weight: bold; color: #6366f1; border-top: 2px solid #e2e8f0; }
+            .notes-section { margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 20px; font-size: 12px; color: #64748b; line-height: 1.5; }
+            .footer { text-align: center; margin-top: 60px; font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; }
+            @media print {
+              body { padding: 0; }
+              .invoice-page { padding: 20px; }
+              .invoice-box { border: none; box-shadow: none; padding: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          ${invoicesHTML}
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   const handleStatusUpdate = async (orderId: string, newStatus: typeof orders[0]['status']) => {
     await updateOrderStatusInBackend(orderId, newStatus);
     updateOrderStatus(orderId, newStatus);
@@ -681,6 +850,15 @@ export default function Orders() {
               <input className="form-input" style={{ height: '34px', paddingLeft: '32px', width: '220px', fontSize: 'var(--text-xs)' }}
                 placeholder="Search orders..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
             </div>
+            {filterType === 'shipped' && filtered.length > 0 && (
+              <button 
+                onClick={handlePrintAllShippedOrders} 
+                className="btn btn-secondary btn-sm"
+                style={{ background: '#0284c7', border: '1px solid #0284c7', color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <FileText size={14} /> Print Shipped Invoices ({filtered.length})
+              </button>
+            )}
             <button className="btn btn-secondary btn-sm"><Download size={14} /> Export</button>
           </div>
         </div>

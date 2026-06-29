@@ -2200,7 +2200,17 @@ var keyMapToCamel = {
   email_provider: "emailProvider",
   smtp_host: "smtpHost",
   smtp_port: "smtpPort",
-  cache_driver: "cacheDriver"
+  smtp_user: "smtpUser",
+  smtp_pass: "smtpPass",
+  payment_bkash: "paymentBkash",
+  payment_nagad: "paymentNagad",
+  payment_sslcommerz: "paymentSslCommerz",
+  payment_cod: "paymentCod",
+  shipping_pathao: "shippingPathao",
+  shipping_steadfast: "shippingSteadfast",
+  shipping_redx: "shippingRedx",
+  cache_driver: "cacheDriver",
+  cache_ttl: "cacheTTL"
 };
 var keyMapToSnake = {
   siteName: "site_name",
@@ -2211,7 +2221,17 @@ var keyMapToSnake = {
   emailProvider: "email_provider",
   smtpHost: "smtp_host",
   smtpPort: "smtp_port",
-  cacheDriver: "cache_driver"
+  smtpUser: "smtp_user",
+  smtpPass: "smtp_pass",
+  paymentBkash: "payment_bkash",
+  paymentNagad: "payment_nagad",
+  paymentSslCommerz: "payment_sslcommerz",
+  paymentCod: "payment_cod",
+  shippingPathao: "shipping_pathao",
+  shippingSteadfast: "shipping_steadfast",
+  shippingRedx: "shipping_redx",
+  cacheDriver: "cache_driver",
+  cacheTTL: "cache_ttl"
 };
 var getSettings = (req, res) => {
   db_default.all("SELECT setting_key, setting_value FROM system_settings", [], (err, rows) => {
@@ -2229,19 +2249,29 @@ var getSettings = (req, res) => {
       emailProvider: "SendGrid",
       smtpHost: "smtp.sendgrid.net",
       smtpPort: 587,
+      smtpUser: "apikey",
+      smtpPass: "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
+      paymentBkash: true,
+      paymentNagad: true,
+      paymentSslCommerz: false,
+      paymentCod: true,
+      shippingPathao: true,
+      shippingSteadfast: true,
+      shippingRedx: false,
       cacheDriver: "Redis",
       cacheHitRate: 94.2,
-      cacheSize: "2.4 GB"
+      cacheSize: "2.4 GB",
+      cacheTTL: 3600
     };
     if (rows && rows.length > 0) {
       rows.forEach((row) => {
         const camelKey = keyMapToCamel[row.setting_key];
         if (camelKey) {
           let val = row.setting_value;
-          if (camelKey === "maintenanceMode") {
+          if (camelKey === "maintenanceMode" || camelKey === "paymentBkash" || camelKey === "paymentNagad" || camelKey === "paymentSslCommerz" || camelKey === "paymentCod" || camelKey === "shippingPathao" || camelKey === "shippingSteadfast" || camelKey === "shippingRedx") {
             val = val === "1" || val === "true";
-          } else if (camelKey === "smtpPort") {
-            val = parseInt(val) || 587;
+          } else if (camelKey === "smtpPort" || camelKey === "cacheTTL") {
+            val = parseInt(val) || (camelKey === "smtpPort" ? 587 : 3600);
           }
           settingsObj[camelKey] = val;
         }
