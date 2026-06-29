@@ -193,13 +193,21 @@ export const getRoles = (req: Request, res: Response) => {
       return res.status(500).json({ status: 'error', message: 'Database error' });
     }
 
-    const roles = (rows || []).map(r => ({
-      id: r.id,
-      name: r.name,
-      description: r.description || '',
-      is_system: r.is_system === 1,
-      permissions: r.permissions ? JSON.parse(r.permissions) : []
-    }));
+    const roles = (rows || []).map(r => {
+      let permissions = [];
+      try {
+        if (r.permissions) permissions = JSON.parse(r.permissions);
+      } catch (e) {
+        console.error(`Error parsing permissions for role ${r.name}:`, e);
+      }
+      return {
+        id: r.id,
+        name: r.name,
+        description: r.description || '',
+        is_system: r.is_system === 1,
+        permissions
+      };
+    });
 
     res.json({ status: 'success', data: roles });
   });

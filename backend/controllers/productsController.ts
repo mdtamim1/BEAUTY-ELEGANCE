@@ -15,13 +15,27 @@ export const getProducts = async (req: Request, res: Response) => {
         console.error(err);
         return res.status(500).json({ status: 'error', message: 'Database error' });
       }
-      const parsedRows = (rows || []).map((row: any) => ({
-        ...row,
-        features: row.features ? JSON.parse(row.features) : [],
-        specs: row.specs ? JSON.parse(row.specs) : [],
-        published: row.published === 1,
-        in_stock: row.in_stock === 1
-      }));
+      const parsedRows = (rows || []).map((row: any) => {
+        let features = [];
+        let specs = [];
+        try {
+          if (row.features) features = JSON.parse(row.features);
+        } catch (e) {
+          console.error(`Error parsing features for product ${row.id}:`, e);
+        }
+        try {
+          if (row.specs) specs = JSON.parse(row.specs);
+        } catch (e) {
+          console.error(`Error parsing specs for product ${row.id}:`, e);
+        }
+        return {
+          ...row,
+          features,
+          specs,
+          published: row.published === 1,
+          in_stock: row.in_stock === 1
+        };
+      });
 
       cacheService.set(cacheKey, parsedRows, 300).catch(console.error);
       res.json({ status: 'success', data: parsedRows });
@@ -52,10 +66,24 @@ export const getProductById = async (req: Request, res: Response) => {
       // Fetch product gallery
       db.all(`SELECT image_url FROM product_gallery WHERE product_id = ?`, [id], (err, galleryRows: any[]) => {
         const gallery = galleryRows ? galleryRows.map(r => r.image_url) : [];
+        
+        let features = [];
+        let specs = [];
+        try {
+          if (product.features) features = JSON.parse(product.features);
+        } catch (e) {
+          console.error(`Error parsing features for product ${product.id}:`, e);
+        }
+        try {
+          if (product.specs) specs = JSON.parse(product.specs);
+        } catch (e) {
+          console.error(`Error parsing specs for product ${product.id}:`, e);
+        }
+
         const resultData = {
           ...product,
-          features: product.features ? JSON.parse(product.features) : [],
-          specs: product.specs ? JSON.parse(product.specs) : [],
+          features,
+          specs,
           published: product.published === 1,
           in_stock: product.in_stock === 1,
           gallery: gallery.length > 0 ? gallery : [product.image]

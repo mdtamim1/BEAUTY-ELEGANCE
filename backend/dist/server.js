@@ -1460,13 +1460,27 @@ var getProducts = async (req, res) => {
         console.error(err);
         return res.status(500).json({ status: "error", message: "Database error" });
       }
-      const parsedRows = (rows || []).map((row) => ({
-        ...row,
-        features: row.features ? JSON.parse(row.features) : [],
-        specs: row.specs ? JSON.parse(row.specs) : [],
-        published: row.published === 1,
-        in_stock: row.in_stock === 1
-      }));
+      const parsedRows = (rows || []).map((row) => {
+        let features = [];
+        let specs = [];
+        try {
+          if (row.features) features = JSON.parse(row.features);
+        } catch (e) {
+          console.error(`Error parsing features for product ${row.id}:`, e);
+        }
+        try {
+          if (row.specs) specs = JSON.parse(row.specs);
+        } catch (e) {
+          console.error(`Error parsing specs for product ${row.id}:`, e);
+        }
+        return {
+          ...row,
+          features,
+          specs,
+          published: row.published === 1,
+          in_stock: row.in_stock === 1
+        };
+      });
       cacheService.set(cacheKey, parsedRows, 300).catch(console.error);
       res.json({ status: "success", data: parsedRows });
     });
@@ -1493,10 +1507,22 @@ var getProductById = async (req, res) => {
       }
       db_default.all(`SELECT image_url FROM product_gallery WHERE product_id = ?`, [id], (err2, galleryRows) => {
         const gallery = galleryRows ? galleryRows.map((r) => r.image_url) : [];
+        let features = [];
+        let specs = [];
+        try {
+          if (product.features) features = JSON.parse(product.features);
+        } catch (e) {
+          console.error(`Error parsing features for product ${product.id}:`, e);
+        }
+        try {
+          if (product.specs) specs = JSON.parse(product.specs);
+        } catch (e) {
+          console.error(`Error parsing specs for product ${product.id}:`, e);
+        }
         const resultData = {
           ...product,
-          features: product.features ? JSON.parse(product.features) : [],
-          specs: product.specs ? JSON.parse(product.specs) : [],
+          features,
+          specs,
           published: product.published === 1,
           in_stock: product.in_stock === 1,
           gallery: gallery.length > 0 ? gallery : [product.image]
@@ -2899,8 +2925,22 @@ import { Router as Router8 } from "express";
 // backend/controllers/aiController.ts
 function buildSystemPrompt(products, storeName) {
   const productList = products.map((p, i) => {
-    const features = p.features ? typeof p.features === "string" ? JSON.parse(p.features) : p.features : [];
-    const specs = p.specs ? typeof p.specs === "string" ? JSON.parse(p.specs) : p.specs : [];
+    let features = [];
+    let specs = [];
+    try {
+      if (p.features) {
+        features = typeof p.features === "string" ? JSON.parse(p.features) : p.features;
+      }
+    } catch (e) {
+      console.error(`Error parsing features for product prompt ${p.id}:`, e);
+    }
+    try {
+      if (p.specs) {
+        specs = typeof p.specs === "string" ? JSON.parse(p.specs) : p.specs;
+      }
+    } catch (e) {
+      console.error(`Error parsing specs for product prompt ${p.id}:`, e);
+    }
     const inStock = p.in_stock === 1 || p.in_stock === true || p.stock > 0;
     const published = p.published === 1 || p.published === true;
     if (!published) return null;
@@ -2980,11 +3020,25 @@ var chatWithAI = async (req, res) => {
           console.error("Failed to fetch products for AI:", err);
           resolve([]);
         } else {
-          resolve((rows || []).map((row) => ({
-            ...row,
-            features: row.features ? JSON.parse(row.features) : [],
-            specs: row.specs ? JSON.parse(row.specs) : []
-          })));
+          resolve((rows || []).map((row) => {
+            let features = [];
+            let specs = [];
+            try {
+              if (row.features) features = JSON.parse(row.features);
+            } catch (e) {
+              console.error(`Error parsing features for AI product ${row.id}:`, e);
+            }
+            try {
+              if (row.specs) specs = JSON.parse(row.specs);
+            } catch (e) {
+              console.error(`Error parsing specs for AI product ${row.id}:`, e);
+            }
+            return {
+              ...row,
+              features,
+              specs
+            };
+          }));
         }
       });
     });
@@ -3239,13 +3293,21 @@ var getRoles = (req, res) => {
       console.error("Failed to get roles:", err);
       return res.status(500).json({ status: "error", message: "Database error" });
     }
-    const roles = (rows || []).map((r) => ({
-      id: r.id,
-      name: r.name,
-      description: r.description || "",
-      is_system: r.is_system === 1,
-      permissions: r.permissions ? JSON.parse(r.permissions) : []
-    }));
+    const roles = (rows || []).map((r) => {
+      let permissions = [];
+      try {
+        if (r.permissions) permissions = JSON.parse(r.permissions);
+      } catch (e) {
+        console.error(`Error parsing permissions for role ${r.name}:`, e);
+      }
+      return {
+        id: r.id,
+        name: r.name,
+        description: r.description || "",
+        is_system: r.is_system === 1,
+        permissions
+      };
+    });
     res.json({ status: "success", data: roles });
   });
 };

@@ -15,8 +15,22 @@ interface ChatMessage {
 // Build a rich system prompt from live product database
 function buildSystemPrompt(products: any[], storeName: string): string {
   const productList = products.map((p: any, i: number) => {
-    const features = p.features ? (typeof p.features === 'string' ? JSON.parse(p.features) : p.features) : [];
-    const specs = p.specs ? (typeof p.specs === 'string' ? JSON.parse(p.specs) : p.specs) : [];
+    let features = [];
+    let specs = [];
+    try {
+      if (p.features) {
+        features = typeof p.features === 'string' ? JSON.parse(p.features) : p.features;
+      }
+    } catch (e) {
+      console.error(`Error parsing features for product prompt ${p.id}:`, e);
+    }
+    try {
+      if (p.specs) {
+        specs = typeof p.specs === 'string' ? JSON.parse(p.specs) : p.specs;
+      }
+    } catch (e) {
+      console.error(`Error parsing specs for product prompt ${p.id}:`, e);
+    }
     const inStock = p.in_stock === 1 || p.in_stock === true || p.stock > 0;
     const published = p.published === 1 || p.published === true;
 
@@ -96,11 +110,25 @@ export const chatWithAI = async (req: Request, res: Response) => {
           console.error('Failed to fetch products for AI:', err);
           resolve([]);
         } else {
-          resolve((rows || []).map((row: any) => ({
-            ...row,
-            features: row.features ? JSON.parse(row.features) : [],
-            specs: row.specs ? JSON.parse(row.specs) : [],
-          })));
+          resolve((rows || []).map((row: any) => {
+            let features = [];
+            let specs = [];
+            try {
+              if (row.features) features = JSON.parse(row.features);
+            } catch (e) {
+              console.error(`Error parsing features for AI product ${row.id}:`, e);
+            }
+            try {
+              if (row.specs) specs = JSON.parse(row.specs);
+            } catch (e) {
+              console.error(`Error parsing specs for AI product ${row.id}:`, e);
+            }
+            return {
+              ...row,
+              features,
+              specs,
+            };
+          }));
         }
       });
     });
