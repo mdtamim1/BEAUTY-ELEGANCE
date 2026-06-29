@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ShoppingCart, Search, Plus, Download, Eye, RotateCcw, Truck, Clock, CheckCircle, XCircle, RefreshCw, FileText } from 'lucide-react';
 import { generateOrders, updateOrderStatus, addOrder, formatCurrency, formatDate, formatTime, timeAgo } from '../../mock/data';
-import { fetchOrdersFromBackend, updateOrderStatusInBackend, createOrderFromAdminInBackend, updateOrderInBackend, validateCouponCode } from '../../services/api';
+import { fetchOrdersFromBackend, updateOrderStatusInBackend, createOrderFromAdminInBackend, updateOrderInBackend, validateCouponCode, fetchProductsFromBackend } from '../../services/api';
 
 const DEMO_PRODUCTS = [
   { sku: 'ST-EPB-001', name: 'Wireless Earbuds Pro Max', price: 129.99 },
@@ -91,6 +91,7 @@ const BD_DISTRICTS: Record<string, string[]> = {
 export default function Orders() {
   const [orders, setOrders] = useState(generateOrders(60));
   const [isLoading, setIsLoading] = useState(false);
+  const [products, setProducts] = useState<any[]>([]);
 
   useEffect(() => {
     const loadOrders = async () => {
@@ -104,7 +105,16 @@ export default function Orders() {
       }
       setIsLoading(false);
     };
+
+    const loadProducts = async () => {
+      const dbProducts = await fetchProductsFromBackend();
+      if (dbProducts && dbProducts.length > 0) {
+        setProducts(dbProducts);
+      }
+    };
+
     loadOrders();
+    loadProducts();
   }, []);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
@@ -1192,7 +1202,7 @@ export default function Orders() {
                     {/* Suggestions list */}
                     {showSuggestions && productSearch && (
                       <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, background: '#1f2937', border: '1px solid #374151', borderRadius: '4px', marginTop: '4px', maxHeight: '150px', overflowY: 'auto' }}>
-                        {DEMO_PRODUCTS.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase())).map((p, idx) => (
+                        {(products.length > 0 ? products : DEMO_PRODUCTS).filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase())).map((p, idx) => (
                           <div
                             key={idx}
                             onClick={() => addProductToOrder(p)}
@@ -1200,7 +1210,7 @@ export default function Orders() {
                             onMouseEnter={(e) => e.currentTarget.style.background = '#374151'}
                             onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                           >
-                            {p.name} - ${p.price}
+                            {p.name} - ৳{p.price}
                           </div>
                         ))}
                       </div>
