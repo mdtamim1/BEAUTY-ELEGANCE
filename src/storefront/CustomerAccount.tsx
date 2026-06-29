@@ -1290,7 +1290,7 @@ export default function CustomerAccount() {
             style={{
               position: 'fixed',
               bottom: '24px',
-              right: '24px',
+              right: '96px',
               width: '60px',
               height: '60px',
               borderRadius: '50%',
