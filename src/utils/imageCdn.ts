@@ -1,4 +1,4 @@
-const IMAGE_CDN_ENDPOINT = 'https://ik.imagekit.io/beauty_elegance';
+const IMAGE_CDN_ENDPOINT = ''; // Disabled because the ImageKit endpoint returns 404
 
 /**
  * Helper to generate optimized ImageKit CDN URLs for local/external images.
@@ -10,8 +10,30 @@ export const getOptimizedImageUrl = (src: string, width?: number, height?: numbe
   // If the image is a base64 string or already optimized, return it
   if (src.startsWith('data:')) return src;
 
+  // Case 1: Unsplash images (most product images in our seeds)
+  // Example: https://images.unsplash.com/photo-1638536532686-d610adfc8e5c?auto=format&fit=crop&w=600&q=80
+  if (src.includes('images.unsplash.com')) {
+    return src;
+  }
+
+  // Case 2: Other external URLs (http/https)
+  if (src.startsWith('http://') || src.startsWith('https://')) {
+    return src;
+  }
+
+  // Case 3: Relative local image files (e.g. /uploads/product.png or assets/logo.png)
+  const cleanPath = src.startsWith('/') ? src : `/${src}`;
+  
+  // Determine frontend deployment base for image origin proxying
+  const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const backendBase = isLocalDev
+    ? `${window.location.protocol}//${window.location.hostname}:5000`
+    : 'https://beauty-elegance-admin.onrender.com';
+  
   const cdnUrl = IMAGE_CDN_ENDPOINT;
-  if (!cdnUrl) return src;
+  if (!cdnUrl) {
+    return `${backendBase}${cleanPath}`;
+  }
 
   // Build query/path options for sizing/formatting
   let transformation = '';
@@ -26,26 +48,5 @@ export const getOptimizedImageUrl = (src: string, width?: number, height?: numbe
     transformation = 'tr:f-auto,q-80';
   }
 
-  // Case 1: Unsplash images (most product images in our seeds)
-  // Example: https://images.unsplash.com/photo-1638536532686-d610adfc8e5c?auto=format&fit=crop&w=600&q=80
-  if (src.includes('images.unsplash.com')) {
-    const rawUrl = src.split('?')[0];
-    return `${cdnUrl}/${transformation}/${rawUrl}`;
-  }
-
-  // Case 2: Other external URLs (http/https)
-  if (src.startsWith('http://') || src.startsWith('https://')) {
-    return `${cdnUrl}/${transformation}/${src}`;
-  }
-
-  // Case 3: Relative local image files (e.g. /uploads/product.png or assets/logo.png)
-  const cleanPath = src.startsWith('/') ? src : `/${src}`;
-  
-  // Determine frontend deployment base for image origin proxying
-  const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  const backendBase = isLocalDev
-    ? `${window.location.protocol}//${window.location.hostname}:5000`
-    : 'https://beauty-elegance-admin.onrender.com';
-  
   return `${cdnUrl}/${transformation}/${backendBase}${cleanPath}`;
 };
