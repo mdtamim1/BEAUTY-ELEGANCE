@@ -1515,7 +1515,7 @@ input, textarea, select {
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: fadeIn 0.2s ease;
+  animation: fadeIn 0.2s ease both;
   backdrop-filter: blur(4px);
 }
 
@@ -1527,7 +1527,7 @@ input, textarea, select {
   max-width: 560px;
   max-height: 85vh;
   overflow-y: auto;
-  animation: scaleIn 0.3s var(--transition-spring);
+  animation: scaleIn 0.3s var(--transition-spring) both;
   box-shadow: var(--shadow-xl);
 }
 
@@ -1935,7 +1935,7 @@ html, body {
   backdrop-filter: blur(20px);
   z-index: 1000;
   overflow: hidden;
-  animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .dropdown-panel-header {
