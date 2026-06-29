@@ -914,7 +914,7 @@ export default function ProductDetails() {
               {related.map((relatedProduct: any) => {
                 return (
                   <Link to={`/product/${relatedProduct.id}`} key={relatedProduct.id} className="product-card" style={{ textDecoration: 'none' }}>
-                    <div style={{ position: 'relative' }}>
+                    <div className="product-card-image-container">
                       <OptimizedImage src={relatedProduct.image} alt={relatedProduct.name} className="product-card-image" width={400} height={400} />
                       {relatedProduct.badge && (
                         <span className={`product-card-badge ${relatedProduct.badge}`}>

@@ -507,7 +507,7 @@ export default function StorefrontHome() {
               <div className="products-grid">
                 {filteredProducts.map((product: any) => (
                   <Link to={`/product/${product.id}`} key={product.id} className="product-card" style={{ textDecoration: 'none' }}>
-                    <div style={{ position: 'relative' }}>
+                    <div className="product-card-image-container">
                       <OptimizedImage src={product.image} alt={product.name} className="product-card-image" width={400} height={400} />
                       {product.badge && (
                         <span className={`product-card-badge ${product.badge}`}>

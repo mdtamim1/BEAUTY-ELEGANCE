@@ -312,7 +312,7 @@ export default function CollectionPage() {
         <div className="products-grid collection-products-grid">
           {filteredProducts.map((product: any) => (
             <Link to={`/product/${product.id}`} key={product.id} className="product-card" style={{ textDecoration: 'none' }}>
-              <div style={{ position: 'relative' }}>
+              <div className="product-card-image-container">
                 <img src={product.image} alt={product.name} className="product-card-image" />
                 {product.badge && (
                   <span className={`product-card-badge ${product.badge}`}>

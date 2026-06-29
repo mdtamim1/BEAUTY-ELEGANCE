@@ -295,6 +295,20 @@ export default function StorefrontLayout() {
 
                 <button 
                   className="store-header-btn" 
+                  title="Wishlist" 
+                  onClick={() => setWishlistOpen(true)}
+                  style={{ position: 'relative' }}
+                >
+                  <Heart size={20} />
+                  {wishlist.length > 0 && (
+                    <span className="cart-count" style={{ background: '#ef4444' }}>
+                      {wishlist.length}
+                    </span>
+                  )}
+                </button>
+
+                <button 
+                  className="store-header-btn" 
                   title="Cart" 
                   onClick={() => setCartOpen(true)}
                   style={{ position: 'relative' }}

@@ -771,6 +771,13 @@
   position: relative;
 }
 
+.product-card-image-container {
+  position: relative;
+  height: 220px;
+  overflow: hidden;
+  width: 100%;
+}
+
 .product-card-badge {
   position: absolute;
   top: 12px;
@@ -2906,6 +2913,10 @@
   }
   
   .product-card-image {
+    height: 165px !important;
+  }
+
+  .product-card-image-container {
     height: 165px !important;
   }
   
