@@ -410,3 +410,31 @@ export const registerInvitedEmployee = (req: Request, res: Response) => {
     }
   );
 };
+
+// Get active moderators (for order assignment)
+export const getActiveModerators = (req: Request, res: Response) => {
+  db.all(
+    `SELECT e.id, e.first_name, e.last_name, e.email, e.status, r.name as role
+     FROM employees e
+     JOIN roles r ON e.role_id = r.id
+     WHERE r.name = 'Moderator' AND e.status = 'active'
+     ORDER BY e.first_name ASC`,
+    [],
+    (err, rows: any[]) => {
+      if (err) {
+        console.error('Error fetching active moderators:', err);
+        return res.status(500).json({ status: 'error', message: 'Database error' });
+      }
+
+      const moderators = (rows || []).map(r => ({
+        id: r.id,
+        name: `${r.first_name} ${r.last_name}`.trim(),
+        email: r.email,
+        role: r.role,
+        status: r.status
+      }));
+
+      res.json({ status: 'success', data: moderators });
+    }
+  );
+};

@@ -3,40 +3,50 @@ import db from '../config/db';
 import { cacheService } from '../services/cacheService';
 
 export const getOrders = (req: Request, res: Response) => {
-  db.all(`SELECT * FROM orders ORDER BY created_at DESC`, [], (err, orderRows: any[]) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ status: 'error', message: 'Database error' });
-    }
-    if (!orderRows || orderRows.length === 0) {
-      return res.json({ status: 'success', data: [] });
-    }
-
-    // Fetch all order items and map them to their parent orders
-    db.all(`SELECT * FROM order_items`, [], (err, itemRows: any[]) => {
+  db.all(
+    `SELECT o.*, e.first_name as assigned_first_name, e.last_name as assigned_last_name 
+     FROM orders o 
+     LEFT JOIN employees e ON o.assigned_to = e.id 
+     ORDER BY o.created_at DESC`, 
+    [], 
+    (err, orderRows: any[]) => {
       if (err) {
         console.error(err);
         return res.status(500).json({ status: 'error', message: 'Database error' });
       }
+      if (!orderRows || orderRows.length === 0) {
+        return res.json({ status: 'success', data: [] });
+      }
 
-      const ordersWithItems = orderRows.map(order => {
-        const items = itemRows ? itemRows.filter(item => item.order_id === order.id) : [];
-        return {
-          ...order,
-          productsList: items.map(item => ({
-            name: item.product_name,
-            color: item.color,
-            size: item.size,
-            code: item.code,
-            quantity: item.quantity,
-            price: item.price
-          }))
-        };
+      // Fetch all order items and map them to their parent orders
+      db.all(`SELECT * FROM order_items`, [], (err, itemRows: any[]) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ status: 'error', message: 'Database error' });
+        }
+
+        const ordersWithItems = orderRows.map(order => {
+          const items = itemRows ? itemRows.filter(item => item.order_id === order.id) : [];
+          return {
+            ...order,
+            assigned_name: order.assigned_first_name && order.assigned_last_name
+              ? `${order.assigned_first_name} ${order.assigned_last_name}`.trim()
+              : null,
+            productsList: items.map(item => ({
+              name: item.product_name,
+              color: item.color,
+              size: item.size,
+              code: item.code,
+              quantity: item.quantity,
+              price: item.price
+            }))
+          };
+        });
+
+        res.json({ status: 'success', data: ordersWithItems });
       });
-
-      res.json({ status: 'success', data: ordersWithItems });
-    });
-  });
+    }
+  );
 };
 
 export const getOrderById = (req: Request, res: Response) => {
@@ -316,4 +326,136 @@ export const updateOrder = (req: Request, res: Response) => {
       }
     );
   });
+};
+
+// Sync orders: round-robin assign unassigned processing orders to active moderators
+export const syncOrders = (req: Request, res: Response) => {
+  // Step 1: Get active moderators
+  db.all(
+    `SELECT e.id, e.first_name, e.last_name 
+     FROM employees e 
+     JOIN roles r ON e.role_id = r.id 
+     WHERE r.name = 'Moderator' AND e.status = 'active'
+     ORDER BY e.first_name ASC`,
+    [],
+    (err, moderators: any[]) => {
+      if (err) {
+        console.error('Error fetching moderators:', err);
+        return res.status(500).json({ status: 'error', message: 'Database error' });
+      }
+
+      if (!moderators || moderators.length === 0) {
+        return res.status(400).json({ status: 'error', message: 'No active moderators found. Please add moderators first.' });
+      }
+
+      // Step 2: Get unassigned processing orders
+      db.all(
+        `SELECT id FROM orders WHERE assigned_to IS NULL AND status = 'processing' ORDER BY created_at ASC`,
+        [],
+        (err, unassignedOrders: any[]) => {
+          if (err) {
+            console.error('Error fetching unassigned orders:', err);
+            return res.status(500).json({ status: 'error', message: 'Database error' });
+          }
+
+          if (!unassignedOrders || unassignedOrders.length === 0) {
+            return res.json({ status: 'success', message: 'No unassigned orders to sync', data: { assigned: 0 } });
+          }
+
+          // Step 3: Round-robin assignment inside a transaction
+          db.run('BEGIN TRANSACTION', (txErr) => {
+            if (txErr) {
+              console.error('Failed to start transaction:', txErr);
+              return res.status(500).json({ status: 'error', message: 'Database error' });
+            }
+
+            let completed = 0;
+            let hasError = false;
+            const totalOrders = unassignedOrders.length;
+
+            unassignedOrders.forEach((order, index) => {
+              const moderator = moderators[index % moderators.length];
+              db.run(
+                `UPDATE orders SET assigned_to = ? WHERE id = ?`,
+                [moderator.id, order.id],
+                (updateErr) => {
+                  if (updateErr) {
+                    console.error('Error assigning order:', updateErr);
+                    hasError = true;
+                  }
+                  completed++;
+                  if (completed === totalOrders) {
+                    if (hasError) {
+                      db.run('ROLLBACK', (rbErr) => {
+                        if (rbErr) console.error('Error rolling back:', rbErr);
+                      });
+                      return res.status(500).json({ status: 'error', message: 'Failed to sync some orders' });
+                    }
+                    db.run('COMMIT', (commitErr) => {
+                      if (commitErr) {
+                        console.error('Error committing:', commitErr);
+                        db.run('ROLLBACK', (rbErr) => {
+                          if (rbErr) console.error('Error rolling back:', rbErr);
+                        });
+                        return res.status(500).json({ status: 'error', message: 'Failed to commit sync' });
+                      }
+                      cacheService.del('dashboard:stats').catch(console.error);
+                      res.json({
+                        status: 'success',
+                        message: `${totalOrders} orders synced to ${moderators.length} moderators`,
+                        data: {
+                          assigned: totalOrders,
+                          moderators: moderators.map(m => `${m.first_name} ${m.last_name}`.trim())
+                        }
+                      });
+                    });
+                  }
+                }
+              );
+            });
+          });
+        }
+      );
+    }
+  );
+};
+
+// Assign/reassign a single order to a specific employee
+export const assignOrder = (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { assignedTo } = req.body;
+
+  // assignedTo can be null (unassign) or an employee ID
+  db.run(
+    `UPDATE orders SET assigned_to = ? WHERE id = ?`,
+    [assignedTo || null, id],
+    function (err) {
+      if (err) {
+        console.error('Error assigning order:', err);
+        return res.status(500).json({ status: 'error', message: 'Failed to assign order' });
+      }
+
+      if (assignedTo) {
+        // Fetch assigned employee name for the response
+        db.get(
+          `SELECT first_name, last_name FROM employees WHERE id = ?`,
+          [assignedTo],
+          (err, emp: any) => {
+            const assignedName = emp ? `${emp.first_name} ${emp.last_name}`.trim() : null;
+            res.json({
+              status: 'success',
+              message: 'Order assigned successfully',
+              data: { assigned_to: assignedTo, assigned_name: assignedName }
+            });
+          }
+        );
+      } else {
+        res.json({
+          status: 'success',
+          message: 'Order unassigned successfully',
+          data: { assigned_to: null, assigned_name: null }
+        });
+      }
+    }
+  );
 };

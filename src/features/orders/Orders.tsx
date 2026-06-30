@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
-import { ShoppingCart, Search, Plus, Download, Eye, RotateCcw, Truck, Clock, CheckCircle, XCircle, RefreshCw, FileText } from 'lucide-react';
+import { ShoppingCart, Search, Plus, Download, Eye, RotateCcw, Truck, Clock, CheckCircle, XCircle, RefreshCw, FileText, Users } from 'lucide-react';
 import { generateOrders, updateOrderStatus, addOrder, formatCurrency, formatDate, formatTime, timeAgo } from '../../mock/data';
-import { fetchOrdersFromBackend, updateOrderStatusInBackend, createOrderFromAdminInBackend, updateOrderInBackend, validateCouponCode, fetchProductsFromBackend } from '../../services/api';
+import { fetchOrdersFromBackend, updateOrderStatusInBackend, createOrderFromAdminInBackend, updateOrderInBackend, validateCouponCode, fetchProductsFromBackend, syncOrdersInBackend, assignOrderInBackend, fetchActiveModerators } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 const DEMO_PRODUCTS = [
   { sku: 'ST-EPB-001', name: 'Wireless Earbuds Pro Max', price: 129.99 },
@@ -116,6 +117,50 @@ export default function Orders() {
     loadOrders();
     loadProducts();
   }, []);
+
+  // Order Sync state
+  const { user } = useAuth();
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
+  const [moderators, setModerators] = useState<any[]>([]);
+  const [reassigningOrderId, setReassigningOrderId] = useState<string | null>(null);
+  const isAdmin = user?.role === 'Super Admin' || user?.role === 'Admin';
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchActiveModerators().then(setModerators);
+    }
+  }, [isAdmin]);
+
+  const handleSyncOrders = async () => {
+    setIsSyncing(true);
+    setSyncMessage('');
+    const result = await syncOrdersInBackend();
+    if (result.status === 'success') {
+      setSyncMessage(result.message || 'Orders synced!');
+      // Reload orders to show assignments
+      const dbOrders = await fetchOrdersFromBackend();
+      if (dbOrders && dbOrders.length > 0) {
+        setOrders(dbOrders);
+      }
+    } else {
+      setSyncMessage(result.message || 'Sync failed');
+    }
+    setIsSyncing(false);
+    setTimeout(() => setSyncMessage(''), 4000);
+  };
+
+  const handleReassignOrder = async (orderId: string, employeeId: string | null) => {
+    const result = await assignOrderInBackend(orderId, employeeId);
+    if (result.status === 'success') {
+      setOrders(prev => prev.map(o =>
+        o.id === orderId
+          ? { ...o, assigned_to: result.data.assigned_to, assigned_name: result.data.assigned_name }
+          : o
+      ));
+    }
+    setReassigningOrderId(null);
+  };
 
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
@@ -841,6 +886,40 @@ export default function Orders() {
           <p className="page-subtitle">Manage and track all orders in real-time</p>
         </div>
         <div className="page-header-actions">
+          {isAdmin && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button 
+                className="btn btn-secondary" 
+                onClick={handleSyncOrders}
+                disabled={isSyncing}
+                style={{ 
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  background: isSyncing ? 'rgba(99, 102, 241, 0.15)' : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                  border: '1px solid rgba(99, 102, 241, 0.3)',
+                  color: '#fff',
+                  fontWeight: 600,
+                  opacity: isSyncing ? 0.7 : 1,
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                <RefreshCw size={15} style={{ animation: isSyncing ? 'spin 1s linear infinite' : 'none' }} />
+                {isSyncing ? 'Syncing...' : 'Order Sync'}
+              </button>
+              {syncMessage && (
+                <span style={{ 
+                  fontSize: '11px', 
+                  color: syncMessage.includes('failed') ? '#ef4444' : '#10b981',
+                  fontWeight: 500,
+                  background: syncMessage.includes('failed') ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  border: syncMessage.includes('failed') ? '1px solid rgba(239, 68, 68, 0.2)' : '1px solid rgba(16, 185, 129, 0.2)'
+                }}>
+                  {syncMessage}
+                </span>
+              )}
+            </div>
+          )}
           <button className="btn btn-secondary"><FileText size={16} /> Bulk Process</button>
           <button className="btn btn-primary" onClick={openCreateModal}><Plus size={16} /> Create Order</button>
         </div>
@@ -976,6 +1055,7 @@ export default function Orders() {
                 <th>Status</th>
                 <th>Address</th>
                 <th>Date</th>
+                <th>Assigned To</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -1074,6 +1154,122 @@ export default function Orders() {
                           </div>
                         )}
                       </div>
+                    </td>
+                    <td>
+                      {order.assigned_name ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', position: 'relative' }}>
+                          <span style={{
+                            fontSize: '10px',
+                            fontWeight: 600,
+                            color: '#818cf8',
+                            background: 'rgba(99, 102, 241, 0.1)',
+                            border: '1px solid rgba(99, 102, 241, 0.2)',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            whiteSpace: 'nowrap',
+                            cursor: isAdmin ? 'pointer' : 'default'
+                          }} onClick={() => isAdmin && setReassigningOrderId(reassigningOrderId === order.id ? null : order.id)}>
+                            <Users size={10} />
+                            {order.assigned_name}
+                          </span>
+                          {isAdmin && reassigningOrderId === order.id && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '100%',
+                              left: 0,
+                              zIndex: 50,
+                              background: 'var(--bg-card)',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: '8px',
+                              padding: '6px',
+                              minWidth: '160px',
+                              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                              marginTop: '4px'
+                            }}>
+                              {moderators.map(mod => (
+                                <div
+                                  key={mod.id}
+                                  onClick={() => handleReassignOrder(order.id, mod.id)}
+                                  style={{
+                                    padding: '6px 10px',
+                                    fontSize: '11px',
+                                    cursor: 'pointer',
+                                    borderRadius: '4px',
+                                    color: order.assigned_to === mod.id ? '#818cf8' : 'var(--text-secondary)',
+                                    fontWeight: order.assigned_to === mod.id ? 600 : 400,
+                                    background: order.assigned_to === mod.id ? 'rgba(99,102,241,0.1)' : 'transparent',
+                                  }}
+                                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                                  onMouseLeave={e => { e.currentTarget.style.background = order.assigned_to === mod.id ? 'rgba(99,102,241,0.1)' : 'transparent'; }}
+                                >
+                                  {mod.name}
+                                </div>
+                              ))}
+                              <div
+                                onClick={() => handleReassignOrder(order.id, null)}
+                                style={{
+                                  padding: '6px 10px',
+                                  fontSize: '11px',
+                                  cursor: 'pointer',
+                                  borderRadius: '4px',
+                                  color: '#ef4444',
+                                  borderTop: '1px solid rgba(255,255,255,0.05)',
+                                  marginTop: '4px'
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                              >
+                                ✕ Unassign
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                          {isAdmin ? (
+                            <span 
+                              style={{ cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dashed' }}
+                              onClick={() => setReassigningOrderId(reassigningOrderId === order.id ? null : order.id)}
+                            >
+                              Unassigned
+                            </span>
+                          ) : 'Unassigned'}
+                          {isAdmin && reassigningOrderId === order.id && !order.assigned_name && (
+                            <div style={{
+                              position: 'absolute',
+                              zIndex: 50,
+                              background: 'var(--bg-card)',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              borderRadius: '8px',
+                              padding: '6px',
+                              minWidth: '160px',
+                              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                              marginTop: '4px'
+                            }}>
+                              {moderators.map(mod => (
+                                <div
+                                  key={mod.id}
+                                  onClick={() => handleReassignOrder(order.id, mod.id)}
+                                  style={{
+                                    padding: '6px 10px',
+                                    fontSize: '11px',
+                                    cursor: 'pointer',
+                                    borderRadius: '4px',
+                                    color: 'var(--text-secondary)',
+                                  }}
+                                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                                >
+                                  {mod.name}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </span>
+                      )}
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '4px' }}>

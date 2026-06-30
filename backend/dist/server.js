@@ -665,9 +665,14 @@ function initializeDatabase() {
         paid_amount REAL DEFAULT 0,
         subtotal REAL NOT NULL,
         status TEXT DEFAULT 'processing',
+        assigned_to TEXT DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    db.run(`ALTER TABLE orders ADD COLUMN assigned_to TEXT DEFAULT NULL`, (err) => {
+      if (err && !String(err).includes("duplicate column")) {
+      }
+    });
     db.run(`
       CREATE TABLE IF NOT EXISTS order_items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1830,36 +1835,44 @@ import { Router as Router3 } from "express";
 
 // backend/controllers/ordersController.ts
 var getOrders = (req, res) => {
-  db_default.all(`SELECT * FROM orders ORDER BY created_at DESC`, [], (err, orderRows) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ status: "error", message: "Database error" });
-    }
-    if (!orderRows || orderRows.length === 0) {
-      return res.json({ status: "success", data: [] });
-    }
-    db_default.all(`SELECT * FROM order_items`, [], (err2, itemRows) => {
-      if (err2) {
-        console.error(err2);
+  db_default.all(
+    `SELECT o.*, e.first_name as assigned_first_name, e.last_name as assigned_last_name 
+     FROM orders o 
+     LEFT JOIN employees e ON o.assigned_to = e.id 
+     ORDER BY o.created_at DESC`,
+    [],
+    (err, orderRows) => {
+      if (err) {
+        console.error(err);
         return res.status(500).json({ status: "error", message: "Database error" });
       }
-      const ordersWithItems = orderRows.map((order) => {
-        const items = itemRows ? itemRows.filter((item) => item.order_id === order.id) : [];
-        return {
-          ...order,
-          productsList: items.map((item) => ({
-            name: item.product_name,
-            color: item.color,
-            size: item.size,
-            code: item.code,
-            quantity: item.quantity,
-            price: item.price
-          }))
-        };
+      if (!orderRows || orderRows.length === 0) {
+        return res.json({ status: "success", data: [] });
+      }
+      db_default.all(`SELECT * FROM order_items`, [], (err2, itemRows) => {
+        if (err2) {
+          console.error(err2);
+          return res.status(500).json({ status: "error", message: "Database error" });
+        }
+        const ordersWithItems = orderRows.map((order) => {
+          const items = itemRows ? itemRows.filter((item) => item.order_id === order.id) : [];
+          return {
+            ...order,
+            assigned_name: order.assigned_first_name && order.assigned_last_name ? `${order.assigned_first_name} ${order.assigned_last_name}`.trim() : null,
+            productsList: items.map((item) => ({
+              name: item.product_name,
+              color: item.color,
+              size: item.size,
+              code: item.code,
+              quantity: item.quantity,
+              price: item.price
+            }))
+          };
+        });
+        res.json({ status: "success", data: ordersWithItems });
       });
-      res.json({ status: "success", data: ordersWithItems });
-    });
-  });
+    }
+  );
 };
 var getOrderById = (req, res) => {
   const { id } = req.params;
@@ -2153,14 +2166,131 @@ var updateOrder = (req, res) => {
     );
   });
 };
+var syncOrders = (req, res) => {
+  db_default.all(
+    `SELECT e.id, e.first_name, e.last_name 
+     FROM employees e 
+     JOIN roles r ON e.role_id = r.id 
+     WHERE r.name = 'Moderator' AND e.status = 'active'
+     ORDER BY e.first_name ASC`,
+    [],
+    (err, moderators) => {
+      if (err) {
+        console.error("Error fetching moderators:", err);
+        return res.status(500).json({ status: "error", message: "Database error" });
+      }
+      if (!moderators || moderators.length === 0) {
+        return res.status(400).json({ status: "error", message: "No active moderators found. Please add moderators first." });
+      }
+      db_default.all(
+        `SELECT id FROM orders WHERE assigned_to IS NULL AND status = 'processing' ORDER BY created_at ASC`,
+        [],
+        (err2, unassignedOrders) => {
+          if (err2) {
+            console.error("Error fetching unassigned orders:", err2);
+            return res.status(500).json({ status: "error", message: "Database error" });
+          }
+          if (!unassignedOrders || unassignedOrders.length === 0) {
+            return res.json({ status: "success", message: "No unassigned orders to sync", data: { assigned: 0 } });
+          }
+          db_default.run("BEGIN TRANSACTION", (txErr) => {
+            if (txErr) {
+              console.error("Failed to start transaction:", txErr);
+              return res.status(500).json({ status: "error", message: "Database error" });
+            }
+            let completed = 0;
+            let hasError = false;
+            const totalOrders = unassignedOrders.length;
+            unassignedOrders.forEach((order, index) => {
+              const moderator = moderators[index % moderators.length];
+              db_default.run(
+                `UPDATE orders SET assigned_to = ? WHERE id = ?`,
+                [moderator.id, order.id],
+                (updateErr) => {
+                  if (updateErr) {
+                    console.error("Error assigning order:", updateErr);
+                    hasError = true;
+                  }
+                  completed++;
+                  if (completed === totalOrders) {
+                    if (hasError) {
+                      db_default.run("ROLLBACK", (rbErr) => {
+                        if (rbErr) console.error("Error rolling back:", rbErr);
+                      });
+                      return res.status(500).json({ status: "error", message: "Failed to sync some orders" });
+                    }
+                    db_default.run("COMMIT", (commitErr) => {
+                      if (commitErr) {
+                        console.error("Error committing:", commitErr);
+                        db_default.run("ROLLBACK", (rbErr) => {
+                          if (rbErr) console.error("Error rolling back:", rbErr);
+                        });
+                        return res.status(500).json({ status: "error", message: "Failed to commit sync" });
+                      }
+                      cacheService.del("dashboard:stats").catch(console.error);
+                      res.json({
+                        status: "success",
+                        message: `${totalOrders} orders synced to ${moderators.length} moderators`,
+                        data: {
+                          assigned: totalOrders,
+                          moderators: moderators.map((m) => `${m.first_name} ${m.last_name}`.trim())
+                        }
+                      });
+                    });
+                  }
+                }
+              );
+            });
+          });
+        }
+      );
+    }
+  );
+};
+var assignOrder = (req, res) => {
+  const { id } = req.params;
+  const { assignedTo } = req.body;
+  db_default.run(
+    `UPDATE orders SET assigned_to = ? WHERE id = ?`,
+    [assignedTo || null, id],
+    function(err) {
+      if (err) {
+        console.error("Error assigning order:", err);
+        return res.status(500).json({ status: "error", message: "Failed to assign order" });
+      }
+      if (assignedTo) {
+        db_default.get(
+          `SELECT first_name, last_name FROM employees WHERE id = ?`,
+          [assignedTo],
+          (err2, emp) => {
+            const assignedName = emp ? `${emp.first_name} ${emp.last_name}`.trim() : null;
+            res.json({
+              status: "success",
+              message: "Order assigned successfully",
+              data: { assigned_to: assignedTo, assigned_name: assignedName }
+            });
+          }
+        );
+      } else {
+        res.json({
+          status: "success",
+          message: "Order unassigned successfully",
+          data: { assigned_to: null, assigned_name: null }
+        });
+      }
+    }
+  );
+};
 
 // backend/routes/orders.ts
 var router3 = Router3();
 router3.post("/", createOrder);
-router3.get("/", authenticateToken, requireRole(["Super Admin", "Admin", "Staff"]), getOrders);
-router3.get("/:id", authenticateToken, requireRole(["Super Admin", "Admin", "Staff"]), getOrderById);
+router3.get("/", authenticateToken, requireRole(["Super Admin", "Admin", "Staff", "Moderator"]), getOrders);
+router3.get("/:id", authenticateToken, requireRole(["Super Admin", "Admin", "Staff", "Moderator"]), getOrderById);
 router3.put("/:id", authenticateToken, requireRole(["Super Admin", "Admin", "Staff"]), updateOrder);
-router3.put("/:id/status", authenticateToken, requireRole(["Super Admin", "Admin", "Staff"]), updateOrderStatus);
+router3.put("/:id/status", authenticateToken, requireRole(["Super Admin", "Admin", "Staff", "Moderator"]), updateOrderStatus);
+router3.post("/sync", authenticateToken, requireRole(["Super Admin", "Admin"]), syncOrders);
+router3.put("/:id/assign", authenticateToken, requireRole(["Super Admin", "Admin"]), assignOrder);
 var orders_default = router3;
 
 // backend/routes/customers.ts
@@ -3626,6 +3756,30 @@ var registerInvitedEmployee = (req, res) => {
     }
   );
 };
+var getActiveModerators = (req, res) => {
+  db_default.all(
+    `SELECT e.id, e.first_name, e.last_name, e.email, e.status, r.name as role
+     FROM employees e
+     JOIN roles r ON e.role_id = r.id
+     WHERE r.name = 'Moderator' AND e.status = 'active'
+     ORDER BY e.first_name ASC`,
+    [],
+    (err, rows) => {
+      if (err) {
+        console.error("Error fetching active moderators:", err);
+        return res.status(500).json({ status: "error", message: "Database error" });
+      }
+      const moderators = (rows || []).map((r) => ({
+        id: r.id,
+        name: `${r.first_name} ${r.last_name}`.trim(),
+        email: r.email,
+        role: r.role,
+        status: r.status
+      }));
+      res.json({ status: "success", data: moderators });
+    }
+  );
+};
 
 // backend/routes/employees.ts
 var router9 = Router9();
@@ -3641,6 +3795,7 @@ router9.get("/roles", authenticateToken, requireRole(["Super Admin", "Admin"]), 
 router9.post("/roles", authenticateToken, requireRole(["Super Admin", "Admin"]), createRole);
 router9.put("/roles/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), updateRole);
 router9.delete("/roles/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteRole);
+router9.get("/active-moderators", authenticateToken, requireRole(["Super Admin", "Admin"]), getActiveModerators);
 var employees_default = router9;
 
 // backend/routes/marketing.ts

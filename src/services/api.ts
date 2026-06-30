@@ -96,6 +96,8 @@ export const fetchOrdersFromBackend = async (): Promise<Order[] | null> => {
       discount: order.discount,
       paidAmount: order.paid_amount || order.paidAmount,
       subtotal: order.subtotal,
+      assigned_to: order.assigned_to || null,
+      assigned_name: order.assigned_name || null,
       productsList: order.productsList || []
     }));
   } catch (e) {
@@ -121,6 +123,59 @@ export const updateOrderStatusInBackend = async (orderId: string, status: string
   } catch (e) {
     console.warn(`Failed to update status for order ${orderId} in backend:`, e);
     return false;
+  }
+};
+
+// Sync orders: assign unassigned processing orders to active moderators (round-robin)
+export const syncOrdersInBackend = async (): Promise<any> => {
+  try {
+    const response = await fetch(`${API_BASE}/orders/sync`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+    });
+    return await response.json();
+  } catch (e) {
+    console.error('Failed to sync orders:', e);
+    return { status: 'error', message: 'Server unreachable' };
+  }
+};
+
+// Assign/reassign a single order to a specific employee
+export const assignOrderInBackend = async (orderId: string, assignedTo: string | null): Promise<any> => {
+  try {
+    const response = await fetch(`${API_BASE}/orders/${orderId}/assign`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify({ assignedTo }),
+    });
+    return await response.json();
+  } catch (e) {
+    console.error('Failed to assign order:', e);
+    return { status: 'error', message: 'Server unreachable' };
+  }
+};
+
+// Fetch active moderators for order assignment
+export const fetchActiveModerators = async (): Promise<any[]> => {
+  try {
+    const response = await fetch(`${API_BASE}/employees/active-moderators`, {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
+    if (!response.ok) return [];
+    const result = await response.json();
+    if (result.status !== 'success') return [];
+    return result.data || [];
+  } catch (e) {
+    console.warn('Failed to fetch active moderators:', e);
+    return [];
   }
 };
 

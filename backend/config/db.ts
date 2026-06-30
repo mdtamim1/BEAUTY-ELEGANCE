@@ -484,9 +484,18 @@ function initializeDatabase() {
         paid_amount REAL DEFAULT 0,
         subtotal REAL NOT NULL,
         status TEXT DEFAULT 'processing',
+        assigned_to TEXT DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Migration: Add assigned_to column if it doesn't exist (for existing databases)
+    db.run(`ALTER TABLE orders ADD COLUMN assigned_to TEXT DEFAULT NULL`, (err) => {
+      // Ignore error if column already exists
+      if (err && !String(err).includes('duplicate column')) {
+        // Column already exists, safe to ignore
+      }
+    });
 
     db.run(`
       CREATE TABLE IF NOT EXISTS order_items (

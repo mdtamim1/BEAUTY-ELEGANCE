@@ -44,6 +44,8 @@ export interface Order {
   subtotal?: number;
   productsList?: OrderProduct[];
   updatedAt?: string;
+  assigned_to?: string | null;
+  assigned_name?: string | null;
 }
 
 export interface Customer {
