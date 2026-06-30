@@ -89,8 +89,11 @@ export const createOrder = (req: Request, res: Response) => {
 
   const id = 'ORD-' + Math.floor(10000 + Math.random() * 90000);
 
-  db.serialize(() => {
-    db.run('BEGIN TRANSACTION');
+  db.run('BEGIN TRANSACTION', (txErr) => {
+    if (txErr) {
+      console.error('Failed to start transaction:', txErr);
+      return res.status(500).json({ status: 'error', message: 'Database error' });
+    }
 
     db.run(
       `INSERT INTO orders (
@@ -105,8 +108,10 @@ export const createOrder = (req: Request, res: Response) => {
       ],
       function (err) {
         if (err) {
-          db.run('ROLLBACK');
-          console.error(err);
+          console.error('Error inserting order:', err);
+          db.run('ROLLBACK', (rbErr) => {
+            if (rbErr) console.error('Error rolling back transaction:', rbErr);
+          });
           return res.status(500).json({ status: 'error', message: 'Failed to create order' });
         }
 
@@ -123,22 +128,27 @@ export const createOrder = (req: Request, res: Response) => {
           productsList.forEach((item: any) => {
             stmt.run(
               [id, item.name, item.color || 'Default', item.size || 'Free Size', item.code, item.quantity, item.price],
-              (runErr) => {
+              (runErr: any) => {
                 if (runErr) {
                   console.error('Error inserting order item:', runErr);
                   hasError = true;
                 }
                 pending--;
                 if (pending === 0) {
-                  stmt.finalize((finalizeErr) => {
+                  stmt.finalize((finalizeErr: any) => {
                     if (hasError || finalizeErr) {
-                      db.run('ROLLBACK');
+                      db.run('ROLLBACK', (rbErr) => {
+                        if (rbErr) console.error('Error rolling back transaction:', rbErr);
+                      });
                       return res.status(500).json({ status: 'error', message: 'Failed to insert order items' });
                     }
                     
                     db.run('COMMIT', (commitErr) => {
                       if (commitErr) {
-                        db.run('ROLLBACK');
+                        console.error('Error committing transaction:', commitErr);
+                        db.run('ROLLBACK', (rbErr) => {
+                          if (rbErr) console.error('Error rolling back transaction:', rbErr);
+                        });
                         return res.status(500).json({ status: 'error', message: 'Failed to commit transaction' });
                       }
                       cacheService.del('dashboard:stats').catch(console.error);
@@ -152,7 +162,10 @@ export const createOrder = (req: Request, res: Response) => {
         } else {
           db.run('COMMIT', (commitErr) => {
             if (commitErr) {
-              db.run('ROLLBACK');
+              console.error('Error committing transaction:', commitErr);
+              db.run('ROLLBACK', (rbErr) => {
+                if (rbErr) console.error('Error rolling back transaction:', rbErr);
+              });
               return res.status(500).json({ status: 'error', message: 'Failed to commit transaction' });
             }
             cacheService.del('dashboard:stats').catch(console.error);
@@ -206,8 +219,11 @@ export const updateOrder = (req: Request, res: Response) => {
     productsList,
   } = req.body;
 
-  db.serialize(() => {
-    db.run('BEGIN TRANSACTION');
+  db.run('BEGIN TRANSACTION', (txErr) => {
+    if (txErr) {
+      console.error('Failed to start transaction:', txErr);
+      return res.status(500).json({ status: 'error', message: 'Database error' });
+    }
 
     db.run(
       `UPDATE orders 
@@ -222,16 +238,20 @@ export const updateOrder = (req: Request, res: Response) => {
       ],
       function (err) {
         if (err) {
-          db.run('ROLLBACK');
-          console.error(err);
+          console.error('Error updating order:', err);
+          db.run('ROLLBACK', (rbErr) => {
+            if (rbErr) console.error('Error rolling back transaction:', rbErr);
+          });
           return res.status(500).json({ status: 'error', message: 'Failed to update order in database' });
         }
 
         // Delete existing items for the order
-        db.run('DELETE FROM order_items WHERE order_id = ?', [id], (err) => {
-          if (err) {
-            db.run('ROLLBACK');
-            console.error(err);
+        db.run('DELETE FROM order_items WHERE order_id = ?', [id], (deleteErr) => {
+          if (deleteErr) {
+            console.error('Error deleting order items:', deleteErr);
+            db.run('ROLLBACK', (rbErr) => {
+              if (rbErr) console.error('Error rolling back transaction:', rbErr);
+            });
             return res.status(500).json({ status: 'error', message: 'Failed to update order items' });
           }
 
@@ -248,22 +268,27 @@ export const updateOrder = (req: Request, res: Response) => {
             productsList.forEach((item: any) => {
               stmt.run(
                 [id, item.name, item.color || 'Default', item.size || 'Free Size', item.code, item.quantity, item.price],
-                (runErr) => {
+                (runErr: any) => {
                   if (runErr) {
                     console.error('Error updating order item:', runErr);
                     hasError = true;
                   }
                   pending--;
                   if (pending === 0) {
-                    stmt.finalize((finalizeErr) => {
+                    stmt.finalize((finalizeErr: any) => {
                       if (hasError || finalizeErr) {
-                        db.run('ROLLBACK');
+                        db.run('ROLLBACK', (rbErr) => {
+                          if (rbErr) console.error('Error rolling back transaction:', rbErr);
+                        });
                         return res.status(500).json({ status: 'error', message: 'Failed to insert updated order items' });
                       }
 
                       db.run('COMMIT', (commitErr) => {
                         if (commitErr) {
-                          db.run('ROLLBACK');
+                          console.error('Error committing transaction:', commitErr);
+                          db.run('ROLLBACK', (rbErr) => {
+                            if (rbErr) console.error('Error rolling back transaction:', rbErr);
+                          });
                           return res.status(500).json({ status: 'error', message: 'Failed to commit transaction' });
                         }
                         cacheService.del('dashboard:stats').catch(console.error);
@@ -277,7 +302,10 @@ export const updateOrder = (req: Request, res: Response) => {
           } else {
             db.run('COMMIT', (commitErr) => {
               if (commitErr) {
-                db.run('ROLLBACK');
+                console.error('Error committing transaction:', commitErr);
+                db.run('ROLLBACK', (rbErr) => {
+                  if (rbErr) console.error('Error rolling back transaction:', rbErr);
+                });
                 return res.status(500).json({ status: 'error', message: 'Failed to commit transaction' });
               }
               cacheService.del('dashboard:stats').catch(console.error);

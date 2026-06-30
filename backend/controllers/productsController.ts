@@ -103,8 +103,12 @@ export const createProduct = (req: Request, res: Response) => {
   const { name, slug, sku, brand, category, price, original_price, image, description, stock, published, features, specs, gallery } = req.body;
   const id = 'PRD-' + Math.random().toString(36).substring(2, 8).toUpperCase();
 
-  db.serialize(() => {
-    db.run('BEGIN TRANSACTION');
+  db.run('BEGIN TRANSACTION', (txErr) => {
+    if (txErr) {
+      console.error('Failed to start transaction:', txErr);
+      return res.status(500).json({ status: 'error', message: 'Database error' });
+    }
+
     db.run(
       `INSERT INTO products (id, name, slug, sku, brand, category, price, original_price, image, description, stock, published, features, specs)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -114,31 +118,61 @@ export const createProduct = (req: Request, res: Response) => {
       ],
       function (err) {
         if (err) {
-          db.run('ROLLBACK');
-          console.error(err);
+          console.error('Error inserting product:', err);
+          db.run('ROLLBACK', (rbErr) => {
+            if (rbErr) console.error('Error rolling back transaction:', rbErr);
+          });
           return res.status(500).json({ status: 'error', message: err.message });
         }
 
+        const commitTransaction = () => {
+          db.run('COMMIT', (commitErr) => {
+            if (commitErr) {
+              console.error('Error committing transaction:', commitErr);
+              db.run('ROLLBACK', (rbErr) => {
+                if (rbErr) console.error('Error rolling back transaction:', rbErr);
+              });
+              return res.status(500).json({ status: 'error', message: 'Failed to commit transaction' });
+            }
+            cacheService.delPattern('products:*').catch(console.error);
+            res.json({ status: 'success', message: 'Product created', data: { id } });
+          });
+        };
+
         // Insert gallery
         if (gallery && Array.isArray(gallery)) {
-          const stmt = db.prepare(`INSERT INTO product_gallery (product_id, image_url) VALUES (?, ?)`);
-          gallery.forEach((img: string) => {
-            if (img.trim()) {
-              stmt.run([id, img.trim()]);
-            }
-          });
-          stmt.finalize();
-        }
-
-        db.run('COMMIT', (err) => {
-          if (err) {
-            db.run('ROLLBACK');
-            return res.status(500).json({ status: 'error', message: 'Failed to commit transaction' });
+          const validImages = gallery.filter((img: string) => img.trim());
+          if (validImages.length === 0) {
+            return commitTransaction();
           }
-          // Invalidate cache
-          cacheService.delPattern('products:*').catch(console.error);
-          res.json({ status: 'success', message: 'Product created', data: { id } });
-        });
+
+          const stmt = db.prepare(`INSERT INTO product_gallery (product_id, image_url) VALUES (?, ?)`);
+          let hasError = false;
+          let pending = validImages.length;
+
+          validImages.forEach((img: string) => {
+            stmt.run([id, img.trim()], (runErr: any) => {
+              if (runErr) {
+                console.error('Error inserting gallery image:', runErr);
+                hasError = true;
+              }
+              pending--;
+              if (pending === 0) {
+                stmt.finalize((finalizeErr: any) => {
+                  if (hasError || finalizeErr) {
+                    db.run('ROLLBACK', (rbErr) => {
+                      if (rbErr) console.error('Error rolling back transaction:', rbErr);
+                    });
+                    return res.status(500).json({ status: 'error', message: 'Failed to insert gallery images' });
+                  }
+                  commitTransaction();
+                });
+              }
+            });
+          });
+        } else {
+          commitTransaction();
+        }
       }
     );
   });
@@ -148,9 +182,12 @@ export const updateProduct = (req: Request, res: Response) => {
   const { id } = req.params;
   const { name, price, original_price, stock, description, image, brand, category, published, features, specs, gallery } = req.body;
 
-  db.serialize(() => {
-    db.run('BEGIN TRANSACTION');
-    
+  db.run('BEGIN TRANSACTION', (txErr) => {
+    if (txErr) {
+      console.error('Failed to start transaction:', txErr);
+      return res.status(500).json({ status: 'error', message: 'Database error' });
+    }
+
     db.run(
       `UPDATE products 
        SET name = COALESCE(?, name), 
@@ -174,45 +211,69 @@ export const updateProduct = (req: Request, res: Response) => {
       ],
       function (err) {
         if (err) {
-          db.run('ROLLBACK');
-          console.error(err);
+          console.error('Error updating product:', err);
+          db.run('ROLLBACK', (rbErr) => {
+            if (rbErr) console.error('Error rolling back transaction:', rbErr);
+          });
           return res.status(500).json({ status: 'error', message: 'Database error' });
         }
 
-        if (gallery && Array.isArray(gallery)) {
-          db.run(`DELETE FROM product_gallery WHERE product_id = ?`, [id], (err) => {
-            if (err) {
-              db.run('ROLLBACK');
-              return res.status(500).json({ status: 'error', message: 'Failed to clear old gallery' });
-            }
-            const stmt = db.prepare(`INSERT INTO product_gallery (product_id, image_url) VALUES (?, ?)`);
-            gallery.forEach((img: string) => {
-              if (img.trim()) {
-                stmt.run([id, img.trim()]);
-              }
-            });
-            stmt.finalize();
-
-            db.run('COMMIT', (err) => {
-              if (err) {
-                db.run('ROLLBACK');
-                return res.status(500).json({ status: 'error', message: 'Failed to commit transaction' });
-              }
-              // Invalidate cache
-              cacheService.delPattern('products:*').catch(console.error);
-              res.json({ status: 'success', message: 'Product updated' });
-            });
-          });
-        } else {
-          db.run('COMMIT', (err) => {
-            if (err) {
-              db.run('ROLLBACK');
+        const commitTransaction = () => {
+          db.run('COMMIT', (commitErr) => {
+            if (commitErr) {
+              console.error('Error committing transaction:', commitErr);
+              db.run('ROLLBACK', (rbErr) => {
+                if (rbErr) console.error('Error rolling back transaction:', rbErr);
+              });
               return res.status(500).json({ status: 'error', message: 'Failed to commit transaction' });
             }
-            // Invalidate cache
             cacheService.delPattern('products:*').catch(console.error);
             res.json({ status: 'success', message: 'Product updated' });
           });
+        };
+
+        if (gallery && Array.isArray(gallery)) {
+          db.run(`DELETE FROM product_gallery WHERE product_id = ?`, [id], (deleteErr) => {
+            if (deleteErr) {
+              console.error('Error deleting gallery:', deleteErr);
+              db.run('ROLLBACK', (rbErr) => {
+                if (rbErr) console.error('Error rolling back transaction:', rbErr);
+              });
+              return res.status(500).json({ status: 'error', message: 'Failed to clear old gallery' });
+            }
+
+            const validImages = gallery.filter((img: string) => img.trim());
+            if (validImages.length === 0) {
+              return commitTransaction();
+            }
+
+            const stmt = db.prepare(`INSERT INTO product_gallery (product_id, image_url) VALUES (?, ?)`);
+            let hasError = false;
+            let pending = validImages.length;
+
+            validImages.forEach((img: string) => {
+              stmt.run([id, img.trim()], (runErr: any) => {
+                if (runErr) {
+                  console.error('Error inserting gallery image:', runErr);
+                  hasError = true;
+                }
+                pending--;
+                if (pending === 0) {
+                  stmt.finalize((finalizeErr: any) => {
+                    if (hasError || finalizeErr) {
+                      db.run('ROLLBACK', (rbErr) => {
+                        if (rbErr) console.error('Error rolling back transaction:', rbErr);
+                      });
+                      return res.status(500).json({ status: 'error', message: 'Failed to insert gallery images' });
+                    }
+                    commitTransaction();
+                  });
+                }
+              });
+            });
+          });
+        } else {
+          commitTransaction();
         }
       }
     );

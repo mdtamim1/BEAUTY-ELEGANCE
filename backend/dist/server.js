@@ -1539,8 +1539,11 @@ var getProductById = async (req, res) => {
 var createProduct = (req, res) => {
   const { name, slug, sku, brand, category, price, original_price, image, description, stock, published, features, specs, gallery } = req.body;
   const id = "PRD-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-  db_default.serialize(() => {
-    db_default.run("BEGIN TRANSACTION");
+  db_default.run("BEGIN TRANSACTION", (txErr) => {
+    if (txErr) {
+      console.error("Failed to start transaction:", txErr);
+      return res.status(500).json({ status: "error", message: "Database error" });
+    }
     db_default.run(
       `INSERT INTO products (id, name, slug, sku, brand, category, price, original_price, image, description, stock, published, features, specs)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -1562,27 +1565,56 @@ var createProduct = (req, res) => {
       ],
       function(err) {
         if (err) {
-          db_default.run("ROLLBACK");
-          console.error(err);
+          console.error("Error inserting product:", err);
+          db_default.run("ROLLBACK", (rbErr) => {
+            if (rbErr) console.error("Error rolling back transaction:", rbErr);
+          });
           return res.status(500).json({ status: "error", message: err.message });
         }
-        if (gallery && Array.isArray(gallery)) {
-          const stmt = db_default.prepare(`INSERT INTO product_gallery (product_id, image_url) VALUES (?, ?)`);
-          gallery.forEach((img) => {
-            if (img.trim()) {
-              stmt.run([id, img.trim()]);
+        const commitTransaction = () => {
+          db_default.run("COMMIT", (commitErr) => {
+            if (commitErr) {
+              console.error("Error committing transaction:", commitErr);
+              db_default.run("ROLLBACK", (rbErr) => {
+                if (rbErr) console.error("Error rolling back transaction:", rbErr);
+              });
+              return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
             }
+            cacheService.delPattern("products:*").catch(console.error);
+            res.json({ status: "success", message: "Product created", data: { id } });
           });
-          stmt.finalize();
-        }
-        db_default.run("COMMIT", (err2) => {
-          if (err2) {
-            db_default.run("ROLLBACK");
-            return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
+        };
+        if (gallery && Array.isArray(gallery)) {
+          const validImages = gallery.filter((img) => img.trim());
+          if (validImages.length === 0) {
+            return commitTransaction();
           }
-          cacheService.delPattern("products:*").catch(console.error);
-          res.json({ status: "success", message: "Product created", data: { id } });
-        });
+          const stmt = db_default.prepare(`INSERT INTO product_gallery (product_id, image_url) VALUES (?, ?)`);
+          let hasError = false;
+          let pending = validImages.length;
+          validImages.forEach((img) => {
+            stmt.run([id, img.trim()], (runErr) => {
+              if (runErr) {
+                console.error("Error inserting gallery image:", runErr);
+                hasError = true;
+              }
+              pending--;
+              if (pending === 0) {
+                stmt.finalize((finalizeErr) => {
+                  if (hasError || finalizeErr) {
+                    db_default.run("ROLLBACK", (rbErr) => {
+                      if (rbErr) console.error("Error rolling back transaction:", rbErr);
+                    });
+                    return res.status(500).json({ status: "error", message: "Failed to insert gallery images" });
+                  }
+                  commitTransaction();
+                });
+              }
+            });
+          });
+        } else {
+          commitTransaction();
+        }
       }
     );
   });
@@ -1590,8 +1622,11 @@ var createProduct = (req, res) => {
 var updateProduct = (req, res) => {
   const { id } = req.params;
   const { name, price, original_price, stock, description, image, brand, category, published, features, specs, gallery } = req.body;
-  db_default.serialize(() => {
-    db_default.run("BEGIN TRANSACTION");
+  db_default.run("BEGIN TRANSACTION", (txErr) => {
+    if (txErr) {
+      console.error("Failed to start transaction:", txErr);
+      return res.status(500).json({ status: "error", message: "Database error" });
+    }
     db_default.run(
       `UPDATE products 
        SET name = COALESCE(?, name), 
@@ -1622,41 +1657,64 @@ var updateProduct = (req, res) => {
       ],
       function(err) {
         if (err) {
-          db_default.run("ROLLBACK");
-          console.error(err);
+          console.error("Error updating product:", err);
+          db_default.run("ROLLBACK", (rbErr) => {
+            if (rbErr) console.error("Error rolling back transaction:", rbErr);
+          });
           return res.status(500).json({ status: "error", message: "Database error" });
         }
-        if (gallery && Array.isArray(gallery)) {
-          db_default.run(`DELETE FROM product_gallery WHERE product_id = ?`, [id], (err2) => {
-            if (err2) {
-              db_default.run("ROLLBACK");
-              return res.status(500).json({ status: "error", message: "Failed to clear old gallery" });
-            }
-            const stmt = db_default.prepare(`INSERT INTO product_gallery (product_id, image_url) VALUES (?, ?)`);
-            gallery.forEach((img) => {
-              if (img.trim()) {
-                stmt.run([id, img.trim()]);
-              }
-            });
-            stmt.finalize();
-            db_default.run("COMMIT", (err3) => {
-              if (err3) {
-                db_default.run("ROLLBACK");
-                return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
-              }
-              cacheService.delPattern("products:*").catch(console.error);
-              res.json({ status: "success", message: "Product updated" });
-            });
-          });
-        } else {
-          db_default.run("COMMIT", (err2) => {
-            if (err2) {
-              db_default.run("ROLLBACK");
+        const commitTransaction = () => {
+          db_default.run("COMMIT", (commitErr) => {
+            if (commitErr) {
+              console.error("Error committing transaction:", commitErr);
+              db_default.run("ROLLBACK", (rbErr) => {
+                if (rbErr) console.error("Error rolling back transaction:", rbErr);
+              });
               return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
             }
             cacheService.delPattern("products:*").catch(console.error);
             res.json({ status: "success", message: "Product updated" });
           });
+        };
+        if (gallery && Array.isArray(gallery)) {
+          db_default.run(`DELETE FROM product_gallery WHERE product_id = ?`, [id], (deleteErr) => {
+            if (deleteErr) {
+              console.error("Error deleting gallery:", deleteErr);
+              db_default.run("ROLLBACK", (rbErr) => {
+                if (rbErr) console.error("Error rolling back transaction:", rbErr);
+              });
+              return res.status(500).json({ status: "error", message: "Failed to clear old gallery" });
+            }
+            const validImages = gallery.filter((img) => img.trim());
+            if (validImages.length === 0) {
+              return commitTransaction();
+            }
+            const stmt = db_default.prepare(`INSERT INTO product_gallery (product_id, image_url) VALUES (?, ?)`);
+            let hasError = false;
+            let pending = validImages.length;
+            validImages.forEach((img) => {
+              stmt.run([id, img.trim()], (runErr) => {
+                if (runErr) {
+                  console.error("Error inserting gallery image:", runErr);
+                  hasError = true;
+                }
+                pending--;
+                if (pending === 0) {
+                  stmt.finalize((finalizeErr) => {
+                    if (hasError || finalizeErr) {
+                      db_default.run("ROLLBACK", (rbErr) => {
+                        if (rbErr) console.error("Error rolling back transaction:", rbErr);
+                      });
+                      return res.status(500).json({ status: "error", message: "Failed to insert gallery images" });
+                    }
+                    commitTransaction();
+                  });
+                }
+              });
+            });
+          });
+        } else {
+          commitTransaction();
         }
       }
     );
@@ -1849,8 +1907,11 @@ var createOrder = (req, res) => {
     productsList
   } = req.body;
   const id = "ORD-" + Math.floor(1e4 + Math.random() * 9e4);
-  db_default.serialize(() => {
-    db_default.run("BEGIN TRANSACTION");
+  db_default.run("BEGIN TRANSACTION", (txErr) => {
+    if (txErr) {
+      console.error("Failed to start transaction:", txErr);
+      return res.status(500).json({ status: "error", message: "Database error" });
+    }
     db_default.run(
       `INSERT INTO orders (
         id, customer, email, amount, items, payment_method, store_name, phone, address, 
@@ -1882,8 +1943,10 @@ var createOrder = (req, res) => {
       ],
       function(err) {
         if (err) {
-          db_default.run("ROLLBACK");
-          console.error(err);
+          console.error("Error inserting order:", err);
+          db_default.run("ROLLBACK", (rbErr) => {
+            if (rbErr) console.error("Error rolling back transaction:", rbErr);
+          });
           return res.status(500).json({ status: "error", message: "Failed to create order" });
         }
         if (productsList && Array.isArray(productsList) && productsList.length > 0) {
@@ -1905,12 +1968,17 @@ var createOrder = (req, res) => {
                 if (pending === 0) {
                   stmt.finalize((finalizeErr) => {
                     if (hasError || finalizeErr) {
-                      db_default.run("ROLLBACK");
+                      db_default.run("ROLLBACK", (rbErr) => {
+                        if (rbErr) console.error("Error rolling back transaction:", rbErr);
+                      });
                       return res.status(500).json({ status: "error", message: "Failed to insert order items" });
                     }
                     db_default.run("COMMIT", (commitErr) => {
                       if (commitErr) {
-                        db_default.run("ROLLBACK");
+                        console.error("Error committing transaction:", commitErr);
+                        db_default.run("ROLLBACK", (rbErr) => {
+                          if (rbErr) console.error("Error rolling back transaction:", rbErr);
+                        });
                         return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
                       }
                       cacheService.del("dashboard:stats").catch(console.error);
@@ -1924,7 +1992,10 @@ var createOrder = (req, res) => {
         } else {
           db_default.run("COMMIT", (commitErr) => {
             if (commitErr) {
-              db_default.run("ROLLBACK");
+              console.error("Error committing transaction:", commitErr);
+              db_default.run("ROLLBACK", (rbErr) => {
+                if (rbErr) console.error("Error rolling back transaction:", rbErr);
+              });
               return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
             }
             cacheService.del("dashboard:stats").catch(console.error);
@@ -1973,8 +2044,11 @@ var updateOrder = (req, res) => {
     status,
     productsList
   } = req.body;
-  db_default.serialize(() => {
-    db_default.run("BEGIN TRANSACTION");
+  db_default.run("BEGIN TRANSACTION", (txErr) => {
+    if (txErr) {
+      console.error("Failed to start transaction:", txErr);
+      return res.status(500).json({ status: "error", message: "Database error" });
+    }
     db_default.run(
       `UPDATE orders 
        SET customer = ?, email = ?, amount = ?, items = ?, payment_method = ?, store_name = ?, phone = ?, address = ?, 
@@ -2007,14 +2081,18 @@ var updateOrder = (req, res) => {
       ],
       function(err) {
         if (err) {
-          db_default.run("ROLLBACK");
-          console.error(err);
+          console.error("Error updating order:", err);
+          db_default.run("ROLLBACK", (rbErr) => {
+            if (rbErr) console.error("Error rolling back transaction:", rbErr);
+          });
           return res.status(500).json({ status: "error", message: "Failed to update order in database" });
         }
-        db_default.run("DELETE FROM order_items WHERE order_id = ?", [id], (err2) => {
-          if (err2) {
-            db_default.run("ROLLBACK");
-            console.error(err2);
+        db_default.run("DELETE FROM order_items WHERE order_id = ?", [id], (deleteErr) => {
+          if (deleteErr) {
+            console.error("Error deleting order items:", deleteErr);
+            db_default.run("ROLLBACK", (rbErr) => {
+              if (rbErr) console.error("Error rolling back transaction:", rbErr);
+            });
             return res.status(500).json({ status: "error", message: "Failed to update order items" });
           }
           if (productsList && Array.isArray(productsList) && productsList.length > 0) {
@@ -2036,12 +2114,17 @@ var updateOrder = (req, res) => {
                   if (pending === 0) {
                     stmt.finalize((finalizeErr) => {
                       if (hasError || finalizeErr) {
-                        db_default.run("ROLLBACK");
+                        db_default.run("ROLLBACK", (rbErr) => {
+                          if (rbErr) console.error("Error rolling back transaction:", rbErr);
+                        });
                         return res.status(500).json({ status: "error", message: "Failed to insert updated order items" });
                       }
                       db_default.run("COMMIT", (commitErr) => {
                         if (commitErr) {
-                          db_default.run("ROLLBACK");
+                          console.error("Error committing transaction:", commitErr);
+                          db_default.run("ROLLBACK", (rbErr) => {
+                            if (rbErr) console.error("Error rolling back transaction:", rbErr);
+                          });
                           return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
                         }
                         cacheService.del("dashboard:stats").catch(console.error);
@@ -2055,7 +2138,10 @@ var updateOrder = (req, res) => {
           } else {
             db_default.run("COMMIT", (commitErr) => {
               if (commitErr) {
-                db_default.run("ROLLBACK");
+                console.error("Error committing transaction:", commitErr);
+                db_default.run("ROLLBACK", (rbErr) => {
+                  if (rbErr) console.error("Error rolling back transaction:", rbErr);
+                });
                 return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
               }
               cacheService.del("dashboard:stats").catch(console.error);
@@ -2838,16 +2924,28 @@ var getSettings = (req, res) => {
 };
 var updateSettings = (req, res) => {
   const settingsData = req.body;
-  db_default.serialize(() => {
-    db_default.run("BEGIN TRANSACTION");
+  db_default.run("BEGIN TRANSACTION", (txErr) => {
+    if (txErr) {
+      console.error("Failed to start transaction:", txErr);
+      return res.status(500).json({ status: "error", message: "Database error" });
+    }
     const stmt = db_default.prepare(`
       INSERT OR REPLACE INTO system_settings (setting_key, setting_value)
       VALUES (?, ?)
     `);
     const keys = Object.keys(settingsData).filter((k) => keyMapToSnake[k]);
     if (keys.length === 0) {
-      db_default.run("COMMIT");
-      return res.json({ status: "success", message: "System settings updated successfully (no changes)" });
+      db_default.run("COMMIT", (commitErr) => {
+        if (commitErr) {
+          console.error("Error committing transaction:", commitErr);
+          db_default.run("ROLLBACK", (rbErr) => {
+            if (rbErr) console.error("Error rolling back transaction:", rbErr);
+          });
+          return res.status(500).json({ status: "error", message: "Database error" });
+        }
+        res.json({ status: "success", message: "System settings updated successfully (no changes)" });
+      });
+      return;
     }
     let completed = 0;
     let hasError = false;
@@ -2868,12 +2966,17 @@ var updateSettings = (req, res) => {
         if (completed === keys.length) {
           stmt.finalize((finalErr) => {
             if (finalErr || hasError) {
-              db_default.run("ROLLBACK");
+              db_default.run("ROLLBACK", (rbErr) => {
+                if (rbErr) console.error("Error rolling back transaction:", rbErr);
+              });
               return res.status(500).json({ status: "error", message: "Failed to update system settings" });
             }
             db_default.run("COMMIT", (commitErr) => {
               if (commitErr) {
-                db_default.run("ROLLBACK");
+                console.error("Error committing transaction:", commitErr);
+                db_default.run("ROLLBACK", (rbErr) => {
+                  if (rbErr) console.error("Error rolling back transaction:", rbErr);
+                });
                 return res.status(500).json({ status: "error", message: "Failed to commit settings update" });
               }
               res.json({ status: "success", message: "System settings updated successfully" });

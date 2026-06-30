@@ -108,8 +108,11 @@ export const getSettings = (req: Request, res: Response) => {
 export const updateSettings = (req: Request, res: Response) => {
   const settingsData = req.body;
 
-  db.serialize(() => {
-    db.run('BEGIN TRANSACTION');
+  db.run('BEGIN TRANSACTION', (txErr) => {
+    if (txErr) {
+      console.error('Failed to start transaction:', txErr);
+      return res.status(500).json({ status: 'error', message: 'Database error' });
+    }
 
     const stmt = db.prepare(`
       INSERT OR REPLACE INTO system_settings (setting_key, setting_value)
@@ -118,8 +121,17 @@ export const updateSettings = (req: Request, res: Response) => {
 
     const keys = Object.keys(settingsData).filter(k => keyMapToSnake[k]);
     if (keys.length === 0) {
-      db.run('COMMIT');
-      return res.json({ status: 'success', message: 'System settings updated successfully (no changes)' });
+      db.run('COMMIT', (commitErr) => {
+        if (commitErr) {
+          console.error('Error committing transaction:', commitErr);
+          db.run('ROLLBACK', (rbErr) => {
+            if (rbErr) console.error('Error rolling back transaction:', rbErr);
+          });
+          return res.status(500).json({ status: 'error', message: 'Database error' });
+        }
+        res.json({ status: 'success', message: 'System settings updated successfully (no changes)' });
+      });
+      return;
     }
 
     let completed = 0;
@@ -134,22 +146,27 @@ export const updateSettings = (req: Request, res: Response) => {
         val = String(val);
       }
 
-      stmt.run([snakeKey, val], (err) => {
+      stmt.run([snakeKey, val], (err: any) => {
         if (err) {
           console.error(`Failed to update setting key ${snakeKey}:`, err);
           hasError = true;
         }
         completed++;
         if (completed === keys.length) {
-          stmt.finalize((finalErr) => {
+          stmt.finalize((finalErr: any) => {
             if (finalErr || hasError) {
-              db.run('ROLLBACK');
+              db.run('ROLLBACK', (rbErr) => {
+                if (rbErr) console.error('Error rolling back transaction:', rbErr);
+              });
               return res.status(500).json({ status: 'error', message: 'Failed to update system settings' });
             }
 
             db.run('COMMIT', (commitErr) => {
               if (commitErr) {
-                db.run('ROLLBACK');
+                console.error('Error committing transaction:', commitErr);
+                db.run('ROLLBACK', (rbErr) => {
+                  if (rbErr) console.error('Error rolling back transaction:', rbErr);
+                });
                 return res.status(500).json({ status: 'error', message: 'Failed to commit settings update' });
               }
               res.json({ status: 'success', message: 'System settings updated successfully' });
