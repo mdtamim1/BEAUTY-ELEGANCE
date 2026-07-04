@@ -157,6 +157,8 @@ export default function Products() {
       specs: [],
       customerReviews: [],
       relatedProducts: [],
+      videoUrl: '',
+      photoContent: '',
       stock: 10,
       sold: 0,
       revenue: 0,
@@ -527,6 +529,11 @@ export default function Products() {
                     </div>
 
                     <div className="form-group">
+                      <label className="form-label">Video Showcase URL (YouTube or Direct Video Link)</label>
+                      <input className="form-input" value={tempProduct.videoUrl || ''} onChange={e => setTempProduct({ ...tempProduct, videoUrl: e.target.value })} placeholder="e.g. https://www.youtube.com/watch?v=... or https://example.com/video.mp4" />
+                    </div>
+
+                    <div className="form-group">
                       <label className="form-label">Gallery Images</label>
                       <div className="sfm-list-editor">
                         {tempProduct.gallery.map((url, idx) => (
@@ -545,6 +552,14 @@ export default function Products() {
                         <button type="button" className="btn btn-secondary btn-sm" style={{ alignSelf: 'flex-start', marginTop: '4px' }} onClick={() => {
                           setTempProduct({ ...tempProduct, gallery: [...tempProduct.gallery, ''] });
                         }}><Plus size={14} /> Add Gallery Image</button>
+                      </div>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label">Additional Photo Content URL</label>
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                        <input className="form-input" style={{ flex: 1 }} value={tempProduct.photoContent || ''} onChange={e => setTempProduct({ ...tempProduct, photoContent: e.target.value })} placeholder="e.g. https://example.com/extra-photo.png" />
+                        {tempProduct.photoContent && <img src={tempProduct.photoContent} alt="Preview" style={{ width: '40px', height: '40px', borderRadius: '4px', objectFit: 'cover', border: '1px solid var(--border-secondary)' }} />}
                       </div>
                     </div>
 

@@ -33,7 +33,9 @@ export const getProducts = async (req: Request, res: Response) => {
           features,
           specs,
           published: row.published === 1,
-          in_stock: row.in_stock === 1
+          in_stock: row.in_stock === 1,
+          video_url: row.video_url || null,
+          photo_content: row.photo_content || null
         };
       });
 
@@ -86,7 +88,9 @@ export const getProductById = async (req: Request, res: Response) => {
           specs,
           published: product.published === 1,
           in_stock: product.in_stock === 1,
-          gallery: gallery.length > 0 ? gallery : [product.image]
+          gallery: gallery.length > 0 ? gallery : [product.image],
+          video_url: product.video_url || null,
+          photo_content: product.photo_content || null
         };
 
         cacheService.set(cacheKey, resultData, 300).catch(console.error);
@@ -100,7 +104,7 @@ export const getProductById = async (req: Request, res: Response) => {
 };
 
 export const createProduct = (req: Request, res: Response) => {
-  const { name, slug, sku, brand, category, price, original_price, image, description, stock, published, features, specs, gallery } = req.body;
+  const { name, slug, sku, brand, category, price, original_price, image, description, stock, published, features, specs, gallery, videoUrl, photoContent } = req.body;
   const id = 'PRD-' + Math.random().toString(36).substring(2, 8).toUpperCase();
 
   db.run('BEGIN TRANSACTION', (txErr) => {
@@ -110,11 +114,12 @@ export const createProduct = (req: Request, res: Response) => {
     }
 
     db.run(
-      `INSERT INTO products (id, name, slug, sku, brand, category, price, original_price, image, description, stock, published, features, specs)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO products (id, name, slug, sku, brand, category, price, original_price, image, description, stock, published, features, specs, video_url, photo_content)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, name, slug, sku, brand, category, price, original_price, image, description, stock || 0,
-        published ? 1 : 0, JSON.stringify(features || []), JSON.stringify(specs || [])
+        published ? 1 : 0, JSON.stringify(features || []), JSON.stringify(specs || []),
+        videoUrl || null, photoContent || null
       ],
       function (err) {
         if (err) {
@@ -180,7 +185,7 @@ export const createProduct = (req: Request, res: Response) => {
 
 export const updateProduct = (req: Request, res: Response) => {
   const { id } = req.params;
-  const { name, price, original_price, stock, description, image, brand, category, published, features, specs, gallery } = req.body;
+  const { name, price, original_price, stock, description, image, brand, category, published, features, specs, gallery, videoUrl, photoContent } = req.body;
 
   db.run('BEGIN TRANSACTION', (txErr) => {
     if (txErr) {
@@ -200,13 +205,17 @@ export const updateProduct = (req: Request, res: Response) => {
            category = COALESCE(?, category),
            published = COALESCE(?, published),
            features = COALESCE(?, features),
-           specs = COALESCE(?, specs)
+           specs = COALESCE(?, specs),
+           video_url = COALESCE(?, video_url),
+           photo_content = COALESCE(?, photo_content)
        WHERE id = ?`,
       [
         name, price, original_price, stock, description, image, brand, category, 
         published === undefined ? null : (published ? 1 : 0),
         features ? JSON.stringify(features) : null,
         specs ? JSON.stringify(specs) : null,
+        videoUrl === undefined ? null : videoUrl,
+        photoContent === undefined ? null : photoContent,
         id
       ],
       function (err) {

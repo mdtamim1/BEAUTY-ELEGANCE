@@ -400,8 +400,29 @@ function generateClientFallbackResponse(
     return `আমাদের আকর্ষণীয় অফার ও ডিসকাউন্টযুক্ত পণ্যসমূহ:\n\n${listStr}`;
   }
 
-  // 6. Direct product name matches
-  const matched = activeProducts.find(p => query.includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(query));
+  // 6. Direct product name matches & keyword aliases
+  let matched = activeProducts.find(p => query.includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(query));
+  
+  if (!matched) {
+    const aliases = [
+      { keywords: ['dumbbell', 'ডাম্বেল', 'ডামবেল'], id: 1, backId: 'PRD-001' },
+      { keywords: ['roller', 'রোলার', 'ab roller', 'এবি রোলার'], id: 2, backId: 'PRD-002' },
+      { keywords: ['football', 'ফুটবল', 'বল'], id: 3, backId: 'PRD-003' },
+      { keywords: ['badminton', 'র‍্যাকেট', 'র্যাকেট', 'রকেট', 'ব্যাডমিন্টন'], id: 4, backId: 'PRD-004' },
+      { keywords: ['shoes', 'জুতো', 'জুতা', 'রানিং', 'running'], id: 5, backId: 'PRD-005' },
+      { keywords: ['jersey', 'জার্সি', 'ড্রাই-ফিট', 'dri-fit'], id: 6, backId: 'PRD-006' },
+      { keywords: ['yoga', 'ম্যাট', 'ইয়োগা', 'ইয়োগা'], id: 7, backId: 'PRD-007' },
+      { keywords: ['basketball', 'বাস্কেটবল', 'হুপ', 'hoop'], id: 8, backId: 'PRD-008' }
+    ];
+    
+    for (const alias of aliases) {
+      if (alias.keywords.some(kw => query.includes(kw))) {
+        matched = activeProducts.find(p => String(p.id) === String(alias.id) || String(p.id) === String(alias.backId));
+        if (matched) break;
+      }
+    }
+  }
+
   if (matched) {
     setLastMatchedProduct(matched);
     return buildTailoredResponse(matched);

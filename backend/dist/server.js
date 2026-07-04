@@ -45,6 +45,7 @@ var seedProducts = [
       { name: "Material", value: "Cast Iron & Rubber" },
       { name: "Handle Type", value: "Knurled" }
     ],
+    description: "\u09B6\u09BE\u09B0\u09C0\u09B0\u09BF\u0995 \u09B6\u0995\u09CD\u09A4\u09BF \u09AC\u09C3\u09A6\u09CD\u09A7\u09BF \u0993 \u09AA\u09C7\u09B6\u09C0 \u0997\u09A0\u09A8\u09C7 \u098F\u0987 \u09A1\u09BE\u09AE\u09CD\u09AC\u09C7\u09B2 \u09B8\u09C7\u099F \u0985\u09A4\u09CD\u09AF\u09A8\u09CD\u09A4 \u0989\u09AA\u09AF\u09CB\u0997\u09C0\u0964 \u098F\u099F\u09BF \u0998\u09B0\u09C7 \u09AC\u09B8\u09C7 \u09AB\u09C1\u09B2 \u09AC\u09A1\u09BF \u0993\u09DF\u09BE\u09B0\u09CD\u0995\u0986\u0989\u099F (\u09AF\u09C7\u09AE\u09A8: \u09AC\u09BE\u0987\u09B8\u09C7\u09AA \u0995\u09BE\u09B0\u09CD\u09B2, \u09B6\u09CB\u09B2\u09CD\u09A1\u09BE\u09B0 \u09AA\u09CD\u09B0\u09C7\u09B8, \u099A\u09C7\u09B8\u09CD\u099F \u09AA\u09CD\u09B0\u09C7\u09B8) \u0995\u09B0\u09BE\u09B0 \u099C\u09A8\u09CD\u09AF \u0986\u09A6\u09B0\u09CD\u09B6\u0964 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE: \u0993\u09DF\u09BE\u09B0\u09CD\u0995\u0986\u0989\u099F \u09B6\u09C1\u09B0\u09C1\u09B0 \u0986\u0997\u09C7 \u09EB-\u09E7\u09E6 \u09AE\u09BF\u09A8\u09BF\u099F \u0993\u09DF\u09BE\u09B0\u09CD\u09AE\u0986\u09AA \u0995\u09B0\u09C7 \u09A8\u09BF\u09A8\u0964 \u09A1\u09BE\u09AE\u09CD\u09AC\u09C7\u09B2 \u09A4\u09CB\u09B2\u09BE\u09B0 \u09B8\u09AE\u09DF \u0997\u09CD\u09B0\u09BF\u09AA \u09B6\u0995\u09CD\u09A4\u09AD\u09BE\u09AC\u09C7 \u09A7\u09B0\u09C1\u09A8 \u098F\u09AC\u0982 \u0986\u09AA\u09A8\u09BE\u09B0 \u0995\u09CD\u09B7\u09AE\u09A4\u09BE \u0985\u09A8\u09C1\u09AF\u09BE\u09DF\u09C0 \u09B0\u09C7\u09AA\u09B8 \u0993 \u09B8\u09C7\u099F \u09A8\u09BF\u09B0\u09CD\u09A7\u09BE\u09B0\u09A3 \u0995\u09B0\u09C1\u09A8\u0964",
     stock: 50,
     published: 1,
     in_stock: 1
@@ -75,6 +76,7 @@ var seedProducts = [
       { name: "Max Weight Cap", value: "150kg" },
       { name: "Includes", value: "Knee Pad" }
     ],
+    description: "\u0989\u09A8\u09CD\u09A8\u09A4 \u09EA-\u09B9\u09C1\u0987\u09B2 \u09A1\u09BF\u099C\u09BE\u0987\u09A8\u09C7\u09B0 \u098F\u0987 \u098F\u09AC\u09BF \u09B0\u09CB\u09B2\u09BE\u09B0 \u0995\u09CB\u09B0\u09C7\u09B0 \u09AA\u09C7\u09B6\u09C0 \u09AE\u099C\u09AC\u09C1\u09A4 \u0993 \u09AA\u09C7\u099F\u09C7\u09B0 \u09AE\u09C7\u09A6 \u0995\u09AE\u09BE\u09A4\u09C7 \u09A6\u09BE\u09B0\u09C1\u09A3 \u09B8\u09BE\u09B9\u09BE\u09AF\u09CD\u09AF \u0995\u09B0\u09C7\u0964 \u098F\u09B0 \u09B8\u09BE\u09A5\u09C7 \u09B9\u09BE\u0981\u099F\u09C1 \u09B8\u09C1\u09B0\u0995\u09CD\u09B7\u09BE\u09B0 \u099C\u09A8\u09CD\u09AF \u09AB\u09CB\u09AE \u09AE\u09CD\u09AF\u09BE\u099F \u09B0\u09DF\u09C7\u099B\u09C7\u0964 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE: \u09AE\u09CD\u09AF\u09BE\u099F\u09C7\u09B0 \u0989\u09AA\u09B0 \u09B9\u09BE\u0981\u099F\u09C1 \u0997\u09C7\u09DC\u09C7 \u09AC\u09B8\u09C1\u09A8, \u09B0\u09CB\u09B2\u09BE\u09B0\u09C7\u09B0 \u0997\u09CD\u09B0\u09BF\u09AA \u09A7\u09B0\u09C1\u09A8 \u098F\u09AC\u0982 \u09B6\u09B0\u09C0\u09B0\u0995\u09C7 \u09B8\u09BE\u09AE\u09A8\u09C7\u09B0 \u09A6\u09BF\u0995\u09C7 \u0986\u09B8\u09CD\u09A4\u09C7 \u0986\u09B8\u09CD\u09A4\u09C7 \u098F\u0997\u09BF\u09DF\u09C7 \u09A8\u09BF\u09A8 \u0993 \u09AA\u09C1\u09A8\u09B0\u09BE\u09DF \u09AA\u09C7\u099B\u09A8\u09C7\u09B0 \u09A6\u09BF\u0995\u09C7 \u09A8\u09BF\u09DF\u09C7 \u0986\u09B8\u09C1\u09A8\u0964 \u0995\u09CB\u09B0\u09C7 \u09AA\u09CD\u09B0\u09C7\u09B8\u09BE\u09B0 \u09B0\u09C7\u0996\u09C7 \u09AA\u09CD\u09B0\u09A4\u09BF\u09A6\u09BF\u09A8 \u09E7\u09E6-\u09E7\u09EB \u09AC\u09BE\u09B0 \u0995\u09B0\u09C7 \u09E9 \u09B8\u09C7\u099F \u09AA\u09CD\u09B0\u09CD\u09AF\u09BE\u0995\u099F\u09BF\u09B8 \u0995\u09B0\u09C1\u09A8\u0964",
     stock: 80,
     published: 1,
     in_stock: 1
@@ -102,6 +104,7 @@ var seedProducts = [
       { name: "Weight", value: "420-440g" },
       { name: "Material", value: "PU Leather" }
     ],
+    description: "\u0985\u09AB\u09BF\u09B8\u09BF\u09DF\u09BE\u09B2 \u09B8\u09BE\u0987\u099C \u09EB \u098F\u09B0 \u098F\u0987 \u09AB\u09C1\u099F\u09AC\u09B2\u099F\u09BF \u09AA\u09C7\u09B6\u09BE\u09A6\u09BE\u09B0 \u09AE\u09CD\u09AF\u09BE\u099A \u0993 \u0985\u09A8\u09C1\u09B6\u09C0\u09B2\u09A8\u09C7\u09B0 \u099C\u09A8\u09CD\u09AF \u0989\u09AA\u09AF\u09CB\u0997\u09C0\u0964 \u098F\u09B0 \u0989\u09A8\u09CD\u09A8\u09A4 \u0995\u09CD\u09AF\u09BE\u09B8\u09BF\u0982 \u09AC\u09BE\u09A4\u09BE\u09B8 \u09A7\u09B0\u09C7 \u09B0\u09BE\u0996\u09C7 \u0993 \u09A8\u09BF\u0996\u09C1\u0981\u09A4 \u09B8\u09C1\u0987\u0982 \u09AA\u09CD\u09B0\u09A6\u09BE\u09A8 \u0995\u09B0\u09C7\u0964 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE: \u0996\u09C7\u09B2\u09BE\u09B0 \u0986\u0997\u09C7 \u09AC\u09B2\u09C7\u09B0 \u098F\u09DF\u09BE\u09B0 \u09AA\u09CD\u09B0\u09C7\u09B8\u09BE\u09B0 \u099A\u09C7\u0995 \u0995\u09B0\u09C7 \u09A8\u09BF\u09A8 (\u09EE.\u09EB \u09A5\u09C7\u0995\u09C7 \u09E7\u09EB.\u09EC \u09AA\u09BF\u098F\u09B8\u0986\u0987 \u0986\u09A6\u09B0\u09CD\u09B6)\u0964 \u09AA\u09BF\u099A\u09CD\u099B\u09BF\u09B2 \u09AC\u09BE \u09A7\u09BE\u09B0\u09BE\u09B2\u09CB \u099C\u09BE\u09DF\u0997\u09BE\u09DF \u0996\u09C7\u09B2\u09BE \u098F\u09DC\u09BF\u09DF\u09C7 \u099A\u09B2\u09C1\u09A8\u0964 \u09AD\u09C7\u099C\u09BE \u0995\u09BE\u09A6\u09BE \u09B2\u09BE\u0997\u09B2\u09C7 \u0996\u09C7\u09B2\u09BE \u09B6\u09C7\u09B7\u09C7 \u09AC\u09B2\u099F\u09BF \u09AE\u09C1\u099B\u09C7 \u09B6\u09C1\u0995\u09BF\u09DF\u09C7 \u09B0\u09BE\u0996\u09C1\u09A8\u0964",
     stock: 60,
     published: 1,
     in_stock: 1
@@ -129,6 +132,7 @@ var seedProducts = [
       { name: "Weight", value: "83g" },
       { name: "Grip Size", value: "G4" }
     ],
+    description: "\u09E7\u09E6\u09E6% \u0995\u09BE\u09B0\u09CD\u09AC\u09A8 \u0997\u09CD\u09B0\u09BE\u09AB\u09BE\u0987\u099F \u09AB\u09CD\u09B0\u09C7\u09AE\u09C7\u09B0 \u098F\u0987 \u09B0\u09CD\u09AF\u09BE\u0995\u09C7\u099F\u099F\u09BF \u09B9\u09BE\u09B2\u0995\u09BE \u0993 \u09B6\u0995\u09CD\u09A4\u09BF\u09B6\u09BE\u09B2\u09C0 \u09B6\u099F \u0996\u09C7\u09B2\u09A4\u09C7 \u0985\u09A4\u09CD\u09AF\u09A8\u09CD\u09A4 \u0989\u09AA\u09AF\u09CB\u0997\u09C0\u0964 \u098F\u09B0 \u09A8\u09CD\u09AF\u09BE\u09A8\u09CB\u099F\u09C7\u0995\u09A8\u09CB\u09B2\u099C\u09BF \u09AB\u09CD\u09B0\u09C7\u09AE \u09B8\u09C1\u0987\u099F \u09B8\u09CD\u09AA\u099F \u09AC\u09C3\u09A6\u09CD\u09A7\u09BF \u0995\u09B0\u09C7\u0964 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE: \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09B8\u09AE\u09DF \u0997\u09CD\u09B0\u09BF\u09AA \u09AD\u09BE\u09B2\u09CB \u09AE\u09BE\u09A8\u09C7\u09B0 \u099F\u09C7\u09AA \u09A6\u09BF\u09DF\u09C7 \u09AE\u09C1\u09DC\u09C7 \u09A8\u09BF\u09A8\u0964 \u09B0\u09CD\u09AF\u09BE\u0995\u09C7\u099F\u099F\u09BF \u0993\u09DF\u09BE\u099F\u09BE\u09B0\u09AA\u09CD\u09B0\u09C1\u09AB \u09AC\u09CD\u09AF\u09BE\u0997\u09C7 \u09B0\u09BE\u0996\u09C1\u09A8 \u098F\u09AC\u0982 \u0996\u09C7\u09B2\u09C1\u09A8 \u09B6\u09C1\u09A7\u09C1\u09AE\u09BE\u09A4\u09CD\u09B0 \u0987\u09A8\u09A1\u09CB\u09B0 \u09AC\u09BE \u0986\u0989\u099F\u09A1\u09CB\u09B0 \u09B8\u09A0\u09BF\u0995 \u09B6\u09BE\u099F\u09B2\u0995\u09B0\u09CD\u0995 \u09A6\u09BF\u09DF\u09C7\u0964",
     stock: 45,
     published: 1,
     in_stock: 1
@@ -158,6 +162,7 @@ var seedProducts = [
       { name: "Weight", value: "290g" },
       { name: "Warranty", value: "6 Months" }
     ],
+    description: "\u09B9\u09BE\u09B2\u0995\u09BE \u0993 \u0986\u09B0\u09BE\u09AE\u09A6\u09BE\u09DF\u0995 \u09B0\u09BE\u09A8\u09BF\u0982 \u099C\u09C1\u09A4\u09CB \u09AF\u09BE \u09A8\u09BF\u09DF\u09AE\u09BF\u09A4 \u09A6\u09CC\u09DC\u09BE\u09A6\u09CC\u09DC\u09BF, \u099C\u09B0\u09CD\u099C\u09BF\u0982 \u0993 \u099C\u09BF\u09AE \u0993\u09DF\u09BE\u09B0\u09CD\u0995\u0986\u0989\u099F\u09C7\u09B0 \u099C\u09A8\u09CD\u09AF \u0985\u09A4\u09CD\u09AF\u09A8\u09CD\u09A4 \u0989\u09AA\u09AF\u09CB\u0997\u09C0\u0964 \u098F\u09B0 \u09AC\u09CD\u09B0\u09BF\u09A6\u09BE\u09AC\u09C7\u09B2 \u09AE\u09C7\u09B6 \u09AA\u09BE \u0998\u09BE\u09AE\u09A4\u09C7 \u09A6\u09C7\u09DF \u09A8\u09BE\u0964 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE: \u09AE\u09CB\u099C\u09BE \u09AA\u09B0\u09C7 \u099C\u09C1\u09A4\u09CB\u099F\u09BF \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0 \u0995\u09B0\u09C1\u09A8 \u098F\u09AC\u0982 \u09AB\u09BF\u09A4\u09BE\u0997\u09C1\u09B2\u09CB \u09B8\u09A0\u09BF\u0995\u09AD\u09BE\u09AC\u09C7 \u099F\u09BE\u0987\u099F \u09A6\u09BF\u09DF\u09C7 \u09AC\u09BE\u0981\u09A7\u09C1\u09A8\u0964 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09AA\u09B0 \u09AA\u09B0\u09BF\u09B7\u09CD\u0995\u09BE\u09B0 \u0993 \u09B6\u09C1\u0995\u09A8\u09CB \u09B8\u09CD\u09A5\u09BE\u09A8\u09C7 \u099C\u09C1\u09A4\u09CB \u09B0\u09BE\u0996\u09C1\u09A8\u0964",
     stock: 35,
     published: 1,
     in_stock: 1
@@ -187,6 +192,7 @@ var seedProducts = [
       { name: "Fit", value: "Slim Fit" },
       { name: "Wash", value: "Machine Wash Cold" }
     ],
+    description: "\u0998\u09BE\u09AE \u09B6\u09CB\u09B7\u09A3\u0995\u09BE\u09B0\u09C0 \u09A1\u09CD\u09B0\u09BE\u0987-\u09AB\u09BF\u099F \u09AA\u09CD\u09B0\u09AF\u09C1\u0995\u09CD\u09A4\u09BF\u09B0 \u0985\u09CD\u09AF\u09BE\u09A5\u09B2\u09C7\u099F\u09BF\u0995 \u099C\u09BE\u09B0\u09CD\u09B8\u09BF \u09AF\u09BE \u0996\u09C7\u09B2\u09BE\u09A7\u09C1\u09B2\u09BE \u0993 \u099C\u09BF\u09AE\u09C7\u09B0 \u09B8\u09AE\u09DF \u0986\u09AA\u09A8\u09BE\u0995\u09C7 \u09B0\u09BE\u0996\u09C7 \u09B6\u09C1\u09B7\u09CD\u0995 \u0993 \u09B8\u09A4\u09C7\u099C\u0964 \u09E7\u09E6\u09E6% \u09B0\u09BF\u09B8\u09BE\u0987\u0995\u09C7\u09B2\u09A1 \u09AA\u09B2\u09BF\u09DF\u09C7\u09B8\u09CD\u099F\u09BE\u09B0\u0964 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE: \u09A0\u09BE\u09A8\u09CD\u09A1\u09BE \u09AA\u09BE\u09A8\u09BF\u09A4\u09C7 \u09AE\u09BE\u0987\u09B2\u09CD\u09A1 \u09A1\u09BF\u099F\u09BE\u09B0\u099C\u09C7\u09A8\u09CD\u099F \u09A6\u09BF\u09DF\u09C7 \u09B9\u09BE\u09A4 \u09A6\u09BF\u09DF\u09C7 \u0985\u09A5\u09AC\u09BE \u0993\u09DF\u09BE\u09B6\u09BF\u0982 \u09AE\u09C7\u09B6\u09BF\u09A8\u09C7 \u09AE\u09BE\u0987\u09B2\u09CD\u09A1 \u09B8\u09BE\u0987\u0995\u09C7\u09B2\u09C7 \u09A7\u09C1\u09DF\u09C7 \u09A8\u09BF\u09A8\u0964 \u0995\u09DC\u09BE \u09B0\u09CB\u09A6\u09C7 \u09B8\u09B0\u09BE\u09B8\u09B0\u09BF \u09A8\u09BE \u09B6\u09C1\u0995\u09BF\u09DF\u09C7 \u099B\u09BE\u09DF\u09BE\u09AF\u09C1\u0995\u09CD\u09A4 \u09B8\u09CD\u09A5\u09BE\u09A8\u09C7 \u09B6\u09C1\u0995\u09BE\u09A8\u09CB \u09AD\u09BE\u09B2\u09CB\u0964",
     stock: 75,
     published: 1,
     in_stock: 1
@@ -215,6 +221,7 @@ var seedProducts = [
       { name: "Material", value: "TPE" },
       { name: "Dimensions", value: "183cm x 61cm" }
     ],
+    description: "\u09EE \u09AE\u09BF\u09AE\u09BF \u09AA\u09C1\u09B0\u09C1 \u098F\u0987 \u0987\u09DF\u09CB\u0997\u09BE \u09AE\u09CD\u09AF\u09BE\u099F \u09AC\u09CD\u09AF\u09BE\u09DF\u09BE\u09AE \u09AC\u09BE \u09AF\u09CB\u0997\u09AC\u09CD\u09AF\u09BE\u09DF\u09BE\u09AE\u09C7\u09B0 \u09B8\u09AE\u09DF \u09B6\u09B0\u09C0\u09B0\u09C7\u09B0 \u099C\u09DF\u09C7\u09A8\u09CD\u099F \u0993 \u09B9\u09BE\u0981\u099F\u09C1\u09A4\u09C7 \u0995\u09C1\u09B6\u09A8\u09BF\u0982 \u09B8\u09BE\u09AA\u09CB\u09B0\u09CD\u099F \u09A6\u09C7\u09DF\u0964 \u09A8\u09A8-\u09B8\u09CD\u09B2\u09BF\u09AA \u0997\u09CD\u09B0\u09BF\u09AA \u09AA\u09BF\u099A\u09CD\u099B\u09BF\u09B2 \u09B9\u0993\u09DF\u09BE \u09B0\u09CB\u09A7 \u0995\u09B0\u09C7\u0964 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE: \u09B8\u09AE\u09A4\u09B2 \u09AE\u09C7\u099D\u09C7\u09A4\u09C7 \u09AE\u09CD\u09AF\u09BE\u099F\u099F\u09BF \u09AC\u09BF\u099B\u09BF\u09DF\u09C7 \u0987\u09DF\u09CB\u0997\u09BE \u0995\u09B0\u09C1\u09A8\u0964 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09AA\u09B0 \u0986\u09B0\u09CD\u09A6\u09CD\u09B0 \u09A8\u09B0\u09AE \u09B8\u09C1\u09A4\u09BF \u0995\u09BE\u09AA\u09DC \u09A6\u09BF\u09DF\u09C7 \u09AE\u09C1\u099B\u09C7 \u09AC\u09BE\u09A4\u09BE\u09B8\u09C7 \u09B6\u09C1\u0995\u09BF\u09DF\u09C7 \u09A4\u09BE\u09B0\u09AA\u09B0 \u09B0\u09CB\u09B2 \u0995\u09B0\u09C7 \u09B0\u09BE\u0996\u09C1\u09A8\u0964",
     stock: 65,
     published: 1,
     in_stock: 1
@@ -242,6 +249,7 @@ var seedProducts = [
       { name: "Suitable Age", value: "3-10 Years" },
       { name: "Material", value: "Steel & Durable ABS" }
     ],
+    description: "\u09AC\u09BE\u099A\u09CD\u099A\u09BE\u09A6\u09C7\u09B0 \u099C\u09A8\u09CD\u09AF \u0985\u09CD\u09AF\u09BE\u09A1\u099C\u09BE\u09B8\u09CD\u099F\u09C7\u09AC\u09B2 \u09B9\u09BE\u0987\u099F \u09AC\u09BE\u09B8\u09CD\u0995\u09C7\u099F\u09AC\u09B2 \u09B8\u09CD\u099F\u09CD\u09AF\u09BE\u09A8\u09CD\u09A1 \u09AF\u09BE \u09E9 \u09A5\u09C7\u0995\u09C7 \u09E7\u09E6 \u09AC\u099B\u09B0 \u09AC\u09DF\u09B8\u09C0\u09A6\u09C7\u09B0 \u09B6\u09BE\u09B0\u09C0\u09B0\u09BF\u0995 \u09AC\u09C3\u09A6\u09CD\u09A7\u09BF \u0993 \u0986\u09A8\u09A8\u09CD\u09A6 \u09A6\u09BF\u09A4\u09C7 \u0989\u09AA\u09AF\u09CB\u0997\u09C0\u0964 \u098F\u09B0 \u09B8\u09CD\u099F\u09CD\u09AF\u09BE\u09A8\u09CD\u09A1\u099F\u09BF \u09ED \u09AB\u09C1\u099F \u09AA\u09B0\u09CD\u09AF\u09A8\u09CD\u09A4 \u09AC\u09BE\u09DC\u09BE\u09A8\u09CB \u09AF\u09BE\u09DF\u0964 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE: \u09B8\u09CD\u099F\u09CD\u09AF\u09BE\u09A8\u09CD\u09A1\u09C7\u09B0 \u09A8\u09BF\u099A\u09C7 \u09A5\u09BE\u0995\u09BE \u09AC\u09BE\u09B2\u09A4\u09BF \u09AC\u09BE \u09AC\u09C7\u09B8\u099F\u09BF\u09A4\u09C7 \u09AA\u09BE\u09A8\u09BF \u0985\u09A5\u09AC\u09BE \u09AC\u09BE\u09B2\u09BF \u09AD\u09B0\u09C7 \u09AD\u09BE\u09B0\u09C0 \u0993 \u09B8\u09CD\u09A5\u09BF\u09A4\u09BF\u09B6\u09C0\u09B2 \u0995\u09B0\u09C7 \u09A8\u09BF\u09A8\u0964 \u099B\u09CB\u099F \u09AC\u09BE\u09B8\u09CD\u0995\u09C7\u099F\u09AC\u09B2 \u09A6\u09BF\u09DF\u09C7 \u09AC\u09BE\u0989\u09A8\u09CD\u09B8\u09BF\u0982 \u0993 \u09A1\u09BE\u0995\u09BF\u0982 \u0985\u09A8\u09C1\u09B6\u09C0\u09B2\u09A8 \u0995\u09B0\u09BE\u09A8\u0964",
     stock: 25,
     published: 1,
     in_stock: 1
@@ -622,12 +630,18 @@ function initializeDatabase() {
         revenue REAL DEFAULT 0.0,
         features TEXT,
         specs TEXT,
+        video_url TEXT,
+        photo_content TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
     db.run("ALTER TABLE products ADD COLUMN features TEXT", (err) => {
     });
     db.run("ALTER TABLE products ADD COLUMN specs TEXT", (err) => {
+    });
+    db.run("ALTER TABLE products ADD COLUMN video_url TEXT DEFAULT NULL", (err) => {
+    });
+    db.run("ALTER TABLE products ADD COLUMN photo_content TEXT DEFAULT NULL", (err) => {
     });
     db.run("ALTER TABLE customers ADD COLUMN address TEXT", (err) => {
     });
@@ -639,6 +653,15 @@ function initializeDatabase() {
         product_id TEXT NOT NULL,
         image_url TEXT NOT NULL,
         FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
+      )
+    `);
+    db.run(`
+      CREATE TABLE IF NOT EXISTS ai_queries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        query_text TEXT NOT NULL,
+        reply_text TEXT,
+        model_used TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
     db.run(`
@@ -666,10 +689,15 @@ function initializeDatabase() {
         subtotal REAL NOT NULL,
         status TEXT DEFAULT 'processing',
         assigned_to TEXT DEFAULT NULL,
+        assigned_name TEXT DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
     db.run(`ALTER TABLE orders ADD COLUMN assigned_to TEXT DEFAULT NULL`, (err) => {
+      if (err && !String(err).includes("duplicate column")) {
+      }
+    });
+    db.run(`ALTER TABLE orders ADD COLUMN assigned_name TEXT DEFAULT NULL`, (err) => {
       if (err && !String(err).includes("duplicate column")) {
       }
     });
@@ -683,6 +711,18 @@ function initializeDatabase() {
         code TEXT NOT NULL,
         quantity INTEGER NOT NULL,
         price REAL NOT NULL,
+        FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE CASCADE
+      )
+    `);
+    db.run(`
+      CREATE TABLE IF NOT EXISTS order_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        order_id TEXT NOT NULL,
+        action_type TEXT NOT NULL,
+        old_value TEXT,
+        new_value TEXT,
+        performed_by TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE CASCADE
       )
     `);
@@ -821,6 +861,30 @@ function initializeDatabase() {
             [c.code, c.type, c.value, c.expiry, c.status]
           );
         });
+      }
+    });
+    db.get("SELECT COUNT(*) as count FROM ai_queries", (err, row) => {
+      if (row && row.count === 0) {
+        const seedQueries = [
+          ...Array(15).fill({ q: "\u0995\u09BF \u0995\u09BF \u09AA\u09A3\u09CD\u09AF \u0986\u099B\u09C7?", r: "\u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u0995\u09BE\u099B\u09C7 \u09A1\u09BE\u09AE\u09CD\u09AC\u09C7\u09B2 \u09B8\u09C7\u099F, \u098F\u09AC\u09BF \u09B0\u09CB\u09B2\u09BE\u09B0, \u09AB\u09C1\u099F\u09AC\u09B2, \u09AC\u09CD\u09AF\u09BE\u09A1\u09AE\u09BF\u09A8\u09CD\u099F\u09A8 \u09B0\u09CD\u09AF\u09BE\u0995\u09C7\u099F, \u09B0\u09BE\u09A8\u09BF\u0982 \u099C\u09C1\u09A4\u09CB, \u0985\u09CD\u09AF\u09BE\u09A5\u09B2\u09C7\u099F\u09BF\u0995 \u099C\u09BE\u09B0\u09CD\u09B8\u09BF, \u0987\u09DF\u09CB\u0997\u09BE \u09AE\u09CD\u09AF\u09BE\u099F \u098F\u09AC\u0982 \u09AC\u09BE\u09B8\u09CD\u0995\u09C7\u099F\u09AC\u09B2 \u09B8\u09CD\u099F\u09CD\u09AF\u09BE\u09A8\u09CD\u09A1 \u09B0\u09DF\u09C7\u099B\u09C7\u0964", m: "gemini-2.0-flash" }),
+          ...Array(10).fill({ q: "\u09B8\u09AC\u099A\u09C7\u09AF\u09BC\u09C7 \u0995\u09AE \u09A6\u09BE\u09AE\u09C7\u09B0 \u09AA\u09A3\u09CD\u09AF \u0995\u09CB\u09A8\u099F\u09BF?", r: "\u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u09B8\u09AC\u099A\u09C7\u09DF\u09C7 \u0995\u09AE \u09A6\u09BE\u09AE\u09BF \u09AA\u09A3\u09CD\u09AF \u09B9\u09B2\u09CB \u09A8\u09A8-\u09B8\u09CD\u09B2\u09BF\u09AA \u09EE\u09AE\u09BF\u09AE\u09BF \u0987\u09DF\u09CB\u0997\u09BE \u09AE\u09CD\u09AF\u09BE\u099F, \u09AF\u09BE\u09B0 \u09AE\u09C2\u09B2\u09CD\u09AF \u09AE\u09BE\u09A4\u09CD\u09B0 \u09F3\u09EF\u09EB\u09E6\u0964", m: "gemini-2.0-flash" }),
+          ...Array(8).fill({ q: "Badminton racket price", r: "The Professional Carbon Fiber Badminton Racket is priced at \u09F32,800 (discounted from \u09F33,500).", m: "gemini-1.5-flash" }),
+          ...Array(6).fill({ q: "Running shoes how to wear?", r: "\u09AA\u09B0\u09BF\u09A7\u09BE\u09A8\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE: \u09B8\u09A0\u09BF\u0995 \u09AE\u09BE\u09AA\u09C7\u09B0 \u09AE\u09CB\u099C\u09BE \u09AA\u09B0\u09C1\u09A8, \u09AB\u09BF\u09A4\u09BE\u0997\u09C1\u09B2\u09CB \u099F\u09BE\u0987\u099F \u09A6\u09BF\u09DF\u09C7 \u09AC\u09BE\u0981\u09A7\u09C1\u09A8\u0964 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09AA\u09B0 \u09B6\u09C1\u0995\u09A8\u09CB \u0993 \u09AA\u09B0\u09BF\u09B7\u09CD\u0995\u09BE\u09B0 \u09B8\u09CD\u09A5\u09BE\u09A8\u09C7 \u09B0\u09BE\u0996\u09C1\u09A8\u0964", m: "gemini-2.0-flash" }),
+          ...Array(5).fill({ q: "Dumbbell weight details", r: "The Hex Dumbbells Set has a total weight of 20kg (10kg each dumbbell).", m: "gemini-1.5-flash" }),
+          ...Array(4).fill({ q: "How to use AB Roller?", r: "\u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE: \u09B9\u09BE\u0981\u099F\u09C1 \u0997\u09C7\u09DC\u09C7 \u09AC\u09B8\u09C1\u09A8, \u09B0\u09CB\u09B2\u09BE\u09B0 \u09B8\u09BE\u09AE\u09A8\u09C7\u09B0 \u09A6\u09BF\u0995\u09C7 \u0997\u09DC\u09BF\u09DF\u09C7 \u09A8\u09BF\u09A8 \u098F\u09AC\u0982 \u09AA\u09C7\u099F\u09C7 \u09AA\u09CD\u09B0\u09C7\u09B6\u09BE\u09B0 \u09B0\u09C7\u0996\u09C7 \u09AA\u09C7\u099B\u09A8\u09C7\u09B0 \u09A6\u09BF\u0995\u09C7 \u099F\u09C7\u09A8\u09C7 \u0986\u09A8\u09C1\u09A8\u0964", m: "gemini-2.0-flash" }),
+          ...Array(4).fill({ q: "Yoga mat thickness", r: "\u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u0987\u09DF\u09CB\u0997\u09BE \u09AE\u09CD\u09AF\u09BE\u099F\u099F\u09BF \u09EE \u09AE\u09BF\u09AE\u09BF (8mm) \u09AA\u09C1\u09B0\u09C1, \u09AF\u09BE \u0986\u09AA\u09A8\u09BE\u0995\u09C7 \u09A6\u09BE\u09B0\u09C1\u09A3 \u0995\u09C1\u09B6\u09A8\u09BF\u0982 \u09B8\u09BE\u09AA\u09CB\u09B0\u09CD\u099F \u09A6\u09C7\u09AC\u09C7\u0964", m: "gemini-2.0-flash" }),
+          ...Array(3).fill({ q: "Puma football features", r: "\u09AB\u09BF\u099A\u09BE\u09B0\u09B8\u09AE\u09C2\u09B9: \u099F\u09C7\u0995\u09CD\u09B8\u099A\u09BE\u09B0\u09CD\u09A1 \u0995\u09CD\u09AF\u09BE\u09B8\u09BF\u0982, \u09B9\u09BE\u0987-\u09A1\u09C7\u09A8\u09B8\u09BF\u099F\u09BF \u09B0\u09BE\u09AC\u09BE\u09B0 \u09AC\u09CD\u09B2\u09CD\u09AF\u09BE\u09A1\u09BE\u09B0 \u098F\u09AC\u0982 \u099A\u09AE\u09CE\u0995\u09BE\u09B0 \u09B8\u09CD\u09A5\u09BE\u09DF\u09BF\u09A4\u09CD\u09AC\u0964", m: "gemini-1.5-flash" })
+        ];
+        const now = /* @__PURE__ */ new Date();
+        seedQueries.forEach((item, idx) => {
+          const staggeredDate = new Date(now.getTime() - idx * 2 * 3600 * 1e3);
+          const formattedDate = staggeredDate.toISOString().slice(0, 19).replace("T", " ");
+          db.run(
+            "INSERT INTO ai_queries (query_text, reply_text, model_used, created_at) VALUES (?, ?, ?, ?)",
+            [item.q, item.r, item.m, formattedDate]
+          );
+        });
+        console.log("\u{1F331} Seeded default AI chatbot query logs for analytics.");
       }
     });
     db.get("SELECT COUNT(*) as count FROM customers", (err, row) => {
@@ -1483,7 +1547,9 @@ var getProducts = async (req, res) => {
           features,
           specs,
           published: row.published === 1,
-          in_stock: row.in_stock === 1
+          in_stock: row.in_stock === 1,
+          video_url: row.video_url || null,
+          photo_content: row.photo_content || null
         };
       });
       cacheService.set(cacheKey, parsedRows, 300).catch(console.error);
@@ -1530,7 +1596,9 @@ var getProductById = async (req, res) => {
           specs,
           published: product.published === 1,
           in_stock: product.in_stock === 1,
-          gallery: gallery.length > 0 ? gallery : [product.image]
+          gallery: gallery.length > 0 ? gallery : [product.image],
+          video_url: product.video_url || null,
+          photo_content: product.photo_content || null
         };
         cacheService.set(cacheKey, resultData, 300).catch(console.error);
         res.json({ status: "success", data: resultData });
@@ -1542,7 +1610,7 @@ var getProductById = async (req, res) => {
   }
 };
 var createProduct = (req, res) => {
-  const { name, slug, sku, brand, category, price, original_price, image, description, stock, published, features, specs, gallery } = req.body;
+  const { name, slug, sku, brand, category, price, original_price, image, description, stock, published, features, specs, gallery, videoUrl, photoContent } = req.body;
   const id = "PRD-" + Math.random().toString(36).substring(2, 8).toUpperCase();
   db_default.run("BEGIN TRANSACTION", (txErr) => {
     if (txErr) {
@@ -1550,8 +1618,8 @@ var createProduct = (req, res) => {
       return res.status(500).json({ status: "error", message: "Database error" });
     }
     db_default.run(
-      `INSERT INTO products (id, name, slug, sku, brand, category, price, original_price, image, description, stock, published, features, specs)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO products (id, name, slug, sku, brand, category, price, original_price, image, description, stock, published, features, specs, video_url, photo_content)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         name,
@@ -1566,7 +1634,9 @@ var createProduct = (req, res) => {
         stock || 0,
         published ? 1 : 0,
         JSON.stringify(features || []),
-        JSON.stringify(specs || [])
+        JSON.stringify(specs || []),
+        videoUrl || null,
+        photoContent || null
       ],
       function(err) {
         if (err) {
@@ -1626,7 +1696,7 @@ var createProduct = (req, res) => {
 };
 var updateProduct = (req, res) => {
   const { id } = req.params;
-  const { name, price, original_price, stock, description, image, brand, category, published, features, specs, gallery } = req.body;
+  const { name, price, original_price, stock, description, image, brand, category, published, features, specs, gallery, videoUrl, photoContent } = req.body;
   db_default.run("BEGIN TRANSACTION", (txErr) => {
     if (txErr) {
       console.error("Failed to start transaction:", txErr);
@@ -1644,7 +1714,9 @@ var updateProduct = (req, res) => {
            category = COALESCE(?, category),
            published = COALESCE(?, published),
            features = COALESCE(?, features),
-           specs = COALESCE(?, specs)
+           specs = COALESCE(?, specs),
+           video_url = COALESCE(?, video_url),
+           photo_content = COALESCE(?, photo_content)
        WHERE id = ?`,
       [
         name,
@@ -1658,6 +1730,8 @@ var updateProduct = (req, res) => {
         published === void 0 ? null : published ? 1 : 0,
         features ? JSON.stringify(features) : null,
         specs ? JSON.stringify(specs) : null,
+        videoUrl === void 0 ? null : videoUrl,
+        photoContent === void 0 ? null : photoContent,
         id
       ],
       function(err) {
@@ -1834,6 +1908,18 @@ var products_default = router2;
 import { Router as Router3 } from "express";
 
 // backend/controllers/ordersController.ts
+var logOrderHistory = (orderId, actionType, oldValue, newValue, performedBy) => {
+  db_default.run(
+    `INSERT INTO order_history (order_id, action_type, old_value, new_value, performed_by)
+     VALUES (?, ?, ?, ?, ?)`,
+    [orderId, actionType, oldValue, newValue, performedBy],
+    (err) => {
+      if (err) {
+        console.error("Failed to log order history:", err);
+      }
+    }
+  );
+};
 var getOrders = (req, res) => {
   db_default.all(
     `SELECT o.*, e.first_name as assigned_first_name, e.last_name as assigned_last_name 
@@ -1856,9 +1942,11 @@ var getOrders = (req, res) => {
         }
         const ordersWithItems = orderRows.map((order) => {
           const items = itemRows ? itemRows.filter((item) => item.order_id === order.id) : [];
+          const storedName = order.assigned_name;
+          const joinedName = order.assigned_first_name && order.assigned_last_name ? `${order.assigned_first_name} ${order.assigned_last_name}`.trim() : null;
           return {
             ...order,
-            assigned_name: order.assigned_first_name && order.assigned_last_name ? `${order.assigned_first_name} ${order.assigned_last_name}`.trim() : null,
+            assigned_name: storedName || joinedName,
             productsList: items.map((item) => ({
               name: item.product_name,
               color: item.color,
@@ -1995,6 +2083,8 @@ var createOrder = (req, res) => {
                         return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
                       }
                       cacheService.del("dashboard:stats").catch(console.error);
+                      const performedBy = req.user ? `${req.user.name} (${req.user.role})` : "Customer";
+                      logOrderHistory(id, "create", null, "processing", performedBy);
                       res.json({ status: "success", message: "Order created successfully", data: { id } });
                     });
                   });
@@ -2012,6 +2102,8 @@ var createOrder = (req, res) => {
               return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
             }
             cacheService.del("dashboard:stats").catch(console.error);
+            const performedBy = req.user ? `${req.user.name} (${req.user.role})` : "Customer";
+            logOrderHistory(id, "create", null, "processing", performedBy);
             res.json({ status: "success", message: "Order created successfully", data: { id } });
           });
         }
@@ -2020,19 +2112,28 @@ var createOrder = (req, res) => {
   });
 };
 var updateOrderStatus = (req, res) => {
-  const { id } = req.params;
+  const id = req.params.id;
   const { status } = req.body;
-  db_default.run(`UPDATE orders SET status = ? WHERE id = ?`, [status, id], function(err) {
+  db_default.get(`SELECT status FROM orders WHERE id = ?`, [id], (err, row) => {
     if (err) {
       console.error(err);
       return res.status(500).json({ status: "error", message: "Database error" });
     }
-    cacheService.del("dashboard:stats").catch(console.error);
-    res.json({ status: "success", message: "Order status updated" });
+    const oldStatus = row ? row.status : "unknown";
+    db_default.run(`UPDATE orders SET status = ? WHERE id = ?`, [status, id], function(err2) {
+      if (err2) {
+        console.error(err2);
+        return res.status(500).json({ status: "error", message: "Database error" });
+      }
+      cacheService.del("dashboard:stats").catch(console.error);
+      const performedBy = req.user ? `${req.user.name} (${req.user.role})` : "System";
+      logOrderHistory(id, "status_change", oldStatus, status, performedBy);
+      res.json({ status: "success", message: "Order status updated" });
+    });
   });
 };
 var updateOrder = (req, res) => {
-  const { id } = req.params;
+  const id = req.params.id;
   const {
     customer,
     email,
@@ -2057,130 +2158,163 @@ var updateOrder = (req, res) => {
     status,
     productsList
   } = req.body;
-  db_default.run("BEGIN TRANSACTION", (txErr) => {
-    if (txErr) {
-      console.error("Failed to start transaction:", txErr);
+  db_default.get(`SELECT status, shop_note FROM orders WHERE id = ?`, [id], (err, oldOrder) => {
+    if (err) {
+      console.error("Error fetching old order details:", err);
       return res.status(500).json({ status: "error", message: "Database error" });
     }
-    db_default.run(
-      `UPDATE orders 
-       SET customer = ?, email = ?, amount = ?, items = ?, payment_method = ?, store_name = ?, phone = ?, address = ?, 
-           courier = ?, city = ?, thana = ?, area = ?, customer_note = ?, shop_note = ?, payment_type = ?, memo_number = ?, 
-           delivery_charge = ?, discount = ?, paid_amount = ?, subtotal = ?, status = ?
-       WHERE id = ?`,
-      [
-        customer,
-        email,
-        amount,
-        items,
-        paymentMethod,
-        storeName,
-        phone,
-        address,
-        courier,
-        city,
-        thana,
-        area,
-        customerNote,
-        shopNote,
-        paymentType,
-        memoNumber,
-        deliveryCharge,
-        discount,
-        paidAmount,
-        subtotal,
-        status,
-        id
-      ],
-      function(err) {
-        if (err) {
-          console.error("Error updating order:", err);
-          db_default.run("ROLLBACK", (rbErr) => {
-            if (rbErr) console.error("Error rolling back transaction:", rbErr);
-          });
-          return res.status(500).json({ status: "error", message: "Failed to update order in database" });
-        }
-        db_default.run("DELETE FROM order_items WHERE order_id = ?", [id], (deleteErr) => {
-          if (deleteErr) {
-            console.error("Error deleting order items:", deleteErr);
+    const oldStatus = oldOrder ? oldOrder.status : "unknown";
+    const oldShopNote = oldOrder ? oldOrder.shop_note : "";
+    db_default.run("BEGIN TRANSACTION", (txErr) => {
+      if (txErr) {
+        console.error("Failed to start transaction:", txErr);
+        return res.status(500).json({ status: "error", message: "Database error" });
+      }
+      db_default.run(
+        `UPDATE orders 
+         SET customer = ?, email = ?, amount = ?, items = ?, payment_method = ?, store_name = ?, phone = ?, address = ?, 
+             courier = ?, city = ?, thana = ?, area = ?, customer_note = ?, shop_note = ?, payment_type = ?, memo_number = ?, 
+             delivery_charge = ?, discount = ?, paid_amount = ?, subtotal = ?, status = ?
+         WHERE id = ?`,
+        [
+          customer,
+          email,
+          amount,
+          items,
+          paymentMethod,
+          storeName,
+          phone,
+          address,
+          courier,
+          city,
+          thana,
+          area,
+          customerNote,
+          shopNote,
+          paymentType,
+          memoNumber,
+          deliveryCharge,
+          discount,
+          paidAmount,
+          subtotal,
+          status,
+          id
+        ],
+        function(err2) {
+          if (err2) {
+            console.error("Error updating order:", err2);
             db_default.run("ROLLBACK", (rbErr) => {
               if (rbErr) console.error("Error rolling back transaction:", rbErr);
             });
-            return res.status(500).json({ status: "error", message: "Failed to update order items" });
+            return res.status(500).json({ status: "error", message: "Failed to update order in database" });
           }
-          if (productsList && Array.isArray(productsList) && productsList.length > 0) {
-            const stmt = db_default.prepare(
-              `INSERT INTO order_items (order_id, product_name, color, size, code, quantity, price) 
-               VALUES (?, ?, ?, ?, ?, ?, ?)`
-            );
-            let hasError = false;
-            let pending = productsList.length;
-            productsList.forEach((item) => {
-              stmt.run(
-                [id, item.name, item.color || "Default", item.size || "Free Size", item.code, item.quantity, item.price],
-                (runErr) => {
-                  if (runErr) {
-                    console.error("Error updating order item:", runErr);
-                    hasError = true;
-                  }
-                  pending--;
-                  if (pending === 0) {
-                    stmt.finalize((finalizeErr) => {
-                      if (hasError || finalizeErr) {
-                        db_default.run("ROLLBACK", (rbErr) => {
-                          if (rbErr) console.error("Error rolling back transaction:", rbErr);
-                        });
-                        return res.status(500).json({ status: "error", message: "Failed to insert updated order items" });
-                      }
-                      db_default.run("COMMIT", (commitErr) => {
-                        if (commitErr) {
-                          console.error("Error committing transaction:", commitErr);
+          db_default.run("DELETE FROM order_items WHERE order_id = ?", [id], (deleteErr) => {
+            if (deleteErr) {
+              console.error("Error deleting order items:", deleteErr);
+              db_default.run("ROLLBACK", (rbErr) => {
+                if (rbErr) console.error("Error rolling back transaction:", rbErr);
+              });
+              return res.status(500).json({ status: "error", message: "Failed to update order items" });
+            }
+            if (productsList && Array.isArray(productsList) && productsList.length > 0) {
+              const stmt = db_default.prepare(
+                `INSERT INTO order_items (order_id, product_name, color, size, code, quantity, price) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`
+              );
+              let hasError = false;
+              let pending = productsList.length;
+              productsList.forEach((item) => {
+                stmt.run(
+                  [id, item.name, item.color || "Default", item.size || "Free Size", item.code, item.quantity, item.price],
+                  (runErr) => {
+                    if (runErr) {
+                      console.error("Error updating order item:", runErr);
+                      hasError = true;
+                    }
+                    pending--;
+                    if (pending === 0) {
+                      stmt.finalize((finalizeErr) => {
+                        if (hasError || finalizeErr) {
                           db_default.run("ROLLBACK", (rbErr) => {
                             if (rbErr) console.error("Error rolling back transaction:", rbErr);
                           });
-                          return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
+                          return res.status(500).json({ status: "error", message: "Failed to insert updated order items" });
                         }
-                        cacheService.del("dashboard:stats").catch(console.error);
-                        res.json({ status: "success", message: "Order updated successfully" });
+                        db_default.run("COMMIT", (commitErr) => {
+                          if (commitErr) {
+                            console.error("Error committing transaction:", commitErr);
+                            db_default.run("ROLLBACK", (rbErr) => {
+                              if (rbErr) console.error("Error rolling back transaction:", rbErr);
+                            });
+                            return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
+                          }
+                          cacheService.del("dashboard:stats").catch(console.error);
+                          const performedBy = req.user ? `${req.user.name} (${req.user.role})` : "System";
+                          if (oldStatus !== status) {
+                            logOrderHistory(id, "status_change", oldStatus, status, performedBy);
+                          }
+                          if (oldShopNote !== shopNote) {
+                            logOrderHistory(id, "shop_note", oldShopNote || null, shopNote || null, performedBy);
+                          }
+                          res.json({ status: "success", message: "Order updated successfully" });
+                        });
                       });
-                    });
+                    }
                   }
+                );
+              });
+            } else {
+              db_default.run("COMMIT", (commitErr) => {
+                if (commitErr) {
+                  console.error("Error committing transaction:", commitErr);
+                  db_default.run("ROLLBACK", (rbErr) => {
+                    if (rbErr) console.error("Error rolling back transaction:", rbErr);
+                  });
+                  return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
                 }
-              );
-            });
-          } else {
-            db_default.run("COMMIT", (commitErr) => {
-              if (commitErr) {
-                console.error("Error committing transaction:", commitErr);
-                db_default.run("ROLLBACK", (rbErr) => {
-                  if (rbErr) console.error("Error rolling back transaction:", rbErr);
-                });
-                return res.status(500).json({ status: "error", message: "Failed to commit transaction" });
-              }
-              cacheService.del("dashboard:stats").catch(console.error);
-              res.json({ status: "success", message: "Order updated successfully" });
-            });
-          }
-        });
-      }
-    );
+                cacheService.del("dashboard:stats").catch(console.error);
+                const performedBy = req.user ? `${req.user.name} (${req.user.role})` : "System";
+                if (oldStatus !== status) {
+                  logOrderHistory(id, "status_change", oldStatus, status, performedBy);
+                }
+                if (oldShopNote !== shopNote) {
+                  logOrderHistory(id, "shop_note", oldShopNote || null, shopNote || null, performedBy);
+                }
+                res.json({ status: "success", message: "Order updated successfully" });
+              });
+            }
+          });
+        }
+      );
+    });
   });
 };
 var syncOrders = (req, res) => {
   db_default.all(
-    `SELECT e.id, e.first_name, e.last_name 
+    `SELECT e.id, e.first_name, e.last_name, r.name as role
      FROM employees e 
      JOIN roles r ON e.role_id = r.id 
-     WHERE r.name = 'Moderator' AND e.status = 'active'
+     WHERE e.status = 'active'
      ORDER BY e.first_name ASC`,
     [],
-    (err, moderators) => {
+    (err, activeEmployees) => {
       if (err) {
-        console.error("Error fetching moderators:", err);
+        console.error("Error fetching active employees:", err);
         return res.status(500).json({ status: "error", message: "Database error" });
       }
-      if (!moderators || moderators.length === 0) {
-        return res.status(400).json({ status: "error", message: "No active moderators found. Please add moderators first." });
+      let assignees = activeEmployees || [];
+      const adminUser = req.user;
+      if (assignees.length === 0 && adminUser) {
+        const nameParts = (adminUser.name || "").split(" ");
+        assignees = [{
+          id: adminUser.id,
+          first_name: nameParts[0] || "Admin",
+          last_name: nameParts.slice(1).join(" ") || "",
+          role: adminUser.role || "Admin"
+        }];
+      }
+      if (assignees.length === 0) {
+        return res.status(400).json({ status: "error", message: "\u0995\u09CB\u09A8\u09CB active employee \u09AA\u09BE\u0993\u09AF\u09BC\u09BE \u09AF\u09BE\u09AF\u09BC\u09A8\u09BF \u098F\u09AC\u0982 admin \u09A4\u09A5\u09CD\u09AF\u0993 \u09AA\u09BE\u0993\u09AF\u09BC\u09BE \u09AF\u09BE\u09AF\u09BC\u09A8\u09BF\u0964" });
       }
       db_default.all(
         `SELECT id FROM orders WHERE assigned_to IS NULL AND status = 'processing' ORDER BY created_at ASC`,
@@ -2191,7 +2325,7 @@ var syncOrders = (req, res) => {
             return res.status(500).json({ status: "error", message: "Database error" });
           }
           if (!unassignedOrders || unassignedOrders.length === 0) {
-            return res.json({ status: "success", message: "No unassigned orders to sync", data: { assigned: 0 } });
+            return res.json({ status: "success", message: "\u0995\u09CB\u09A8\u09CB unassigned order \u09A8\u09C7\u0987", data: { assigned: 0 } });
           }
           db_default.run("BEGIN TRANSACTION", (txErr) => {
             if (txErr) {
@@ -2202,14 +2336,18 @@ var syncOrders = (req, res) => {
             let hasError = false;
             const totalOrders = unassignedOrders.length;
             unassignedOrders.forEach((order, index) => {
-              const moderator = moderators[index % moderators.length];
+              const employee = assignees[index % assignees.length];
+              const assignedName = `${employee.first_name} ${employee.last_name}`.trim();
               db_default.run(
-                `UPDATE orders SET assigned_to = ? WHERE id = ?`,
-                [moderator.id, order.id],
+                `UPDATE orders SET assigned_to = ?, assigned_name = ? WHERE id = ?`,
+                [employee.id, assignedName, order.id],
                 (updateErr) => {
                   if (updateErr) {
                     console.error("Error assigning order:", updateErr);
                     hasError = true;
+                  } else {
+                    const performedBy = req.user ? `${req.user.name} (${req.user.role})` : "System";
+                    logOrderHistory(order.id, "assignment", null, assignedName, performedBy);
                   }
                   completed++;
                   if (completed === totalOrders) {
@@ -2230,10 +2368,10 @@ var syncOrders = (req, res) => {
                       cacheService.del("dashboard:stats").catch(console.error);
                       res.json({
                         status: "success",
-                        message: `${totalOrders} orders synced to ${moderators.length} moderators`,
+                        message: `${totalOrders} \u099F\u09BF \u0985\u09B0\u09CD\u09A1\u09BE\u09B0 ${assignees.length} \u099C\u09A8 employee \u098F\u09B0 \u09AE\u09A7\u09CD\u09AF\u09C7 assign \u09B9\u09AF\u09BC\u09C7\u099B\u09C7`,
                         data: {
                           assigned: totalOrders,
-                          moderators: moderators.map((m) => `${m.first_name} ${m.last_name}`.trim())
+                          employees: assignees.map((m) => `${m.first_name} ${m.last_name}`.trim())
                         }
                       });
                     });
@@ -2248,36 +2386,67 @@ var syncOrders = (req, res) => {
   );
 };
 var assignOrder = (req, res) => {
-  const { id } = req.params;
+  const id = req.params.id;
   const { assignedTo } = req.body;
-  db_default.run(
-    `UPDATE orders SET assigned_to = ? WHERE id = ?`,
-    [assignedTo || null, id],
-    function(err) {
-      if (err) {
-        console.error("Error assigning order:", err);
-        return res.status(500).json({ status: "error", message: "Failed to assign order" });
-      }
-      if (assignedTo) {
-        db_default.get(
-          `SELECT first_name, last_name FROM employees WHERE id = ?`,
-          [assignedTo],
-          (err2, emp) => {
-            const assignedName = emp ? `${emp.first_name} ${emp.last_name}`.trim() : null;
-            res.json({
-              status: "success",
-              message: "Order assigned successfully",
-              data: { assigned_to: assignedTo, assigned_name: assignedName }
-            });
+  db_default.get(`SELECT assigned_name FROM orders WHERE id = ?`, [id], (err, orderRow) => {
+    const oldAssigneeName = orderRow ? orderRow.assigned_name : null;
+    if (assignedTo) {
+      db_default.get(
+        `SELECT first_name, last_name FROM employees WHERE id = ?`,
+        [assignedTo],
+        (err2, emp) => {
+          const assignedName = emp ? `${emp.first_name} ${emp.last_name}`.trim() : null;
+          db_default.run(
+            `UPDATE orders SET assigned_to = ?, assigned_name = ? WHERE id = ?`,
+            [assignedTo, assignedName, id],
+            function(updateErr) {
+              if (updateErr) {
+                console.error("Error assigning order:", updateErr);
+                return res.status(500).json({ status: "error", message: "Failed to assign order" });
+              }
+              const performedBy = req.user ? `${req.user.name} (${req.user.role})` : "System";
+              logOrderHistory(id, "assignment", oldAssigneeName, assignedName, performedBy);
+              res.json({
+                status: "success",
+                message: "Order assigned successfully",
+                data: { assigned_to: assignedTo, assigned_name: assignedName }
+              });
+            }
+          );
+        }
+      );
+    } else {
+      db_default.run(
+        `UPDATE orders SET assigned_to = NULL, assigned_name = NULL WHERE id = ?`,
+        [id],
+        function(err2) {
+          if (err2) {
+            console.error("Error unassigning order:", err2);
+            return res.status(500).json({ status: "error", message: "Failed to unassign order" });
           }
-        );
-      } else {
-        res.json({
-          status: "success",
-          message: "Order unassigned successfully",
-          data: { assigned_to: null, assigned_name: null }
-        });
+          const performedBy = req.user ? `${req.user.name} (${req.user.role})` : "System";
+          logOrderHistory(id, "assignment", oldAssigneeName, "Unassigned", performedBy);
+          res.json({
+            status: "success",
+            message: "Order unassigned successfully",
+            data: { assigned_to: null, assigned_name: null }
+          });
+        }
+      );
+    }
+  });
+};
+var getOrderHistory = (req, res) => {
+  const { id } = req.params;
+  db_default.all(
+    `SELECT * FROM order_history WHERE order_id = ? ORDER BY created_at DESC`,
+    [id],
+    (err, rows) => {
+      if (err) {
+        console.error("Error fetching order history:", err);
+        return res.status(500).json({ status: "error", message: "Database error" });
       }
+      res.json({ status: "success", data: rows || [] });
     }
   );
 };
@@ -2287,6 +2456,7 @@ var router3 = Router3();
 router3.post("/", createOrder);
 router3.get("/", authenticateToken, requireRole(["Super Admin", "Admin", "Staff", "Moderator"]), getOrders);
 router3.get("/:id", authenticateToken, requireRole(["Super Admin", "Admin", "Staff", "Moderator"]), getOrderById);
+router3.get("/:id/history", authenticateToken, requireRole(["Super Admin", "Admin", "Staff", "Moderator"]), getOrderHistory);
 router3.put("/:id", authenticateToken, requireRole(["Super Admin", "Admin", "Staff"]), updateOrder);
 router3.put("/:id/status", authenticateToken, requireRole(["Super Admin", "Admin", "Staff", "Moderator"]), updateOrderStatus);
 router3.post("/sync", authenticateToken, requireRole(["Super Admin", "Admin"]), syncOrders);
@@ -3296,11 +3466,6 @@ var chatWithAI = async (req, res) => {
     if (message.trim().length > 2e3) {
       return res.status(400).json({ status: "error", message: "Message too long (max 2000 characters)" });
     }
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.error("GEMINI_API_KEY is not set in environment variables");
-      return res.status(500).json({ status: "error", message: "AI service is not configured" });
-    }
     const products = await new Promise((resolve, reject) => {
       db_default.all(`SELECT * FROM products WHERE published = 1`, [], (err, rows) => {
         if (err) {
@@ -3329,6 +3494,22 @@ var chatWithAI = async (req, res) => {
         }
       });
     });
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.warn("GEMINI_API_KEY is not set in environment variables. Operating in Local AI mode.");
+      const localReply2 = generateLocalAIResponse(message.trim(), products);
+      db_default.run(
+        `INSERT INTO ai_queries (query_text, reply_text, model_used) VALUES (?, ?, ?)`,
+        [message.trim(), localReply2, "Local-Heuristic-Mode"]
+      );
+      return res.json({
+        status: "success",
+        data: {
+          reply: localReply2,
+          role: "model"
+        }
+      });
+    }
     const storeName = "AURA Sports";
     const systemPrompt = buildSystemPrompt(products, storeName);
     const contents = [];
@@ -3395,6 +3576,10 @@ var chatWithAI = async (req, res) => {
           continue;
         }
         console.log(`AI response generated successfully using model: ${model}`);
+        db_default.run(
+          `INSERT INTO ai_queries (query_text, reply_text, model_used) VALUES (?, ?, ?)`,
+          [message.trim(), aiText, model]
+        );
         return res.json({
           status: "success",
           data: {
@@ -3408,17 +3593,239 @@ var chatWithAI = async (req, res) => {
         continue;
       }
     }
-    console.error("All Gemini models failed. Last error:", lastError);
-    return res.status(502).json({ status: "error", message: "AI service temporarily unavailable. Please try again later." });
+    console.warn("All Gemini models failed. Falling back to Local AI mode. Error:", lastError);
+    const localReply = generateLocalAIResponse(message.trim(), products);
+    db_default.run(
+      `INSERT INTO ai_queries (query_text, reply_text, model_used) VALUES (?, ?, ?)`,
+      [message.trim(), localReply, "Local-Fallback-Mode"]
+    );
+    return res.json({
+      status: "success",
+      data: {
+        reply: localReply,
+        role: "model"
+      }
+    });
   } catch (error) {
     console.error("AI Chat Error:", error);
     res.status(500).json({ status: "error", message: "Internal server error" });
   }
 };
+var getAIAnalytics = async (req, res) => {
+  try {
+    db_default.all(`SELECT DATE(created_at) as date, COUNT(*) as count FROM ai_queries GROUP BY DATE(created_at) ORDER BY date ASC LIMIT 30`, [], (err, dailyRows) => {
+      if (err) return res.status(500).json({ status: "error", message: err.message });
+      db_default.all(`SELECT query_text as query, COUNT(*) as count FROM ai_queries GROUP BY query_text ORDER BY count DESC LIMIT 8`, [], (err2, popularRows) => {
+        if (err2) return res.status(500).json({ status: "error", message: err2.message });
+        db_default.get(`SELECT COUNT(*) as total FROM ai_queries`, [], (err3, totalRow) => {
+          if (err3) return res.status(500).json({ status: "error", message: err3.message });
+          db_default.all(`SELECT model_used as model, COUNT(*) as count FROM ai_queries GROUP BY model_used`, [], (err4, modelRows) => {
+            if (err4) return res.status(500).json({ status: "error", message: err4.message });
+            res.json({
+              status: "success",
+              data: {
+                dailyVolume: dailyRows || [],
+                popularQuestions: popularRows || [],
+                totalQueries: totalRow ? totalRow.total : 0,
+                modelDistribution: modelRows || []
+              }
+            });
+          });
+        });
+      });
+    });
+  } catch (error) {
+    console.error("Failed to get AI analytics:", error);
+    res.status(500).json({ status: "error", message: "Internal server error" });
+  }
+};
+function generateLocalAIResponse(message, products) {
+  const query = message.toLowerCase().trim();
+  const isAskingForUse = query.includes("use") || query.includes("kivabe") || query.includes("\u0995\u09BF\u09AD\u09BE\u09AC\u09C7") || query.includes("\u09A8\u09BF\u09DF\u09AE") || query.includes("rules") || query.includes("kaj") || query.includes("\u0995\u09BE\u099C") || query.includes("\u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0") || query.includes("work") || query.includes("hobe");
+  const isAskingForBenefits = query.includes("upokarita") || query.includes("\u0989\u09AA\u0995\u09BE\u09B0") || query.includes("\u09B8\u09C1\u09AC\u09BF\u09A7\u09BE") || query.includes("benefit") || query.includes("feature") || query.includes("\u09AB\u09BF\u099A\u09BE\u09B0");
+  const isAskingForSpecs = query.includes("spec") || query.includes("\u09AE\u09BE\u09AA") || query.includes("size") || query.includes("\u09B8\u09BE\u0987\u099C") || query.includes("material") || query.includes("\u0989\u09AA\u09BE\u09A6\u09BE\u09A8") || query.includes("\u09AC\u09BF\u09AC\u09B0\u09A3") || query.includes("details") || query.includes("\u09AC\u09BF\u09B8\u09CD\u09A4\u09BE\u09B0\u09BF\u09A4");
+  const isAskingForPrice = query.includes("price") || query.includes("\u09A6\u09BE\u09AE") || query.includes("\u0995\u09A4") || query.includes("\u099F\u09BE\u0995\u09BE") || query.includes("cost");
+  const isAskingForStock = query.includes("stock") || query.includes("\u0986\u099B\u09C7") || query.includes("\u09AA\u09BE\u09AC") || query.includes("\u09AA\u09BE\u0993\u09AF\u09BC\u09BE");
+  const buildTailoredResponse = (product) => {
+    const inStock = product.in_stock === 1 || product.in_stock === true || product.stock > 0;
+    if (isAskingForUse) {
+      let reply2 = `**${product.name}** \u098F\u09B0 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE \u0993 \u0995\u09BE\u099C\u09C7\u09B0 \u09AC\u09BF\u09AC\u09B0\u09A3:
+
+`;
+      if (product.description) {
+        reply2 += `**\u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE \u0993 \u09AA\u09B0\u09BE\u09AE\u09B0\u09CD\u09B6:** ${product.description}
+
+`;
+      } else {
+        reply2 += `\u09AA\u09A3\u09CD\u09AF\u099F\u09BF \u09A8\u09BF\u09B0\u09BE\u09AA\u09A6\u09C7 \u098F\u09AC\u0982 \u09A6\u0995\u09CD\u09B7\u09A4\u09BE\u09B0 \u09B8\u09BE\u09A5\u09C7 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u099C\u09A8\u09CD\u09AF \u09AA\u09CD\u09AF\u09BE\u0995\u09C7\u099C\u09C7\u09B0 \u0997\u09BE\u09DF\u09C7 \u09A5\u09BE\u0995\u09BE \u09A8\u09BF\u09B0\u09CD\u09A6\u09C7\u09B6\u09A8\u09BE\u09AC\u09B2\u09C0 \u0985\u09A8\u09C1\u09B8\u09B0\u09A3 \u0995\u09B0\u09C1\u09A8\u0964 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09B8\u09AE\u09DF \u0995\u09CB\u09A8\u09CB \u09B8\u09AE\u09B8\u09CD\u09AF\u09BE\u09DF \u09AA\u09DC\u09B2\u09C7 \u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u09B9\u09C7\u09B2\u09CD\u09AA\u09B2\u09BE\u0987\u09A8\u09C7 \u09AF\u09CB\u0997\u09BE\u09AF\u09CB\u0997 \u0995\u09B0\u09A4\u09C7 \u09AA\u09BE\u09B0\u09C7\u09A8\u0964
+
+`;
+      }
+      if (product.features && product.features.length > 0) {
+        reply2 += `**\u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09B8\u09C1\u09AC\u09BF\u09A7\u09BE \u0993 \u09AC\u09C8\u09B6\u09BF\u09B7\u09CD\u099F\u09CD\u09AF\u09B8\u09AE\u09C2\u09B9:**
+`;
+        product.features.forEach((f) => {
+          reply2 += `- ${f}
+`;
+        });
+      }
+      return reply2;
+    }
+    if (isAskingForBenefits) {
+      let reply2 = `**${product.name}** \u098F\u09B0 \u0989\u09AA\u0995\u09BE\u09B0\u09BF\u09A4\u09BE \u0993 \u09AC\u09BF\u09B6\u09C7\u09B7 \u09AB\u09BF\u099A\u09BE\u09B0\u09B8\u09AE\u09C2\u09B9:
+
+`;
+      if (product.features && product.features.length > 0) {
+        product.features.forEach((f) => {
+          reply2 += `- ${f}
+`;
+        });
+      } else if (product.description) {
+        reply2 += `${product.description}
+`;
+      } else {
+        reply2 += `\u098F\u099F\u09BF \u098F\u0995\u099F\u09BF \u0985\u09A4\u09CD\u09AF\u09A8\u09CD\u09A4 \u09AE\u09BE\u09A8\u09B8\u09AE\u09CD\u09AA\u09A8\u09CD\u09A8 \u0993 \u0995\u09BE\u09B0\u09CD\u09AF\u0995\u09B0\u09C0 \u09AA\u09A3\u09CD\u09AF\u0964
+`;
+      }
+      return reply2;
+    }
+    if (isAskingForSpecs) {
+      let reply2 = `**${product.name}** \u098F\u09B0 \u09B8\u09CD\u09AA\u09C7\u09B8\u09BF\u09AB\u09BF\u0995\u09C7\u09B6\u09A8 \u0993 \u09AC\u09BF\u09B8\u09CD\u09A4\u09BE\u09B0\u09BF\u09A4 \u09A4\u09A5\u09CD\u09AF:
+
+`;
+      if (product.specs && product.specs.length > 0) {
+        product.specs.forEach((s) => {
+          reply2 += `- **${s.name}**: ${s.value}
+`;
+        });
+      } else if (product.description) {
+        reply2 += `**\u09AC\u09BF\u09AC\u09B0\u09A3:** ${product.description}
+`;
+      }
+      return reply2;
+    }
+    if (isAskingForPrice) {
+      let reply2 = `**${product.name}** \u098F\u09B0 \u09AC\u09B0\u09CD\u09A4\u09AE\u09BE\u09A8 \u09AE\u09C2\u09B2\u09CD\u09AF \u09F3${product.price}\u0964`;
+      if (product.original_price && product.original_price > product.price) {
+        reply2 += ` (\u09AA\u09C2\u09B0\u09CD\u09AC\u09C7 \u098F\u09B0 \u09AE\u09C2\u09B2\u09CD\u09AF \u099B\u09BF\u09B2 \u09F3${product.original_price}, \u09AF\u09BE \u098F\u0996\u09A8 ${Math.round((1 - product.price / product.original_price) * 100)}% \u099B\u09BE\u09DC\u09C7 \u09AA\u09BE\u0993\u09DF\u09BE \u09AF\u09BE\u099A\u09CD\u099B\u09C7!)`;
+      }
+      return reply2;
+    }
+    if (isAskingForStock) {
+      return `**${product.name}** \u09AA\u09A3\u09CD\u09AF\u099F\u09BF ${inStock ? `\u09AC\u09B0\u09CD\u09A4\u09AE\u09BE\u09A8\u09C7 \u09B8\u09CD\u099F\u0995\u09C7 \u0986\u099B\u09C7 (\u09AC\u09BE\u0995\u09BF \u0986\u099B\u09C7 ${product.stock || 1} \u099F\u09BF)` : "\u09AC\u09B0\u09CD\u09A4\u09AE\u09BE\u09A8\u09C7 \u09B8\u09CD\u099F\u0995 \u0986\u0989\u099F"}`;
+    }
+    let reply = `**${product.name}** \u09B8\u09AE\u09CD\u09AA\u09B0\u09CD\u0995\u09C7 \u09AC\u09BF\u09B8\u09CD\u09A4\u09BE\u09B0\u09BF\u09A4 \u09A4\u09A5\u09CD\u09AF \u0993 \u09AA\u09B0\u09BE\u09AE\u09B0\u09CD\u09B6:
+
+`;
+    reply += `- **\u09AE\u09C2\u09B2\u09CD\u09AF**: \u09F3${product.price}
+`;
+    if (product.original_price && product.original_price > product.price) {
+      reply += `- **\u09AE\u09C2\u09B2\u09CD\u09AF\u099B\u09BE\u09DC**: \u09F3${product.original_price} (${Math.round((1 - product.price / product.original_price) * 100)}% \u099B\u09BE\u09DC!)
+`;
+    }
+    reply += `- **\u09B8\u09CD\u099F\u0995**: ${inStock ? `\u09B8\u09CD\u099F\u0995\u09C7 \u0986\u099B\u09C7 (\u09AC\u09BE\u0995\u09BF \u0986\u099B\u09C7 ${product.stock || 1} \u099F\u09BF)` : "\u09B8\u09CD\u099F\u0995 \u0986\u0989\u099F"}
+`;
+    if (product.description) reply += `- **\u09AC\u09BF\u09AC\u09B0\u09A3 \u0993 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE**: ${product.description}
+`;
+    if (product.features && product.features.length > 0) {
+      reply += `
+**\u09AB\u09BF\u099A\u09BE\u09B0\u09B8\u09AE\u09C2\u09B9:**
+`;
+      product.features.forEach((f) => {
+        reply += `- ${f}
+`;
+      });
+    }
+    if (product.specs && product.specs.length > 0) {
+      reply += `
+**\u09B8\u09CD\u09AA\u09C7\u09B8\u09BF\u09AB\u09BF\u0995\u09C7\u09B6\u09A8:**
+`;
+      product.specs.forEach((s) => {
+        reply += `- **${s.name}**: ${s.value}
+`;
+      });
+    }
+    if (product.category) {
+      const related = products.filter((p) => p.id !== product.id && p.category === product.category).slice(0, 3);
+      if (related.length > 0) {
+        reply += `
+\u{1F517} **\u09B8\u09AE\u09CD\u09AA\u09B0\u09CD\u0995\u09BF\u09A4 \u0985\u09A8\u09CD\u09AF\u09BE\u09A8\u09CD\u09AF \u09AA\u09A3\u09CD\u09AF (Related Products):**
+`;
+        related.forEach((p) => {
+          reply += `- **${p.name}** (\u09F3${p.price})
+`;
+        });
+      }
+    }
+    return reply;
+  };
+  let matched = products.find((p) => query.includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(query));
+  if (!matched) {
+    const aliases = [
+      { keywords: ["dumbbell", "\u09A1\u09BE\u09AE\u09CD\u09AC\u09C7\u09B2", "\u09A1\u09BE\u09AE\u09AC\u09C7\u09B2"], productId: "PRD-001" },
+      { keywords: ["roller", "\u09B0\u09CB\u09B2\u09BE\u09B0", "ab roller", "\u098F\u09AC\u09BF \u09B0\u09CB\u09B2\u09BE\u09B0"], productId: "PRD-002" },
+      { keywords: ["football", "\u09AB\u09C1\u099F\u09AC\u09B2", "\u09AC\u09B2"], productId: "PRD-003" },
+      { keywords: ["badminton", "\u09B0\u200D\u09CD\u09AF\u09BE\u0995\u09C7\u099F", "\u09B0\u09CD\u09AF\u09BE\u0995\u09C7\u099F", "\u09B0\u0995\u09C7\u099F", "\u09AC\u09CD\u09AF\u09BE\u09A1\u09AE\u09BF\u09A8\u09CD\u099F\u09A8"], productId: "PRD-004" },
+      { keywords: ["shoes", "\u099C\u09C1\u09A4\u09CB", "\u099C\u09C1\u09A4\u09BE", "\u09B0\u09BE\u09A8\u09BF\u0982", "running"], productId: "PRD-005" },
+      { keywords: ["jersey", "\u099C\u09BE\u09B0\u09CD\u09B8\u09BF", "\u09A1\u09CD\u09B0\u09BE\u0987-\u09AB\u09BF\u099F", "dri-fit"], productId: "PRD-006" },
+      { keywords: ["yoga", "\u09AE\u09CD\u09AF\u09BE\u099F", "\u0987\u09DF\u09CB\u0997\u09BE", "\u0987\u09DF\u09CB\u0997\u09BE"], productId: "PRD-007" },
+      { keywords: ["basketball", "\u09AC\u09BE\u09B8\u09CD\u0995\u09C7\u099F\u09AC\u09B2", "\u09B9\u09C1\u09AA", "hoop"], productId: "PRD-008" }
+    ];
+    for (const alias of aliases) {
+      if (alias.keywords.some((kw) => query.includes(kw))) {
+        matched = products.find((p) => p.id === alias.productId);
+        if (matched) break;
+      }
+    }
+  }
+  if (matched) {
+    return buildTailoredResponse(matched);
+  }
+  if (query.includes("\u09B9\u09CD\u09AF\u09BE\u09B2\u09CB") || query.includes("hi") || query.includes("hello") || query.includes("\u0995\u09C7\u09AE\u09A8 \u0986\u099B") || query.includes("\u0986\u099B\u09C7\u09A8")) {
+    return "\u09B9\u09CD\u09AF\u09BE\u09B2\u09CB! \u0986\u09AE\u09BF \u0986\u09AA\u09A8\u09BE\u09B0 AI \u09B6\u09AA\u09BF\u0982 \u0985\u09CD\u09AF\u09BE\u09B8\u09BF\u09B8\u09CD\u099F\u09CD\u09AF\u09BE\u09A8\u09CD\u099F\u0964 \u0986\u09AE\u09BF \u0986\u09AA\u09A8\u09BE\u0995\u09C7 \u09AA\u09A3\u09CD\u09AF \u0996\u09C1\u0981\u099C\u09C7 \u09AA\u09C7\u09A4\u09C7, \u09A6\u09BE\u09AE \u099C\u09BE\u09A8\u09A4\u09C7, \u0985\u09A5\u09AC\u09BE \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE \u0993 \u09AA\u09B0\u09BE\u09AE\u09B0\u09CD\u09B6 \u099C\u09BE\u09A8\u09A4\u09C7 \u09B8\u09BE\u09B9\u09BE\u09AF\u09CD\u09AF \u0995\u09B0\u09A4\u09C7 \u09AA\u09BE\u09B0\u09BF\u0964 \u0986\u09AA\u09A8\u09BF \u0995\u09BF \u0996\u09C1\u0981\u099C\u099B\u09C7\u09A8 \u09AC\u09B2\u09C1\u09A8?";
+  }
+  if (query.includes("\u09AA\u09A3\u09CD\u09AF") || query.includes("\u09AA\u09CD\u09B0\u09CB\u09A1\u09BE\u0995\u09CD\u099F") || query.includes("product") || query.includes("list") || query.includes("\u0995\u09BF \u0995\u09BF \u0986\u099B\u09C7")) {
+    if (products.length === 0) return "\u09A6\u09C1\u0983\u0996\u09BF\u09A4, \u098F\u0987 \u09AE\u09C1\u09B9\u09C2\u09B0\u09CD\u09A4\u09C7 \u0995\u09CB\u09A8\u09CB \u09AA\u09A3\u09CD\u09AF \u09AA\u09BE\u0993\u09DF\u09BE \u09AF\u09BE\u099A\u09CD\u099B\u09C7 \u09A8\u09BE\u0964";
+    const listStr = products.slice(0, 10).map((p) => `- **${p.name}** (\u09F3${p.price})`).join("\n");
+    return `\u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u09B8\u09CD\u099F\u09CB\u09B0\u09C7\u09B0 \u09AA\u09A3\u09CD\u09AF\u09B8\u09AE\u09C2\u09B9\u09C7\u09B0 \u09A4\u09BE\u09B2\u09BF\u0995\u09BE \u09A8\u09BF\u099A\u09C7 \u09A6\u09C7\u0993\u09DF\u09BE \u09B9\u09B2\u09CB:
+
+${listStr}
+
+\u09AF\u09C7\u0995\u09CB\u09A8\u09CB \u09AA\u09A3\u09CD\u09AF\u09C7\u09B0 \u09AC\u09BF\u09B8\u09CD\u09A4\u09BE\u09B0\u09BF\u09A4 \u09AC\u09BE \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE \u099C\u09BE\u09A8\u09A4\u09C7 \u09A4\u09BE\u09B0 \u09A8\u09BE\u09AE \u09B2\u09BF\u0996\u09C7 \u09AA\u09CD\u09B0\u09B6\u09CD\u09A8 \u0995\u09B0\u09C1\u09A8!`;
+  }
+  if (query.includes("\u0995\u09AE \u09A6\u09BE\u09AE") || query.includes("\u09B8\u09B8\u09CD\u09A4\u09BE") || query.includes("cheap") || query.includes("low price") || query.includes("\u0995\u09AE\u09A6\u09BE\u09AE\u09BF")) {
+    if (products.length === 0) return "\u09A6\u09C1\u0983\u0996\u09BF\u09A4, \u098F\u0987 \u09AE\u09C1\u09B9\u09C2\u09B0\u09CD\u09A4\u09C7 \u0995\u09CB\u09A8\u09CB \u09AA\u09A3\u09CD\u09AF \u09AA\u09BE\u0993\u09DF\u09BE \u09AF\u09BE\u099A\u09CD\u099B\u09C7 \u09A8\u09BE\u0964";
+    const sorted = [...products].sort((a, b) => a.price - b.price);
+    const listStr = sorted.slice(0, 5).map((p) => `- **${p.name}** (\u09F3${p.price})`).join("\n");
+    return `\u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u09B8\u09CD\u099F\u09CB\u09B0\u09C7\u09B0 \u09B8\u09AC\u099A\u09C7\u09DF\u09C7 \u0995\u09AE \u09A6\u09BE\u09AE\u09C7\u09B0 \u09AA\u09A3\u09CD\u09AF\u09B8\u09AE\u09C2\u09B9:
+
+${listStr}`;
+  }
+  if (query.includes("\u099B\u09BE\u09DC") || query.includes("\u0985\u09AB\u09BE\u09B0") || query.includes("discount") || query.includes("sale") || query.includes("\u0995\u09CD\u09AF\u09BE\u09AE\u09CD\u09AA\u09C7\u0987\u09A8")) {
+    const discounted = products.filter((p) => p.original_price && p.original_price > p.price);
+    if (discounted.length === 0) return "\u098F\u0987 \u09AE\u09C1\u09B9\u09C2\u09B0\u09CD\u09A4\u09C7 \u0995\u09CB\u09A8\u09CB \u09AA\u09A3\u09CD\u09AF\u09C7 \u09B8\u09B0\u09BE\u09B8\u09B0\u09BF \u09AE\u09C2\u09B2\u09CD\u09AF\u099B\u09BE\u09DC \u09A8\u09C7\u0987, \u09A4\u09AC\u09C7 \u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u09B8\u09AC \u09AA\u09A3\u09CD\u09AF\u09C7\u09B0 \u09A6\u09BE\u09AE\u0987 \u0985\u09A4\u09CD\u09AF\u09A8\u09CD\u09A4 \u09B8\u09BE\u09B6\u09CD\u09B0\u09DF\u09C0!";
+    const listStr = discounted.slice(0, 5).map((p) => {
+      const pct = Math.round((1 - p.price / p.original_price) * 100);
+      return `- **${p.name}**: \u09F3${p.price} (\u09AE\u09C2\u09B2\u09CD\u09AF: \u09F3${p.original_price}, **${pct}% \u099B\u09BE\u09DC!**)`;
+    }).join("\n");
+    return `\u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u0986\u0995\u09B0\u09CD\u09B7\u09A3\u09C0\u09DF \u0985\u09AB\u09BE\u09B0 \u0993 \u09A1\u09BF\u09B8\u0995\u09BE\u0989\u09A8\u09CD\u099F\u09AF\u09C1\u0995\u09CD\u09A4 \u09AA\u09A3\u09CD\u09AF\u09B8\u09AE\u09C2\u09B9:
+
+${listStr}`;
+  }
+  const categoryMatched = products.filter((p) => p.category && query.includes(p.category.toLowerCase()));
+  if (categoryMatched.length > 0) {
+    const listStr = categoryMatched.slice(0, 5).map((p) => `- **${p.name}** (\u09F3${p.price})`).join("\n");
+    return `\u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u0995\u09BE\u099B\u09C7 **${categoryMatched[0].category}** \u0995\u09CD\u09AF\u09BE\u099F\u09BE\u0997\u09B0\u09BF\u09B0 \u09A8\u09BF\u099A\u09C7\u09B0 \u09AA\u09A3\u09CD\u09AF\u0997\u09C1\u09B2\u09CB \u09B0\u09DF\u09C7\u099B\u09C7:
+
+${listStr}`;
+  }
+  return "\u0986\u09AE\u09BF \u0986\u09AA\u09A8\u09BE\u09B0 \u09AA\u09CD\u09B0\u09B6\u09CD\u09A8\u099F\u09BF \u09AC\u09C1\u099D\u09A4\u09C7 \u09AA\u09C7\u09B0\u09C7\u099B\u09BF\u0964 \u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u09B8\u09CD\u099F\u09CB\u09B0\u09C7 \u09A5\u09BE\u0995\u09BE \u09AA\u09A3\u09CD\u09AF\u0997\u09C1\u09B2\u09CB\u09B0 \u09A6\u09BE\u09AE, \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE, \u0985\u09A5\u09AC\u09BE \u0995\u09CB\u09A8\u09CB \u09AA\u09B0\u09BE\u09AE\u09B0\u09CD\u09B6 \u09B8\u09AE\u09CD\u09AA\u09B0\u09CD\u0995\u09C7 \u099C\u09BE\u09A8\u09A4\u09C7 \u09AA\u09A3\u09CD\u09AF\u099F\u09BF\u09B0 \u09A8\u09BE\u09AE \u09B2\u09BF\u0996\u09C7 \u09AA\u09CD\u09B0\u09B6\u09CD\u09A8 \u0995\u09B0\u09A4\u09C7 \u09AA\u09BE\u09B0\u09C7\u09A8\u0964 \u0986\u09AE\u09BF \u0986\u09AA\u09A8\u09BE\u0995\u09C7 \u09B8\u09A0\u09BF\u0995 \u09A4\u09A5\u09CD\u09AF \u0993 \u09AA\u09B0\u09BE\u09AE\u09B0\u09CD\u09B6 \u09A6\u09C7\u0993\u09DF\u09BE\u09B0 \u099A\u09C7\u09B7\u09CD\u099F\u09BE \u0995\u09B0\u09AC!";
+}
 
 // backend/routes/ai.ts
 var router8 = Router8();
 router8.post("/chat", chatWithAI);
+router8.get("/analytics", authenticateToken, getAIAnalytics);
 var ai_default = router8;
 
 // backend/routes/employees.ts
@@ -3756,29 +4163,61 @@ var registerInvitedEmployee = (req, res) => {
     }
   );
 };
-var getActiveModerators = (req, res) => {
+var getActiveEmployees = (req, res) => {
   db_default.all(
     `SELECT e.id, e.first_name, e.last_name, e.email, e.status, r.name as role
      FROM employees e
      JOIN roles r ON e.role_id = r.id
-     WHERE r.name = 'Moderator' AND e.status = 'active'
+     WHERE e.status = 'active'
      ORDER BY e.first_name ASC`,
     [],
     (err, rows) => {
       if (err) {
-        console.error("Error fetching active moderators:", err);
+        console.error("Error fetching active employees:", err);
         return res.status(500).json({ status: "error", message: "Database error" });
       }
-      const moderators = (rows || []).map((r) => ({
+      const employees = (rows || []).map((r) => ({
         id: r.id,
         name: `${r.first_name} ${r.last_name}`.trim(),
         email: r.email,
         role: r.role,
         status: r.status
       }));
-      res.json({ status: "success", data: moderators });
+      res.json({ status: "success", data: employees });
     }
   );
+};
+var getActiveModerators = getActiveEmployees;
+var toggleEmployeeStatus = (req, res) => {
+  const employeeId = req.params.id;
+  if (employeeId === "EMP-001") {
+    return res.status(400).json({ status: "error", message: "Super Admin \u098F\u09B0 \u09B8\u09CD\u099F\u09CD\u09AF\u09BE\u099F\u09BE\u09B8 \u09AA\u09B0\u09BF\u09AC\u09B0\u09CD\u09A4\u09A8 \u0995\u09B0\u09BE \u09AF\u09BE\u09AC\u09C7 \u09A8\u09BE\u0964" });
+  }
+  db_default.get(`SELECT status FROM employees WHERE id = ?`, [employeeId], (err, row) => {
+    if (err) {
+      console.error("Error fetching employee status:", err);
+      return res.status(500).json({ status: "error", message: "Database error" });
+    }
+    if (!row) {
+      return res.status(404).json({ status: "error", message: "Employee not found" });
+    }
+    const newStatus = row.status === "active" ? "inactive" : "active";
+    db_default.run(
+      `UPDATE employees SET status = ? WHERE id = ?`,
+      [newStatus, employeeId],
+      function(err2) {
+        if (err2) {
+          console.error("Error toggling employee status:", err2);
+          return res.status(500).json({ status: "error", message: "Database error" });
+        }
+        res.json({
+          status: "success",
+          message: `Employee ${newStatus === "active" ? "activated" : "deactivated"} successfully`,
+          data: { id: employeeId, newStatus }
+        });
+      }
+    );
+  });
 };
 
 // backend/routes/employees.ts
@@ -3788,6 +4227,7 @@ router9.post("/invite/register", registerInvitedEmployee);
 router9.get("/", authenticateToken, requireRole(["Super Admin", "Admin"]), getEmployees);
 router9.put("/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), updateEmployee);
 router9.delete("/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteEmployee);
+router9.put("/:id/toggle-status", authenticateToken, requireRole(["Super Admin", "Admin"]), toggleEmployeeStatus);
 router9.get("/invitations", authenticateToken, requireRole(["Super Admin", "Admin"]), getInvitations);
 router9.post("/invite", authenticateToken, requireRole(["Super Admin", "Admin"]), inviteEmployee);
 router9.delete("/invitations/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteInvitation);
@@ -3795,6 +4235,7 @@ router9.get("/roles", authenticateToken, requireRole(["Super Admin", "Admin"]), 
 router9.post("/roles", authenticateToken, requireRole(["Super Admin", "Admin"]), createRole);
 router9.put("/roles/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), updateRole);
 router9.delete("/roles/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteRole);
+router9.get("/active-employees", authenticateToken, requireRole(["Super Admin", "Admin"]), getActiveEmployees);
 router9.get("/active-moderators", authenticateToken, requireRole(["Super Admin", "Admin"]), getActiveModerators);
 var employees_default = router9;
 

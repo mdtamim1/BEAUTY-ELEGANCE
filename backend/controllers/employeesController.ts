@@ -411,22 +411,22 @@ export const registerInvitedEmployee = (req: Request, res: Response) => {
   );
 };
 
-// Get active moderators (for order assignment)
-export const getActiveModerators = (req: Request, res: Response) => {
+// Get all active employees for order assignment (not just moderators)
+export const getActiveEmployees = (req: Request, res: Response) => {
   db.all(
     `SELECT e.id, e.first_name, e.last_name, e.email, e.status, r.name as role
      FROM employees e
      JOIN roles r ON e.role_id = r.id
-     WHERE r.name = 'Moderator' AND e.status = 'active'
+     WHERE e.status = 'active'
      ORDER BY e.first_name ASC`,
     [],
     (err, rows: any[]) => {
       if (err) {
-        console.error('Error fetching active moderators:', err);
+        console.error('Error fetching active employees:', err);
         return res.status(500).json({ status: 'error', message: 'Database error' });
       }
 
-      const moderators = (rows || []).map(r => ({
+      const employees = (rows || []).map(r => ({
         id: r.id,
         name: `${r.first_name} ${r.last_name}`.trim(),
         email: r.email,
@@ -434,7 +434,51 @@ export const getActiveModerators = (req: Request, res: Response) => {
         status: r.status
       }));
 
-      res.json({ status: 'success', data: moderators });
+      res.json({ status: 'success', data: employees });
     }
   );
+};
+
+// Keep backward compatibility alias
+export const getActiveModerators = getActiveEmployees;
+
+// Toggle employee status (active <-> inactive)
+export const toggleEmployeeStatus = (req: Request, res: Response) => {
+  const employeeId = req.params.id;
+
+  // Cannot toggle EMP-001 (Super Admin)
+  if (employeeId === 'EMP-001') {
+    return res.status(400).json({ status: 'error', message: 'Super Admin এর স্ট্যাটাস পরিবর্তন করা যাবে না।' });
+  }
+
+  // Get current status
+  db.get(`SELECT status FROM employees WHERE id = ?`, [employeeId], (err, row: any) => {
+    if (err) {
+      console.error('Error fetching employee status:', err);
+      return res.status(500).json({ status: 'error', message: 'Database error' });
+    }
+
+    if (!row) {
+      return res.status(404).json({ status: 'error', message: 'Employee not found' });
+    }
+
+    const newStatus = row.status === 'active' ? 'inactive' : 'active';
+
+    db.run(
+      `UPDATE employees SET status = ? WHERE id = ?`,
+      [newStatus, employeeId],
+      function (err) {
+        if (err) {
+          console.error('Error toggling employee status:', err);
+          return res.status(500).json({ status: 'error', message: 'Database error' });
+        }
+
+        res.json({
+          status: 'success',
+          message: `Employee ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`,
+          data: { id: employeeId, newStatus }
+        });
+      }
+    );
+  });
 };

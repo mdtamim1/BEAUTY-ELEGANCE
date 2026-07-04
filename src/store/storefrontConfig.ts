@@ -122,6 +122,8 @@ export interface ProductConfig {
   stock?: number;
   sold?: number;
   revenue?: number;
+  videoUrl?: string;
+  photoContent?: string;
 }
 
 export interface StorefrontConfig {

@@ -161,10 +161,10 @@ export const assignOrderInBackend = async (orderId: string, assignedTo: string |
   }
 };
 
-// Fetch active moderators for order assignment
-export const fetchActiveModerators = async (): Promise<any[]> => {
+// Fetch all active employees for order assignment (not just moderators)
+export const fetchActiveEmployees = async (): Promise<any[]> => {
   try {
-    const response = await fetch(`${API_BASE}/employees/active-moderators`, {
+    const response = await fetch(`${API_BASE}/employees/active-employees`, {
       headers: {
         ...getAuthHeaders(),
       },
@@ -174,7 +174,42 @@ export const fetchActiveModerators = async (): Promise<any[]> => {
     if (result.status !== 'success') return [];
     return result.data || [];
   } catch (e) {
-    console.warn('Failed to fetch active moderators:', e);
+    console.warn('Failed to fetch active employees:', e);
+    return [];
+  }
+};
+
+// Backward compatibility alias
+export const fetchActiveModerators = fetchActiveEmployees;
+
+// Toggle employee status (active <-> inactive)
+export const toggleEmployeeStatusInBackend = async (id: string): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/employees/${id}/toggle-status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      }
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to toggle employee status' };
+  }
+};
+
+// Fetch order logs/history
+export const fetchOrderHistory = async (orderId: string): Promise<any[]> => {
+  try {
+    const res = await fetch(`${API_BASE}/orders/${orderId}/history`, {
+      headers: {
+        ...getAuthHeaders()
+      }
+    });
+    const result = await res.json();
+    return result.status === 'success' ? result.data : [];
+  } catch (e) {
+    console.warn('Failed to fetch order history:', e);
     return [];
   }
 };
@@ -224,7 +259,9 @@ const mapProductToFrontend = (p: any): any => {
     stock: p.stock !== undefined ? Number(p.stock) : 0,
     sold: p.sold !== undefined ? Number(p.sold) : 0,
     revenue: p.revenue !== undefined ? Number(p.revenue) : 0,
-    customerReviews: p.customerReviews || []
+    customerReviews: p.customerReviews || [],
+    videoUrl: p.video_url || null,
+    photoContent: p.photo_content || null
   };
 };
 
@@ -282,7 +319,9 @@ export const createProductInBackend = async (productData: any): Promise<any> => 
       published: productData.published ? 1 : 0,
       features: productData.features || [],
       specs: productData.specs || [],
-      gallery: productData.gallery || []
+      gallery: productData.gallery || [],
+      videoUrl: productData.videoUrl || null,
+      photoContent: productData.photoContent || null
     };
 
     const response = await fetch(`${API_BASE}/products`, {
@@ -319,7 +358,9 @@ export const updateProductInBackend = async (id: string | number, productData: a
       published: productData.published ? 1 : 0,
       features: productData.features,
       specs: productData.specs,
-      gallery: productData.gallery
+      gallery: productData.gallery,
+      videoUrl: productData.videoUrl || null,
+      photoContent: productData.photoContent || null
     };
 
     const response = await fetch(`${API_BASE}/products/${backendId}`, {
@@ -900,6 +941,23 @@ export const deleteBlogFromBackend = async (id: string): Promise<any> => {
     return await res.json();
   } catch (e) {
     return { status: 'error', message: 'Failed to delete blog' };
+  }
+};
+
+export const fetchAIAnalytics = async (): Promise<any> => {
+  try {
+    const response = await fetch(`${API_BASE}/ai/analytics`, {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
+    if (!response.ok) return null;
+    const result = await response.json();
+    if (result.status === 'success') return result.data;
+    return null;
+  } catch (e) {
+    console.error('Failed to fetch AI analytics:', e);
+    return null;
   }
 };
 

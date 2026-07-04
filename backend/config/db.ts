@@ -433,6 +433,8 @@ function initializeDatabase() {
         revenue REAL DEFAULT 0.0,
         features TEXT,
         specs TEXT,
+        video_url TEXT,
+        photo_content TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -442,6 +444,12 @@ function initializeDatabase() {
       // ignore error if column already exists
     });
     db.run("ALTER TABLE products ADD COLUMN specs TEXT", (err) => {
+      // ignore error if column already exists
+    });
+    db.run("ALTER TABLE products ADD COLUMN video_url TEXT DEFAULT NULL", (err) => {
+      // ignore error if column already exists
+    });
+    db.run("ALTER TABLE products ADD COLUMN photo_content TEXT DEFAULT NULL", (err) => {
       // ignore error if column already exists
     });
     db.run("ALTER TABLE customers ADD COLUMN address TEXT", (err) => {
@@ -457,6 +465,16 @@ function initializeDatabase() {
         product_id TEXT NOT NULL,
         image_url TEXT NOT NULL,
         FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
+      )
+    `);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS ai_queries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        query_text TEXT NOT NULL,
+        reply_text TEXT,
+        model_used TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
@@ -485,12 +503,21 @@ function initializeDatabase() {
         subtotal REAL NOT NULL,
         status TEXT DEFAULT 'processing',
         assigned_to TEXT DEFAULT NULL,
+        assigned_name TEXT DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
     // Migration: Add assigned_to column if it doesn't exist (for existing databases)
     db.run(`ALTER TABLE orders ADD COLUMN assigned_to TEXT DEFAULT NULL`, (err) => {
+      // Ignore error if column already exists
+      if (err && !String(err).includes('duplicate column')) {
+        // Column already exists, safe to ignore
+      }
+    });
+
+    // Migration: Add assigned_name column if it doesn't exist (for existing databases)
+    db.run(`ALTER TABLE orders ADD COLUMN assigned_name TEXT DEFAULT NULL`, (err) => {
       // Ignore error if column already exists
       if (err && !String(err).includes('duplicate column')) {
         // Column already exists, safe to ignore
@@ -507,6 +534,19 @@ function initializeDatabase() {
         code TEXT NOT NULL,
         quantity INTEGER NOT NULL,
         price REAL NOT NULL,
+        FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE CASCADE
+      )
+    `);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS order_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        order_id TEXT NOT NULL,
+        action_type TEXT NOT NULL,
+        old_value TEXT,
+        new_value TEXT,
+        performed_by TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE CASCADE
       )
     `);
@@ -646,6 +686,33 @@ function initializeDatabase() {
             [c.code, c.type, c.value, c.expiry, c.status]
           );
         });
+      }
+    });
+
+    // Seed default ai queries if none exist
+    db.get("SELECT COUNT(*) as count FROM ai_queries", (err, row: any) => {
+      if (row && row.count === 0) {
+        const seedQueries = [
+          ...Array(15).fill({ q: 'কি কি পণ্য আছে?', r: 'আমাদের কাছে ডাম্বেল সেট, এবি রোলার, ফুটবল, ব্যাডমিন্টন র্যাকেট, রানিং জুতো, অ্যাথলেটিক জার্সি, ইয়োগা ম্যাট এবং বাস্কেটবল স্ট্যান্ড রয়েছে।', m: 'gemini-2.0-flash' }),
+          ...Array(10).fill({ q: 'সবচেয়ে কম দামের পণ্য কোনটি?', r: 'আমাদের সবচেয়ে কম দামি পণ্য হলো নন-স্লিপ ৮মিমি ইয়োগা ম্যাট, যার মূল্য মাত্র ৳৯৫০।', m: 'gemini-2.0-flash' }),
+          ...Array(8).fill({ q: 'Badminton racket price', r: 'The Professional Carbon Fiber Badminton Racket is priced at ৳2,800 (discounted from ৳3,500).', m: 'gemini-1.5-flash' }),
+          ...Array(6).fill({ q: 'Running shoes how to wear?', r: 'পরিধানের নিয়ম: সঠিক মাপের মোজা পরুন, ফিতাগুলো টাইট দিয়ে বাঁধুন। ব্যবহারের পর শুকনো ও পরিষ্কার স্থানে রাখুন।', m: 'gemini-2.0-flash' }),
+          ...Array(5).fill({ q: 'Dumbbell weight details', r: 'The Hex Dumbbells Set has a total weight of 20kg (10kg each dumbbell).', m: 'gemini-1.5-flash' }),
+          ...Array(4).fill({ q: 'How to use AB Roller?', r: 'ব্যবহারের নিয়ম: হাঁটু গেড়ে বসুন, রোলার সামনের দিকে গড়িয়ে নিন এবং পেটে প্রেশার রেখে পেছনের দিকে টেনে আনুন।', m: 'gemini-2.0-flash' }),
+          ...Array(4).fill({ q: 'Yoga mat thickness', r: 'আমাদের ইয়োগা ম্যাটটি ৮ মিমি (8mm) পুরু, যা আপনাকে দারুণ কুশনিং সাপোর্ট দেবে।', m: 'gemini-2.0-flash' }),
+          ...Array(3).fill({ q: 'Puma football features', r: 'ফিচারসমূহ: টেক্সচার্ড ক্যাসিং, হাই-ডেনসিটি রাবার ব্ল্যাডার এবং চমৎকার স্থায়িত্ব।', m: 'gemini-1.5-flash' })
+        ];
+
+        const now = new Date();
+        seedQueries.forEach((item, idx) => {
+          const staggeredDate = new Date(now.getTime() - (idx * 2 * 3600 * 1000));
+          const formattedDate = staggeredDate.toISOString().slice(0, 19).replace('T', ' ');
+          db.run(
+            "INSERT INTO ai_queries (query_text, reply_text, model_used, created_at) VALUES (?, ?, ?, ?)",
+            [item.q, item.r, item.m, formattedDate]
+          );
+        });
+        console.log('🌱 Seeded default AI chatbot query logs for analytics.');
       }
     });
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UserCog, Shield, Plus, Edit, Trash2, X, Mail, Check, AlertCircle, Copy, Link } from 'lucide-react';
+import { UserCog, Shield, Plus, Edit, Trash2, X, Mail, Check, AlertCircle, Copy, Link, Power } from 'lucide-react';
 import { 
   fetchEmployees, 
   updateEmployee, 
@@ -10,7 +10,8 @@ import {
   deleteRole, 
   fetchInvitations, 
   inviteEmployee, 
-  deleteInvitation 
+  deleteInvitation,
+  toggleEmployeeStatusInBackend 
 } from '../../services/api';
 
 const roleColors: Record<string, string> = {
@@ -186,6 +187,18 @@ export default function Employees() {
     }
   };
 
+  // Toggle employee active/inactive status
+  const handleToggleStatus = async (emp: any) => {
+    const res = await toggleEmployeeStatusInBackend(emp.id);
+    if (res.status === 'success') {
+      setEmployees(prev => prev.map(e => 
+        e.id === emp.id ? { ...e, status: res.data.newStatus } : e
+      ));
+    } else {
+      alert(res.message || 'Failed to toggle employee status');
+    }
+  };
+
   // Delete employee
   const handleDeleteEmp = async (emp: any) => {
     if (confirm(`Are you sure you want to delete ${emp.name}?`)) {
@@ -332,6 +345,7 @@ export default function Employees() {
                 <th>Role</th>
                 <th>Department</th>
                 <th>Status</th>
+                <th>Active/Deactive</th>
                 <th>Last Login</th>
                 <th>Actions</th>
               </tr>
@@ -361,6 +375,49 @@ export default function Employees() {
                       <div className={statusColors[employee.status] || 'status-dot offline'} />
                       <span style={{ fontSize: 'var(--text-xs)', textTransform: 'capitalize' }}>{employee.status}</span>
                     </div>
+                  </td>
+                  <td>
+                    {employee.id === 'EMP-001' ? (
+                      <div style={{ 
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 600,
+                        background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)'
+                      }}>
+                        <Power size={12} /> Always Active
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleToggleStatus(employee)}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '6px',
+                          padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 600,
+                          cursor: 'pointer', border: 'none', transition: 'all 0.3s ease',
+                          background: employee.status === 'active' 
+                            ? 'rgba(16, 185, 129, 0.12)' 
+                            : 'rgba(239, 68, 68, 0.12)',
+                          color: employee.status === 'active' ? '#10b981' : '#ef4444',
+                          boxShadow: employee.status === 'active' 
+                            ? '0 0 8px rgba(16, 185, 129, 0.2)' 
+                            : '0 0 8px rgba(239, 68, 68, 0.15)',
+                        }}
+                        title={employee.status === 'active' ? 'Click to Deactivate' : 'Click to Activate'}
+                      >
+                        <div style={{
+                          width: '32px', height: '16px', borderRadius: '10px', position: 'relative',
+                          background: employee.status === 'active' ? '#10b981' : '#64748b',
+                          transition: 'background 0.3s ease',
+                        }}>
+                          <div style={{
+                            width: '12px', height: '12px', borderRadius: '50%', background: '#fff',
+                            position: 'absolute', top: '2px',
+                            left: employee.status === 'active' ? '18px' : '2px',
+                            transition: 'left 0.3s ease',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                          }} />
+                        </div>
+                        {employee.status === 'active' ? 'Active' : 'Inactive'}
+                      </button>
+                    )}
                   </td>
                   <td style={{ fontSize: 'var(--text-xs)' }}>
                     {employee.lastLogin ? new Date(employee.lastLogin).toLocaleString() : 'N/A'}

@@ -97,12 +97,6 @@ export const chatWithAI = async (req: Request, res: Response) => {
       return res.status(400).json({ status: 'error', message: 'Message too long (max 2000 characters)' });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.error('GEMINI_API_KEY is not set in environment variables');
-      return res.status(500).json({ status: 'error', message: 'AI service is not configured' });
-    }
-
     // Fetch all published products from database (live data - auto-updates when new products added)
     const products: any[] = await new Promise((resolve, reject) => {
       db.all(`SELECT * FROM products WHERE published = 1`, [], (err, rows) => {
@@ -132,6 +126,23 @@ export const chatWithAI = async (req: Request, res: Response) => {
         }
       });
     });
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.warn('GEMINI_API_KEY is not set in environment variables. Operating in Local AI mode.');
+      const localReply = generateLocalAIResponse(message.trim(), products);
+      db.run(
+        `INSERT INTO ai_queries (query_text, reply_text, model_used) VALUES (?, ?, ?)`,
+        [message.trim(), localReply, 'Local-Heuristic-Mode']
+      );
+      return res.json({
+        status: 'success',
+        data: {
+          reply: localReply,
+          role: 'model'
+        }
+      });
+    }
 
     const storeName = 'AURA Sports';
     const systemPrompt = buildSystemPrompt(products, storeName);
@@ -216,6 +227,10 @@ export const chatWithAI = async (req: Request, res: Response) => {
 
         // Success! Return the response
         console.log(`AI response generated successfully using model: ${model}`);
+        db.run(
+          `INSERT INTO ai_queries (query_text, reply_text, model_used) VALUES (?, ?, ?)`,
+          [message.trim(), aiText, model]
+        );
         return res.json({
           status: 'success',
           data: {
@@ -231,12 +246,226 @@ export const chatWithAI = async (req: Request, res: Response) => {
       }
     }
 
-    // All models failed
-    console.error('All Gemini models failed. Last error:', lastError);
-    return res.status(502).json({ status: 'error', message: 'AI service temporarily unavailable. Please try again later.' });
+    // All models failed — fallback to local AI response
+    console.warn('All Gemini models failed. Falling back to Local AI mode. Error:', lastError);
+    const localReply = generateLocalAIResponse(message.trim(), products);
+    db.run(
+      `INSERT INTO ai_queries (query_text, reply_text, model_used) VALUES (?, ?, ?)`,
+      [message.trim(), localReply, 'Local-Fallback-Mode']
+    );
+    return res.json({
+      status: 'success',
+      data: {
+        reply: localReply,
+        role: 'model'
+      }
+    });
 
   } catch (error: any) {
     console.error('AI Chat Error:', error);
     res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
+
+export const getAIAnalytics = async (req: Request, res: Response) => {
+  try {
+    db.all(`SELECT DATE(created_at) as date, COUNT(*) as count FROM ai_queries GROUP BY DATE(created_at) ORDER BY date ASC LIMIT 30`, [], (err, dailyRows) => {
+      if (err) return res.status(500).json({ status: 'error', message: err.message });
+      
+      db.all(`SELECT query_text as query, COUNT(*) as count FROM ai_queries GROUP BY query_text ORDER BY count DESC LIMIT 8`, [], (err, popularRows) => {
+        if (err) return res.status(500).json({ status: 'error', message: err.message });
+        
+        db.get(`SELECT COUNT(*) as total FROM ai_queries`, [], (err, totalRow: any) => {
+          if (err) return res.status(500).json({ status: 'error', message: err.message });
+          
+          db.all(`SELECT model_used as model, COUNT(*) as count FROM ai_queries GROUP BY model_used`, [], (err, modelRows) => {
+            if (err) return res.status(500).json({ status: 'error', message: err.message });
+            
+            res.json({
+              status: 'success',
+              data: {
+                dailyVolume: dailyRows || [],
+                popularQuestions: popularRows || [],
+                totalQueries: totalRow ? totalRow.total : 0,
+                modelDistribution: modelRows || []
+              }
+            });
+          });
+        });
+      });
+    });
+  } catch (error: any) {
+    console.error('Failed to get AI analytics:', error);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
+  }
+};
+
+function generateLocalAIResponse(message: string, products: any[]): string {
+  const query = message.toLowerCase().trim();
+
+  const isAskingForUse = query.includes('use') || query.includes('kivabe') || query.includes('কিভাবে') || query.includes('নিয়ম') || query.includes('rules') || query.includes('kaj') || query.includes('কাজ') || query.includes('ব্যবহার') || query.includes('work') || query.includes('hobe');
+  const isAskingForBenefits = query.includes('upokarita') || query.includes('উপকার') || query.includes('সুবিধা') || query.includes('benefit') || query.includes('feature') || query.includes('ফিচার');
+  const isAskingForSpecs = query.includes('spec') || query.includes('মাপ') || query.includes('size') || query.includes('সাইজ') || query.includes('material') || query.includes('উপাদান') || query.includes('বিবরণ') || query.includes('details') || query.includes('বিস্তারিত');
+  const isAskingForPrice = query.includes('price') || query.includes('দাম') || query.includes('কত') || query.includes('টাকা') || query.includes('cost');
+  const isAskingForStock = query.includes('stock') || query.includes('আছে') || query.includes('পাব') || query.includes('পাওয়া');
+
+  const buildTailoredResponse = (product: any): string => {
+    const inStock = product.in_stock === 1 || product.in_stock === true || product.stock > 0;
+    
+    if (isAskingForUse) {
+      let reply = `**${product.name}** এর ব্যবহারের নিয়ম ও কাজের বিবরণ:\n\n`;
+      if (product.description) {
+        reply += `**ব্যবহারের নিয়ম ও পরামর্শ:** ${product.description}\n\n`;
+      } else {
+        reply += `পণ্যটি নিরাপদে এবং দক্ষতার সাথে ব্যবহারের জন্য প্যাকেজের গায়ে থাকা নির্দেশনাবলী অনুসরণ করুন। ব্যবহারের সময় কোনো সমস্যায় পড়লে আমাদের হেল্পলাইনে যোগাযোগ করতে পারেন।\n\n`;
+      }
+      if (product.features && product.features.length > 0) {
+        reply += `**ব্যবহারের সুবিধা ও বৈশিষ্ট্যসমূহ:**\n`;
+        product.features.forEach((f: string) => {
+          reply += `- ${f}\n`;
+        });
+      }
+      return reply;
+    }
+
+    if (isAskingForBenefits) {
+      let reply = `**${product.name}** এর উপকারিতা ও বিশেষ ফিচারসমূহ:\n\n`;
+      if (product.features && product.features.length > 0) {
+        product.features.forEach((f: string) => {
+          reply += `- ${f}\n`;
+        });
+      } else if (product.description) {
+        reply += `${product.description}\n`;
+      } else {
+        reply += `এটি একটি অত্যন্ত মানসম্পন্ন ও কার্যকরী পণ্য।\n`;
+      }
+      return reply;
+    }
+
+    if (isAskingForSpecs) {
+      let reply = `**${product.name}** এর স্পেসিফিকেশন ও বিস্তারিত তথ্য:\n\n`;
+      if (product.specs && product.specs.length > 0) {
+        product.specs.forEach((s: any) => {
+          reply += `- **${s.name}**: ${s.value}\n`;
+        });
+      } else if (product.description) {
+        reply += `**বিবরণ:** ${product.description}\n`;
+      }
+      return reply;
+    }
+
+    if (isAskingForPrice) {
+      let reply = `**${product.name}** এর বর্তমান মূল্য ৳${product.price}।`;
+      if (product.original_price && product.original_price > product.price) {
+        reply += ` (পূর্বে এর মূল্য ছিল ৳${product.original_price}, যা এখন ${Math.round((1 - product.price / product.original_price) * 100)}% ছাড়ে পাওয়া যাচ্ছে!)`;
+      }
+      return reply;
+    }
+
+    if (isAskingForStock) {
+      return `**${product.name}** পণ্যটি ${inStock ? `বর্তমানে স্টকে আছে (বাকি আছে ${product.stock || 1} টি)` : 'বর্তমানে স্টক আউট'}`;
+    }
+
+    // Default detailed product info card
+    let reply = `**${product.name}** সম্পর্কে বিস্তারিত তথ্য ও পরামর্শ:\n\n`;
+    reply += `- **মূল্য**: ৳${product.price}\n`;
+    if (product.original_price && product.original_price > product.price) {
+      reply += `- **মূল্যছাড়**: ৳${product.original_price} (${Math.round((1 - product.price / product.original_price) * 100)}% ছাড়!)\n`;
+    }
+    reply += `- **স্টক**: ${inStock ? `স্টকে আছে (বাকি আছে ${product.stock || 1} টি)` : 'স্টক আউট'}\n`;
+    if (product.description) reply += `- **বিবরণ ও ব্যবহারের নিয়ম**: ${product.description}\n`;
+    
+    if (product.features && product.features.length > 0) {
+      reply += `\n**ফিচারসমূহ:**\n`;
+      product.features.forEach((f: string) => {
+        reply += `- ${f}\n`;
+      });
+    }
+
+    if (product.specs && product.specs.length > 0) {
+      reply += `\n**স্পেসিফিকেশন:**\n`;
+      product.specs.forEach((s: any) => {
+        reply += `- **${s.name}**: ${s.value}\n`;
+      });
+    }
+
+    // Find related products in the same category
+    if (product.category) {
+      const related = products.filter(p => p.id !== product.id && p.category === product.category).slice(0, 3);
+      if (related.length > 0) {
+        reply += `\n🔗 **সম্পর্কিত অন্যান্য পণ্য (Related Products):**\n`;
+        related.forEach(p => {
+          reply += `- **${p.name}** (৳${p.price})\n`;
+        });
+      }
+    }
+    return reply;
+  };
+
+  // Direct product name matches & keyword aliases
+  let matched = products.find(p => query.includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(query));
+  
+  if (!matched) {
+    const aliases = [
+      { keywords: ['dumbbell', 'ডাম্বেল', 'ডামবেল'], productId: 'PRD-001' },
+      { keywords: ['roller', 'রোলার', 'ab roller', 'এবি রোলার'], productId: 'PRD-002' },
+      { keywords: ['football', 'ফুটবল', 'বল'], productId: 'PRD-003' },
+      { keywords: ['badminton', 'র‍্যাকেট', 'র্যাকেট', 'রকেট', 'ব্যাডমিন্টন'], productId: 'PRD-004' },
+      { keywords: ['shoes', 'জুতো', 'জুতা', 'রানিং', 'running'], productId: 'PRD-005' },
+      { keywords: ['jersey', 'জার্সি', 'ড্রাই-ফিট', 'dri-fit'], productId: 'PRD-006' },
+      { keywords: ['yoga', 'ম্যাট', 'ইয়োগা', 'ইয়োগা'], productId: 'PRD-007' },
+      { keywords: ['basketball', 'বাস্কেটবল', 'হুপ', 'hoop'], productId: 'PRD-008' }
+    ];
+    
+    for (const alias of aliases) {
+      if (alias.keywords.some(kw => query.includes(kw))) {
+        matched = products.find(p => p.id === alias.productId);
+        if (matched) break;
+      }
+    }
+  }
+
+  if (matched) {
+    return buildTailoredResponse(matched);
+  }
+
+  // Greetings
+  if (query.includes('হ্যালো') || query.includes('hi') || query.includes('hello') || query.includes('কেমন আছ') || query.includes('আছেন')) {
+    return 'হ্যালো! আমি আপনার AI শপিং অ্যাসিস্ট্যান্ট। আমি আপনাকে পণ্য খুঁজে পেতে, দাম জানতে, অথবা ব্যবহারের নিয়ম ও পরামর্শ জানতে সাহায্য করতে পারি। আপনি কি খুঁজছেন বলুন?';
+  }
+
+  // Catalog Queries
+  if (query.includes('পণ্য') || query.includes('প্রোডাক্ট') || query.includes('product') || query.includes('list') || query.includes('কি কি আছে')) {
+    if (products.length === 0) return 'দুঃখিত, এই মুহূর্তে কোনো পণ্য পাওয়া যাচ্ছে না।';
+    const listStr = products.slice(0, 10).map(p => `- **${p.name}** (৳${p.price})`).join('\n');
+    return `আমাদের স্টোরের পণ্যসমূহের তালিকা নিচে দেওয়া হলো:\n\n${listStr}\n\nযেকোনো পণ্যের বিস্তারিত বা ব্যবহারের নিয়ম জানতে তার নাম লিখে প্রশ্ন করুন!`;
+  }
+
+  // Low Price Queries
+  if (query.includes('কম দাম') || query.includes('সস্তা') || query.includes('cheap') || query.includes('low price') || query.includes('কমদামি')) {
+    if (products.length === 0) return 'দুঃখিত, এই মুহূর্তে কোনো পণ্য পাওয়া যাচ্ছে না।';
+    const sorted = [...products].sort((a, b) => a.price - b.price);
+    const listStr = sorted.slice(0, 5).map(p => `- **${p.name}** (৳${p.price})`).join('\n');
+    return `আমাদের স্টোরের সবচেয়ে কম দামের পণ্যসমূহ:\n\n${listStr}`;
+  }
+
+  // Discount Queries
+  if (query.includes('ছাড়') || query.includes('অফার') || query.includes('discount') || query.includes('sale') || query.includes('ক্যাম্পেইন')) {
+    const discounted = products.filter(p => p.original_price && p.original_price > p.price);
+    if (discounted.length === 0) return 'এই মুহূর্তে কোনো পণ্যে সরাসরি মূল্যছাড় নেই, তবে আমাদের সব পণ্যের দামই অত্যন্ত সাশ্রয়ী!';
+    const listStr = discounted.slice(0, 5).map(p => {
+      const pct = Math.round((1 - p.price / p.original_price) * 100);
+      return `- **${p.name}**: ৳${p.price} (মূল্য: ৳${p.original_price}, **${pct}% ছাড়!**)`;
+    }).join('\n');
+    return `আমাদের আকর্ষণীয় অফার ও ডিসকাউন্টযুক্ত পণ্যসমূহ:\n\n${listStr}`;
+  }
+
+  // Category queries
+  const categoryMatched = products.filter(p => p.category && query.includes(p.category.toLowerCase()));
+  if (categoryMatched.length > 0) {
+    const listStr = categoryMatched.slice(0, 5).map(p => `- **${p.name}** (৳${p.price})`).join('\n');
+    return `আমাদের কাছে **${categoryMatched[0].category}** ক্যাটাগরির নিচের পণ্যগুলো রয়েছে:\n\n${listStr}`;
+  }
+
+  return 'আমি আপনার প্রশ্নটি বুঝতে পেরেছি। আমাদের স্টোরে থাকা পণ্যগুলোর দাম, ব্যবহারের নিয়ম, অথবা কোনো পরামর্শ সম্পর্কে জানতে পণ্যটির নাম লিখে প্রশ্ন করতে পারেন। আমি আপনাকে সঠিক তথ্য ও পরামর্শ দেওয়ার চেষ্টা করব!';
+}

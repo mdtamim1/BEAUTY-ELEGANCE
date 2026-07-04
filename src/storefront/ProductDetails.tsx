@@ -33,7 +33,7 @@ export default function ProductDetails() {
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState('');
-  const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'reviews'>('description');
+  const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'reviews' | 'media'>('description');
   
   const { customer, login, register, loginWithGmail, updateCustomerProfile } = useCustomerAuth();
   
@@ -716,6 +716,9 @@ export default function ProductDetails() {
           <button className={`pdp-tab ${activeTab === 'description' ? 'active' : ''}`} onClick={() => setActiveTab('description')}>Description</button>
           <button className={`pdp-tab ${activeTab === 'specs' ? 'active' : ''}`} onClick={() => setActiveTab('specs')}>Specifications</button>
           <button className={`pdp-tab ${activeTab === 'reviews' ? 'active' : ''}`} onClick={() => setActiveTab('reviews')}>Reviews ({product.customerReviews?.length || 0})</button>
+          {(product.videoUrl || product.photoContent || product.video_url || product.photo_content) && (
+            <button className={`pdp-tab ${activeTab === 'media' ? 'active' : ''}`} onClick={() => setActiveTab('media')}>Video & Photos</button>
+          )}
         </div>
         
         <div className="pdp-tab-content">
@@ -742,6 +745,44 @@ export default function ProductDetails() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {activeTab === 'media' && (
+            <div className="pdp-media-tab" style={{ display: 'flex', flexDirection: 'column', gap: '24px', padding: '10px 0' }}>
+              {(product.videoUrl || product.video_url) && (
+                <div style={{ background: 'var(--bg-secondary)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-secondary)' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-primary)' }} />
+                    Product Video Content
+                  </h3>
+                  {((product.videoUrl || product.video_url).includes('youtube.com') || (product.videoUrl || product.video_url).includes('youtu.be')) ? (
+                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+                      <iframe
+                        src={getEmbedUrl(product.videoUrl || product.video_url)}
+                        title="Product Video"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                      />
+                    </div>
+                  ) : (
+                    <video controls src={product.videoUrl || product.video_url} style={{ width: '100%', borderRadius: '8px', maxHeight: '480px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} />
+                  )}
+                </div>
+              )}
+              {(product.photoContent || product.photo_content) && (
+                <div style={{ background: 'var(--bg-secondary)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-secondary)' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-primary)' }} />
+                    Additional Photo Content
+                  </h3>
+                  <div style={{ display: 'flex', justifyContent: 'center', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+                    <img src={product.photoContent || product.photo_content} alt="Product Photo Content" style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px', maxHeight: '600px', objectFit: 'contain' }} />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1536,3 +1577,15 @@ export default function ProductDetails() {
     </div>
   );
 }
+
+const getEmbedUrl = (url: string) => {
+  if (!url) return '';
+  if (url.includes('embed/')) return url;
+  let videoId = '';
+  if (url.includes('youtu.be/')) {
+    videoId = url.split('youtu.be/')[1]?.split('?')[0] || '';
+  } else {
+    videoId = url.split('v=')[1]?.split('&')[0] || '';
+  }
+  return `https://www.youtube.com/embed/${videoId}`;
+};

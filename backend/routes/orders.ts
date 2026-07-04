@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getOrders, getOrderById, createOrder, updateOrderStatus, updateOrder, syncOrders, assignOrder } from '../controllers/ordersController';
+import { getOrders, getOrderById, createOrder, updateOrderStatus, updateOrder, syncOrders, assignOrder, getOrderHistory } from '../controllers/ordersController';
 import { authenticateToken, requireRole } from '../middleware/auth';
 
 const router = Router();
@@ -10,6 +10,7 @@ router.post('/', createOrder);
 // Admin / staff / moderator can view orders
 router.get('/', authenticateToken, requireRole(['Super Admin', 'Admin', 'Staff', 'Moderator']), getOrders);
 router.get('/:id', authenticateToken, requireRole(['Super Admin', 'Admin', 'Staff', 'Moderator']), getOrderById);
+router.get('/:id/history', authenticateToken, requireRole(['Super Admin', 'Admin', 'Staff', 'Moderator']), getOrderHistory);
 
 // Admin can manage orders
 router.put('/:id', authenticateToken, requireRole(['Super Admin', 'Admin', 'Staff']), updateOrder);
