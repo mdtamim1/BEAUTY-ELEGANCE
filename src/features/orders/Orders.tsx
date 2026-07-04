@@ -1310,7 +1310,7 @@ export default function Orders() {
       {/* Detail and Create Modal */}
       {modalOpen && (
         <div className="modal-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)' }}>
-          <div className="modal" style={{ maxWidth: '1200px', width: '95%', maxHeight: '90vh', overflowY: 'auto', background: '#0b0f19', color: '#e2e8f0', borderRadius: '12px', border: '1px solid #1e293b' }} onClick={(e) => e.stopPropagation()}>
+          <div className="modal" style={{ maxWidth: '1400px', width: '95%', maxHeight: '90vh', overflowY: 'auto', background: '#0b0f19', color: '#e2e8f0', borderRadius: '12px', border: '1px solid #1e293b' }} onClick={(e) => e.stopPropagation()}>
             
             {/* Modal Header */}
             <div className="modal-header" style={{ borderBottom: '1px solid #1e293b', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1668,7 +1668,16 @@ export default function Orders() {
                       No history logs found for this order.
                     </div>
                   ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px', marginTop: '12px' }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      flexDirection: 'row', 
+                      gap: '16px', 
+                      overflowX: 'auto', 
+                      paddingBottom: '12px', 
+                      marginTop: '12px',
+                      scrollbarWidth: 'thin',
+                      scrollbarColor: 'rgba(99, 102, 241, 0.3) rgba(15, 23, 42, 0.2)'
+                    }}>
                       {orderHistory.map((log) => {
                         let dotColor = '#10b981'; // green for create
                         let eventTitle = 'Event';
@@ -1709,7 +1718,9 @@ export default function Orders() {
                               gap: '12px',
                               position: 'relative',
                               transition: 'all 0.2s',
-                              overflow: 'hidden'
+                              overflow: 'hidden',
+                              flexShrink: 0,
+                              width: '280px'
                             }}
                           >
                             {/* Accent indicator line */}
