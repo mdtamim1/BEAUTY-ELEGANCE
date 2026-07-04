@@ -1336,102 +1336,10 @@ export default function Orders() {
             <form onSubmit={handleSaveOrder} style={{ padding: '24px' }}>
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: modalMode === 'edit' ? '300px 1fr 1fr' : '1fr 1fr',
+                gridTemplateColumns: '1fr 1fr',
                 gap: '24px',
                 alignItems: 'start'
               }}>
-
-                {/* Timeline Column */}
-                {modalMode === 'edit' && (
-                  <div style={{
-                    background: 'rgba(15, 23, 42, 0.4)',
-                    border: '1px solid rgba(255, 255, 255, 0.05)',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '16px',
-                    maxHeight: '680px',
-                    overflowY: 'auto',
-                    boxShadow: 'inset 0 0 20px rgba(0,0,0,0.2)'
-                  }}>
-                    <h4 style={{ 
-                      fontSize: '14px', 
-                      fontWeight: 600, 
-                      color: '#38bdf8', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '8px', 
-                      borderBottom: '1px solid rgba(255,255,255,0.05)', 
-                      paddingBottom: '8px',
-                      margin: 0
-                    }}>
-                      <History size={16} /> Order History Timeline
-                    </h4>
-
-                    {orderHistory.length === 0 ? (
-                      <div style={{ color: '#64748b', fontSize: '12px', fontStyle: 'italic', padding: '16px 0', textAlign: 'center' }}>
-                        No history logs found for this order.
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', position: 'relative', paddingLeft: '14px', borderLeft: '2px solid rgba(255,255,255,0.05)', marginLeft: '6px', gap: '20px', marginTop: '4px' }}>
-                        {orderHistory.map((log) => {
-                          let dotColor = '#10b981'; // green for create
-                          let eventTitle = 'Event';
-                          let description = '';
-
-                          if (log.action_type === 'create') {
-                            dotColor = '#10b981';
-                            eventTitle = 'Order Created';
-                            description = 'Order was placed & marked as processing.';
-                          } else if (log.action_type === 'status_change') {
-                            dotColor = '#6366f1'; // blue/indigo
-                            eventTitle = 'Status Updated';
-                            description = `${log.old_value || 'N/A'} ➔ ${log.new_value}`;
-                          } else if (log.action_type === 'assignment') {
-                            dotColor = '#818cf8'; // purple
-                            eventTitle = 'Assignee Updated';
-                            description = log.new_value === 'Unassigned' 
-                              ? `Unassigned (previously: ${log.old_value || 'None'})` 
-                              : `Assigned to ${log.new_value}`;
-                          } else if (log.action_type === 'shop_note') {
-                            dotColor = '#f59e0b'; // amber/orange
-                            eventTitle = 'Shop Note Added';
-                            description = log.new_value 
-                              ? `Note: "${log.new_value}"` 
-                              : 'Shop note was cleared.';
-                          }
-
-                          return (
-                            <div key={log.id} style={{ position: 'relative', fontSize: '12px' }}>
-                              {/* Event Dot */}
-                              <div style={{
-                                width: '10px',
-                                height: '10px',
-                                borderRadius: '50%',
-                                background: dotColor,
-                                position: 'absolute',
-                                left: '-20px',
-                                top: '4px',
-                                boxShadow: `0 0 8px ${dotColor}`
-                              }} />
-
-                              {/* Content */}
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                                <div style={{ fontWeight: 600, color: '#fff' }}>{eventTitle}</div>
-                                <div style={{ color: '#94a3b8', fontSize: '11px', lineBreak: 'anywhere' }}>{description}</div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginTop: '2px', color: '#64748b', fontSize: '10px' }}>
-                                  <div>by {log.performed_by}</div>
-                                  <div>{new Date(log.created_at).toLocaleString()}</div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
                 
                 {/* Left Column */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1729,6 +1637,102 @@ export default function Orders() {
                 </div>
 
               </div>
+
+              {/* Order History Timeline at the bottom */}
+              {modalMode === 'edit' && (
+                <div style={{
+                  background: 'rgba(15, 23, 42, 0.4)',
+                  border: '1px solid rgba(255, 255, 255, 0.05)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  marginTop: '24px',
+                  boxShadow: 'inset 0 0 20px rgba(0,0,0,0.2)'
+                }}>
+                  <h4 style={{ 
+                    fontSize: '15px', 
+                    fontWeight: 600, 
+                    color: '#38bdf8', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px', 
+                    borderBottom: '1px solid rgba(255,255,255,0.05)', 
+                    paddingBottom: '12px',
+                    marginBottom: '16px',
+                    margin: 0
+                  }}>
+                    <History size={18} /> Order History Timeline & Log Audit
+                  </h4>
+
+                  {orderHistory.length === 0 ? (
+                    <div style={{ color: '#64748b', fontSize: '12px', fontStyle: 'italic', padding: '16px 0', textAlign: 'center' }}>
+                      No history logs found for this order.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px', marginTop: '12px' }}>
+                      {orderHistory.map((log) => {
+                        let dotColor = '#10b981'; // green for create
+                        let eventTitle = 'Event';
+                        let description = '';
+
+                        if (log.action_type === 'create') {
+                          dotColor = '#10b981';
+                          eventTitle = 'Order Created';
+                          description = 'Order was placed & marked as processing.';
+                        } else if (log.action_type === 'status_change') {
+                          dotColor = '#6366f1'; // blue/indigo
+                          eventTitle = 'Status Updated';
+                          description = `${log.old_value || 'N/A'} ➔ ${log.new_value}`;
+                        } else if (log.action_type === 'assignment') {
+                          dotColor = '#818cf8'; // purple
+                          eventTitle = 'Assignee Updated';
+                          description = log.new_value === 'Unassigned' 
+                            ? `Unassigned (previously: ${log.old_value || 'None'})` 
+                            : `Assigned to ${log.new_value}`;
+                        } else if (log.action_type === 'shop_note') {
+                          dotColor = '#f59e0b'; // amber/orange
+                          eventTitle = 'Shop Note Added';
+                          description = log.new_value 
+                            ? `Note: "${log.new_value}"` 
+                            : 'Shop note was cleared.';
+                        }
+
+                        return (
+                          <div 
+                            key={log.id} 
+                            style={{ 
+                              background: 'rgba(30, 41, 59, 0.4)', 
+                              border: '1px solid rgba(255, 255, 255, 0.05)', 
+                              borderRadius: '8px', 
+                              padding: '12px 16px',
+                              display: 'flex',
+                              alignItems: 'start',
+                              gap: '12px',
+                              position: 'relative',
+                              transition: 'all 0.2s',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            {/* Accent indicator line */}
+                            <div style={{ width: '4px', position: 'absolute', top: 0, bottom: 0, left: 0, background: dotColor }} />
+                            
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, paddingLeft: '4px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontWeight: 600, color: '#fff', fontSize: '12px' }}>{eventTitle}</span>
+                                <span style={{ color: '#64748b', fontSize: '9px' }}>{new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                              <div style={{ color: '#94a3b8', fontSize: '11px', wordBreak: 'break-word', marginTop: '2px', lineHeight: '1.4' }}>{description}</div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', fontSize: '10px', color: '#64748b' }}>
+                                <span>by {log.performed_by}</span>
+                                <span>{new Date(log.created_at).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Submit Buttons */}
               <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px', borderTop: '1px solid #1e293b', paddingTop: '20px' }}>
