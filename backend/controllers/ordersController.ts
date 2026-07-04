@@ -117,10 +117,12 @@ export const createOrder = (req: Request, res: Response) => {
     discount,
     paidAmount,
     subtotal,
+    status,
     productsList,
   } = req.body;
 
   const id = 'ORD-' + Math.floor(10000 + Math.random() * 90000);
+  const initialStatus = status || 'pending';
 
   db.run('BEGIN TRANSACTION', (txErr) => {
     if (txErr) {
@@ -133,11 +135,11 @@ export const createOrder = (req: Request, res: Response) => {
         id, customer, email, amount, items, payment_method, store_name, phone, address, 
         courier, city, thana, area, customer_note, shop_note, payment_type, memo_number, 
         delivery_charge, discount, paid_amount, subtotal, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'processing')`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, customer, email, amount, items, paymentMethod, storeName, phone, address,
         courier, city, thana, area, customerNote, shopNote, paymentType, memoNumber,
-        deliveryCharge, discount, paidAmount, subtotal
+        deliveryCharge, discount, paidAmount, subtotal, initialStatus
       ],
       function (err) {
         if (err) {
@@ -186,7 +188,7 @@ export const createOrder = (req: Request, res: Response) => {
                       }
                       cacheService.del('dashboard:stats').catch(console.error);
                       const performedBy = (req as any).user ? `${(req as any).user.name} (${(req as any).user.role})` : 'Customer';
-                      logOrderHistory(id, 'create', null, 'processing', performedBy);
+                      logOrderHistory(id, 'create', null, initialStatus, performedBy);
                       res.json({ status: 'success', message: 'Order created successfully', data: { id } });
                     });
                   });
@@ -205,7 +207,7 @@ export const createOrder = (req: Request, res: Response) => {
             }
             cacheService.del('dashboard:stats').catch(console.error);
             const performedBy = (req as any).user ? `${(req as any).user.name} (${(req as any).user.role})` : 'Customer';
-            logOrderHistory(id, 'create', null, 'processing', performedBy);
+            logOrderHistory(id, 'create', null, initialStatus, performedBy);
             res.json({ status: 'success', message: 'Order created successfully', data: { id } });
           });
         }
@@ -430,9 +432,9 @@ export const syncOrders = (req: Request, res: Response) => {
         return res.status(400).json({ status: 'error', message: 'কোনো active employee পাওয়া যায়নি এবং admin তথ্যও পাওয়া যায়নি।' });
       }
 
-      // Step 2: Get unassigned processing orders
+      // Step 2: Get unassigned pending orders
       db.all(
-        `SELECT id FROM orders WHERE assigned_to IS NULL AND status = 'processing' ORDER BY created_at ASC`,
+        `SELECT id FROM orders WHERE assigned_to IS NULL AND status = 'pending' ORDER BY created_at ASC`,
         [],
         (err, unassignedOrders: any[]) => {
           if (err) {
@@ -441,10 +443,10 @@ export const syncOrders = (req: Request, res: Response) => {
           }
 
           if (!unassignedOrders || unassignedOrders.length === 0) {
-            return res.json({ status: 'success', message: 'কোনো unassigned order নেই', data: { assigned: 0 } });
+            return res.json({ status: 'success', message: 'কোনো unassigned pending order নেই', data: { assigned: 0 } });
           }
 
-          // Step 3: Round-robin assignment inside a transaction — save both assigned_to and assigned_name
+          // Step 3: Round-robin assignment inside a transaction — save assigned_to, assigned_name, and update status to processing
           db.run('BEGIN TRANSACTION', (txErr) => {
             if (txErr) {
               console.error('Failed to start transaction:', txErr);
@@ -459,7 +461,7 @@ export const syncOrders = (req: Request, res: Response) => {
               const employee = assignees[index % assignees.length];
               const assignedName = `${employee.first_name} ${employee.last_name}`.trim();
               db.run(
-                `UPDATE orders SET assigned_to = ?, assigned_name = ? WHERE id = ?`,
+                `UPDATE orders SET assigned_to = ?, assigned_name = ?, status = 'processing' WHERE id = ?`,
                 [employee.id, assignedName, order.id],
                 (updateErr) => {
                   if (updateErr) {
@@ -467,6 +469,7 @@ export const syncOrders = (req: Request, res: Response) => {
                     hasError = true;
                   } else {
                     const performedBy = (req as any).user ? `${(req as any).user.name} (${(req as any).user.role})` : 'System';
+                    logOrderHistory(order.id, 'status_change', 'pending', 'processing', performedBy);
                     logOrderHistory(order.id, 'assignment', null, assignedName, performedBy);
                   }
                   completed++;
