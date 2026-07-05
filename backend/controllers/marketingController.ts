@@ -392,15 +392,64 @@ export const getCustomerCoupons = (req: Request, res: Response) => {
     return res.status(400).json({ status: 'error', message: 'Customer email is required' });
   }
 
+  // 1. Fetch user's individual coupons from customer_coupons
   db.all(
     `SELECT * FROM customer_coupons WHERE LOWER(customer_email) = ? ORDER BY created_at DESC`,
     [email],
-    (err, rows) => {
+    (err, userRows: any[]) => {
       if (err) {
         console.error('Failed to fetch customer coupons:', err);
         return res.status(500).json({ status: 'error', message: 'Database error' });
       }
-      res.json({ status: 'success', data: rows || [] });
+
+      let couponsList = userRows || [];
+
+      // 2. ALSO auto-sync active global auto-dispatch campaigns from system_settings
+      db.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'auto_dispatch_coupons'`, [], (err, settingRow: any) => {
+        if (!err && settingRow && settingRow.setting_value) {
+          try {
+            const activeCampaigns: any[] = JSON.parse(settingRow.setting_value);
+            if (Array.isArray(activeCampaigns) && activeCampaigns.length > 0) {
+              const existingCodes = new Set(couponsList.map((c) => (c.code || '').toUpperCase()));
+
+              activeCampaigns.forEach((camp) => {
+                if (camp && camp.enabled && camp.code) {
+                  const cleanCode = camp.code.trim().toUpperCase();
+                  if (!existingCodes.has(cleanCode)) {
+                    // Deposit campaign on the fly for this customer
+                    db.run(
+                      `INSERT INTO customer_coupons (customer_email, code, title, discount_type, discount_value, status, source)
+                       VALUES (?, ?, ?, ?, ?, 'active', 'admin_gift')`,
+                      [
+                        email,
+                        cleanCode,
+                        camp.title || 'বিশেষ উপহার',
+                        camp.discount_type || 'fixed',
+                        Number(camp.discount_value) || 0
+                      ]
+                    );
+
+                    couponsList.unshift({
+                      customer_email: email,
+                      code: cleanCode,
+                      title: camp.title || 'বিশেষ উপহার',
+                      discount_type: camp.discount_type || 'fixed',
+                      discount_value: Number(camp.discount_value) || 0,
+                      status: 'active',
+                      source: 'admin_gift',
+                      created_at: new Date().toISOString()
+                    });
+                  }
+                }
+              });
+            }
+          } catch (e) {
+            console.error('Error parsing auto_dispatch_coupons:', e);
+          }
+        }
+
+        res.json({ status: 'success', data: couponsList });
+      });
     }
   );
 };
@@ -417,14 +466,17 @@ export const dispatchDirectCoupon = (req: Request, res: Response) => {
   const type = discount_type || 'percentage';
   const val = Number(discount_value);
 
+  // Default auto_enroll_future to TRUE when target === 'all' to ensure every customer receives it
+  const shouldAutoEnroll = auto_enroll_future !== undefined ? Boolean(auto_enroll_future) : (target === 'all');
+
   // Insert code into main coupons table
   db.run(
     `INSERT OR REPLACE INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, '2030-12-31', 'active')`,
     [cleanCode, type, val]
   );
 
-  // If auto_enroll_future is checked, save campaign to auto_dispatch_coupons in system_settings
-  if (auto_enroll_future) {
+  // If auto_enroll_future or target === 'all', save campaign to auto_dispatch_coupons in system_settings
+  if (shouldAutoEnroll) {
     db.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'auto_dispatch_coupons'`, [], (err, row: any) => {
       let existingCampaigns: any[] = [];
       if (row && row.setting_value) {
@@ -474,7 +526,7 @@ export const dispatchDirectCoupon = (req: Request, res: Response) => {
     // Dispatch to ALL registered customers
     db.all(`SELECT email FROM customers`, [], (err, rows: any[]) => {
       if (err || !rows || rows.length === 0) {
-        return res.json({ status: 'success', message: 'কুপন ডাটাবেজে তৈরি হয়েছে এবং অটো-ডিচপ্যাচ অন করা হয়েছে!' });
+        return res.json({ status: 'success', message: 'কুপন ডাটাবেজে তৈরি হয়েছে এবং কাস্টমার একাউন্টগুলোর জন্য অন করা হয়েছে!' });
       }
 
       rows.forEach((c) => {
@@ -487,8 +539,8 @@ export const dispatchDirectCoupon = (req: Request, res: Response) => {
         }
       });
 
-      const autoMsg = auto_enroll_future ? ' এবং ভবিষ্যত নতুন একাউন্টগুলোর জন্য অটো-ডিচপ্যাচ অন করা হয়েছে!' : '';
-      res.json({ status: 'success', message: `সকল (${rows.length} জন) রেজিস্টার্ড কাস্টমারের একাউন্টে কুপন পাঠানো হয়েছে${autoMsg}` });
+      const autoMsg = shouldAutoEnroll ? ' এবং সকল কাস্টমার একাউন্টে স্বয়ংক্রিয়ভাবে অন করা হয়েছে!' : '';
+      res.json({ status: 'success', message: `সকল কাস্টমারের একাউন্টে কুপন পাঠানো হয়েছে${autoMsg}` });
     });
   }
 };

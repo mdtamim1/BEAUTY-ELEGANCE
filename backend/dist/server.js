@@ -4723,12 +4723,53 @@ var getCustomerCoupons = (req, res) => {
   db_default.all(
     `SELECT * FROM customer_coupons WHERE LOWER(customer_email) = ? ORDER BY created_at DESC`,
     [email],
-    (err, rows) => {
+    (err, userRows) => {
       if (err) {
         console.error("Failed to fetch customer coupons:", err);
         return res.status(500).json({ status: "error", message: "Database error" });
       }
-      res.json({ status: "success", data: rows || [] });
+      let couponsList = userRows || [];
+      db_default.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'auto_dispatch_coupons'`, [], (err2, settingRow) => {
+        if (!err2 && settingRow && settingRow.setting_value) {
+          try {
+            const activeCampaigns = JSON.parse(settingRow.setting_value);
+            if (Array.isArray(activeCampaigns) && activeCampaigns.length > 0) {
+              const existingCodes = new Set(couponsList.map((c) => (c.code || "").toUpperCase()));
+              activeCampaigns.forEach((camp) => {
+                if (camp && camp.enabled && camp.code) {
+                  const cleanCode = camp.code.trim().toUpperCase();
+                  if (!existingCodes.has(cleanCode)) {
+                    db_default.run(
+                      `INSERT INTO customer_coupons (customer_email, code, title, discount_type, discount_value, status, source)
+                       VALUES (?, ?, ?, ?, ?, 'active', 'admin_gift')`,
+                      [
+                        email,
+                        cleanCode,
+                        camp.title || "\u09AC\u09BF\u09B6\u09C7\u09B7 \u0989\u09AA\u09B9\u09BE\u09B0",
+                        camp.discount_type || "fixed",
+                        Number(camp.discount_value) || 0
+                      ]
+                    );
+                    couponsList.unshift({
+                      customer_email: email,
+                      code: cleanCode,
+                      title: camp.title || "\u09AC\u09BF\u09B6\u09C7\u09B7 \u0989\u09AA\u09B9\u09BE\u09B0",
+                      discount_type: camp.discount_type || "fixed",
+                      discount_value: Number(camp.discount_value) || 0,
+                      status: "active",
+                      source: "admin_gift",
+                      created_at: (/* @__PURE__ */ new Date()).toISOString()
+                    });
+                  }
+                }
+              });
+            }
+          } catch (e) {
+            console.error("Error parsing auto_dispatch_coupons:", e);
+          }
+        }
+        res.json({ status: "success", data: couponsList });
+      });
     }
   );
 };
@@ -4740,11 +4781,12 @@ var dispatchDirectCoupon = (req, res) => {
   const cleanCode = String(code).trim().toUpperCase();
   const type = discount_type || "percentage";
   const val = Number(discount_value);
+  const shouldAutoEnroll = auto_enroll_future !== void 0 ? Boolean(auto_enroll_future) : target === "all";
   db_default.run(
     `INSERT OR REPLACE INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, '2030-12-31', 'active')`,
     [cleanCode, type, val]
   );
-  if (auto_enroll_future) {
+  if (shouldAutoEnroll) {
     db_default.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'auto_dispatch_coupons'`, [], (err, row) => {
       let existingCampaigns = [];
       if (row && row.setting_value) {
@@ -4789,7 +4831,7 @@ var dispatchDirectCoupon = (req, res) => {
   } else {
     db_default.all(`SELECT email FROM customers`, [], (err, rows) => {
       if (err || !rows || rows.length === 0) {
-        return res.json({ status: "success", message: "\u0995\u09C1\u09AA\u09A8 \u09A1\u09BE\u099F\u09BE\u09AC\u09C7\u099C\u09C7 \u09A4\u09C8\u09B0\u09BF \u09B9\u09DF\u09C7\u099B\u09C7 \u098F\u09AC\u0982 \u0985\u099F\u09CB-\u09A1\u09BF\u099A\u09AA\u09CD\u09AF\u09BE\u099A \u0985\u09A8 \u0995\u09B0\u09BE \u09B9\u09DF\u09C7\u099B\u09C7!" });
+        return res.json({ status: "success", message: "\u0995\u09C1\u09AA\u09A8 \u09A1\u09BE\u099F\u09BE\u09AC\u09C7\u099C\u09C7 \u09A4\u09C8\u09B0\u09BF \u09B9\u09DF\u09C7\u099B\u09C7 \u098F\u09AC\u0982 \u0995\u09BE\u09B8\u09CD\u099F\u09AE\u09BE\u09B0 \u098F\u0995\u09BE\u0989\u09A8\u09CD\u099F\u0997\u09C1\u09B2\u09CB\u09B0 \u099C\u09A8\u09CD\u09AF \u0985\u09A8 \u0995\u09B0\u09BE \u09B9\u09DF\u09C7\u099B\u09C7!" });
       }
       rows.forEach((c) => {
         if (c.email) {
@@ -4800,8 +4842,8 @@ var dispatchDirectCoupon = (req, res) => {
           );
         }
       });
-      const autoMsg = auto_enroll_future ? " \u098F\u09AC\u0982 \u09AD\u09AC\u09BF\u09B7\u09CD\u09AF\u09A4 \u09A8\u09A4\u09C1\u09A8 \u098F\u0995\u09BE\u0989\u09A8\u09CD\u099F\u0997\u09C1\u09B2\u09CB\u09B0 \u099C\u09A8\u09CD\u09AF \u0985\u099F\u09CB-\u09A1\u09BF\u099A\u09AA\u09CD\u09AF\u09BE\u099A \u0985\u09A8 \u0995\u09B0\u09BE \u09B9\u09DF\u09C7\u099B\u09C7!" : "";
-      res.json({ status: "success", message: `\u09B8\u0995\u09B2 (${rows.length} \u099C\u09A8) \u09B0\u09C7\u099C\u09BF\u09B8\u09CD\u099F\u09BE\u09B0\u09CD\u09A1 \u0995\u09BE\u09B8\u09CD\u099F\u09AE\u09BE\u09B0\u09C7\u09B0 \u098F\u0995\u09BE\u0989\u09A8\u09CD\u099F\u09C7 \u0995\u09C1\u09AA\u09A8 \u09AA\u09BE\u09A0\u09BE\u09A8\u09CB \u09B9\u09DF\u09C7\u099B\u09C7${autoMsg}` });
+      const autoMsg = shouldAutoEnroll ? " \u098F\u09AC\u0982 \u09B8\u0995\u09B2 \u0995\u09BE\u09B8\u09CD\u099F\u09AE\u09BE\u09B0 \u098F\u0995\u09BE\u0989\u09A8\u09CD\u099F\u09C7 \u09B8\u09CD\u09AC\u09DF\u0982\u0995\u09CD\u09B0\u09BF\u09DF\u09AD\u09BE\u09AC\u09C7 \u0985\u09A8 \u0995\u09B0\u09BE \u09B9\u09DF\u09C7\u099B\u09C7!" : "";
+      res.json({ status: "success", message: `\u09B8\u0995\u09B2 \u0995\u09BE\u09B8\u09CD\u099F\u09AE\u09BE\u09B0\u09C7\u09B0 \u098F\u0995\u09BE\u0989\u09A8\u09CD\u099F\u09C7 \u0995\u09C1\u09AA\u09A8 \u09AA\u09BE\u09A0\u09BE\u09A8\u09CB \u09B9\u09DF\u09C7\u099B\u09C7${autoMsg}` });
     });
   }
 };
