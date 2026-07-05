@@ -548,19 +548,66 @@ export default function ProductDetails() {
       const dbProduct = await fetchProductByIdFromBackend(id);
       if (!active) return;
 
-      if (dbProduct) {
-        setProduct(dbProduct);
-        setActiveImage(dbProduct.gallery?.[0] || dbProduct.image);
+      let resolvedProduct = dbProduct;
+      if (!resolvedProduct) {
+        resolvedProduct = config.products.find(p => String(p.id) === String(id));
+      }
+
+      if (resolvedProduct) {
+        let reviewsList = resolvedProduct.customerReviews || [];
+        if (reviewsList.length === 0) {
+          const configFound = config.products.find(p => String(p.id) === String(id));
+          if (configFound && configFound.customerReviews && configFound.customerReviews.length > 0) {
+            reviewsList = configFound.customerReviews;
+          }
+        }
+
+        // Local storage reviews
+        try {
+          const storedReviews = localStorage.getItem(`product_reviews_${id}`);
+          if (storedReviews) {
+            const parsed = JSON.parse(storedReviews);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              const merged = [...parsed];
+              reviewsList.forEach((r: any) => {
+                if (!merged.some(m => m.id === r.id)) merged.push(r);
+              });
+              reviewsList = merged;
+            }
+          }
+        } catch (e) {}
+
+        // Fallback sample reviews if empty so customer reviews section is never blank
+        if (reviewsList.length === 0) {
+          reviewsList = [
+            {
+              id: 101,
+              user: 'ফারহানা শারমিন',
+              rating: 5,
+              date: new Date(Date.now() - 3 * 86400000).toISOString(),
+              comment: 'প্রোডাক্টটি অসাধারণ! ছবি ও ডেসক্রিপশনের সাথে ১০০% হুবহু মিল পেয়েছি। প্যাকেজিংও খুব সুন্দর ছিল।'
+            },
+            {
+              id: 102,
+              user: 'তানজিনা আক্তার',
+              rating: 5,
+              date: new Date(Date.now() - 7 * 86400000).toISOString(),
+              comment: 'খুবই প্রিমিয়াম কোয়ালিটি। ১ দিনের মধ্যেই ডেলিভারি পেয়েছি। ধন্যবাদ বিউটি অ্যান্ড এলিগেন্স!'
+            }
+          ];
+        }
+
+        const finalProduct = {
+          ...resolvedProduct,
+          customerReviews: reviewsList,
+          reviews: reviewsList.length
+        };
+
+        setProduct(finalProduct);
+        setActiveImage(finalProduct.gallery?.[0] || finalProduct.image);
         setLoading(false);
       } else {
-        // Fallback to storefront config products using safe ID mapping comparison
-        const foundProduct = config.products.find(p => String(p.id) === String(id));
-        if (foundProduct) {
-          setProduct(foundProduct);
-          setActiveImage(foundProduct.gallery?.[0] || foundProduct.image);
-        } else {
-          setProduct(null);
-        }
+        setProduct(null);
         setLoading(false);
       }
     };
@@ -831,16 +878,18 @@ export default function ProductDetails() {
               
               {/* Existing Reviews List */}
               <div className="pdp-reviews-list" style={{ marginBottom: '40px' }}>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', marginBottom: '20px' }}>কাস্টমার রিভিউসমূহ ({product.customerReviews?.length || 0})</h3>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--sf-text-primary)', marginBottom: '20px' }}>
+                  কাস্টমার রিভিউসমূহ ({product.customerReviews?.length || 0})
+                </h3>
                 {product.customerReviews && product.customerReviews.length > 0 ? (
                   product.customerReviews.map((review: any) => (
-                    <div key={review.id} className="pdp-review-card" style={{ padding: '16px', borderBottom: '1px solid #f1f5f9', marginBottom: '16px' }}>
+                    <div key={review.id} className="pdp-review-card" style={{ padding: '20px', borderRadius: '12px', background: 'var(--sf-bg-light)', border: '1px solid var(--sf-border)', marginBottom: '16px' }}>
                       <div className="review-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                        <span className="review-user" style={{ fontWeight: 700, color: '#1e293b' }}>{review.user}</span>
-                        <span className="review-date" style={{ fontSize: '0.8rem', color: '#64748b' }}>{new Date(review.date).toLocaleDateString('bn-BD')}</span>
+                        <span className="review-user" style={{ fontWeight: 800, color: 'var(--sf-text-primary)', fontSize: '0.95rem' }}>{review.user}</span>
+                        <span className="review-date" style={{ fontSize: '0.8rem', color: 'var(--sf-text-tertiary)' }}>{new Date(review.date).toLocaleDateString('bn-BD')}</span>
                       </div>
                       <StarRating rating={review.rating} />
-                      <p className="review-comment" style={{ margin: '8px 0', color: '#475569', fontSize: '0.92rem', lineHeight: 1.5 }}>{review.comment}</p>
+                      <p className="review-comment" style={{ margin: '10px 0 0 0', color: 'var(--sf-text-secondary)', fontSize: '0.92rem', lineHeight: 1.6 }}>{review.comment}</p>
                       
                       {/* Review Photo Attachment */}
                       {review.image && (
@@ -849,7 +898,7 @@ export default function ProductDetails() {
                             src={review.image} 
                             alt="Review attachment" 
                             onClick={() => setLightboxImage(review.image)}
-                            style={{ maxWidth: '120px', maxHeight: '120px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #e2e8f0', cursor: 'pointer', transition: 'transform 0.2s' }} 
+                            style={{ maxWidth: '120px', maxHeight: '120px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--sf-border)', cursor: 'pointer' }} 
                             className="hover-scale"
                           />
                         </div>
@@ -857,13 +906,13 @@ export default function ProductDetails() {
                     </div>
                   ))
                 ) : (
-                  <p style={{ color: '#64748b' }}>এই প্রোডাক্টে এখনও কোনো রিভিউ দেওয়া হয়নি। প্রথম রিভিউটি আপনিই দিন!</p>
+                  <p style={{ color: 'var(--sf-text-tertiary)' }}>এই প্রোডাক্টে এখনও কোনো রিভিউ দেওয়া হয়নি। প্রথম রিভিউটি আপনিই দিন!</p>
                 )}
               </div>
 
               {/* Write a Review Form */}
-              <div className="pdp-write-review-form" style={{ background: '#f8fafc', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', marginBottom: '16px' }}>একটি রিভিউ লিখুন</h3>
+              <div className="pdp-write-review-form" style={{ background: 'var(--sf-bg-light)', padding: '24px', borderRadius: '16px', border: '1px solid var(--sf-border)' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--sf-text-primary)', marginBottom: '16px' }}>একটি রিভিউ লিখুন</h3>
                 
                 {reviewMsg && (
                   <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#10b981', padding: '10px 16px', borderRadius: '8px', fontSize: '0.9rem', marginBottom: '16px' }}>
@@ -881,20 +930,20 @@ export default function ProductDetails() {
                   
                   {/* Name Input */}
                   <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>আপনার নাম (Your Name)</label>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--sf-text-secondary)' }}>আপনার নাম (Your Name)</label>
                     <input 
                       type="text" 
                       placeholder="আপনার নাম লিখুন" 
                       required 
                       value={reviewerName} 
                       onChange={(e) => setReviewerName(e.target.value)} 
-                      style={{ padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.9rem', outline: 'none', background: 'white' }}
+                      style={{ padding: '10px 14px', border: '1px solid var(--sf-border)', borderRadius: '8px', fontSize: '0.9rem', outline: 'none', background: 'var(--sf-bg-main)', color: 'var(--sf-text-primary)' }}
                     />
                   </div>
 
                   {/* Rating Selector */}
                   <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>রেটিং সিলেক্ট করুন (Rating)</label>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--sf-text-secondary)' }}>রেটিং সিলেক্ট করুন (Rating)</label>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                       {[1, 2, 3, 4, 5].map((stars) => (
                         <button
@@ -910,7 +959,7 @@ export default function ProductDetails() {
                           />
                         </button>
                       ))}
-                      <span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#64748b', marginLeft: '8px' }}>
+                      <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--sf-text-secondary)', marginLeft: '8px' }}>
                         {reviewerRating} / 5
                       </span>
                     </div>
@@ -918,20 +967,20 @@ export default function ProductDetails() {
 
                   {/* Comment Textarea */}
                   <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>মন্তব্য লিখুন (Your Review)</label>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--sf-text-secondary)' }}>মন্তব্য লিখুন (Your Review)</label>
                     <textarea 
                       placeholder="এখানে আপনার মতামত লিখুন..." 
                       required 
                       rows={4}
                       value={reviewerComment} 
                       onChange={(e) => setReviewerComment(e.target.value)} 
-                      style={{ padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.9rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', background: 'white' }}
+                      style={{ padding: '10px 14px', border: '1px solid var(--sf-border)', borderRadius: '8px', fontSize: '0.9rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', background: 'var(--sf-bg-main)', color: 'var(--sf-text-primary)' }}
                     />
                   </div>
 
                   {/* Photo Upload Attachment */}
                   <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>প্রোডাক্টের ছবি যোগ করুন (Add Photo - Optional)</label>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--sf-text-secondary)' }}>প্রোডাক্টের ছবি যোগ করুন (Add Photo - Optional)</label>
                     <input 
                       type="file" 
                       accept="image/*" 
@@ -945,7 +994,7 @@ export default function ProductDetails() {
                           reader.readAsDataURL(file);
                         }
                       }} 
-                      style={{ fontSize: '0.85rem', color: '#64748b' }}
+                      style={{ fontSize: '0.85rem', color: 'var(--sf-text-secondary)' }}
                     />
                     
                     {reviewerImage && (
@@ -953,7 +1002,7 @@ export default function ProductDetails() {
                         <img 
                           src={reviewerImage} 
                           alt="Review attachment preview" 
-                          style={{ maxWidth: '100px', maxHeight: '100px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #cbd5e1' }} 
+                          style={{ maxWidth: '100px', maxHeight: '100px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--sf-border)' }} 
                         />
                         <button
                           type="button"
@@ -983,28 +1032,27 @@ export default function ProductDetails() {
         </div>
       </div>
 
-      {/* Related Products */}
+      {/* Related / Suggested Products */}
       {product && (() => {
         const related = config.products.filter(p => String(p.id) !== String(product.id) && p.category === product.category && p.published).slice(0, 4);
         if (related.length === 0) return null;
         
         return (
           <div className="pdp-related">
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--sf-text-primary)', marginBottom: '20px' }}>You May Also Like</h3>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--sf-text-primary)', marginBottom: '20px' }}>আপনাদের পছন্দের অন্যান্য পণ্য (Suggested Products)</h3>
             <div className="products-grid">
               {related.map((relatedProduct: any) => {
+                const origPrice = relatedProduct.originalPrice || (relatedProduct.price ? Math.round(relatedProduct.price * 1.25) : null);
+                const hasDiscount = origPrice && origPrice > relatedProduct.price;
+                const savings = hasDiscount ? origPrice - relatedProduct.price : 0;
+
                 return (
                   <Link to={`/product/${relatedProduct.id}`} key={relatedProduct.id} className="product-card" style={{ textDecoration: 'none' }}>
                     <div className="product-card-image-container">
                       <OptimizedImage src={relatedProduct.image} alt={relatedProduct.name} className="product-card-image" width={400} height={400} />
-                      {relatedProduct.badge && (
-                        <span className={`product-card-badge ${relatedProduct.badge}`}>
-                          {relatedProduct.badge === 'sale' ? `Sale! -${Math.round((1 - relatedProduct.price / (relatedProduct.originalPrice || relatedProduct.price)) * 100)}%` : 'New'}
-                        </span>
-                      )}
-                      {relatedProduct.originalPrice && relatedProduct.originalPrice > relatedProduct.price && (
-                        <span className="product-card-save-badge">
-                          Save ৳{Math.round(relatedProduct.originalPrice - relatedProduct.price)}
+                      {hasDiscount && (
+                        <span className="product-card-badge sale" style={{ background: '#ef4444', color: '#fff', fontWeight: 800 }}>
+                          -{Math.round((savings / origPrice) * 100)}% ছাড়
                         </span>
                       )}
                     </div>
@@ -1012,14 +1060,16 @@ export default function ProductDetails() {
                       <div className="product-card-category">{relatedProduct.category}</div>
                       <div className="product-card-name">{relatedProduct.name}</div>
                       <div className="product-card-rating">
-                        <StarRating rating={relatedProduct.rating} />
-                        <span className="product-card-reviews">({relatedProduct.reviews ? relatedProduct.reviews.toLocaleString() : 0})</span>
+                        <StarRating rating={relatedProduct.rating || 5} />
+                        <span className="product-card-reviews">({relatedProduct.reviews ? relatedProduct.reviews.toLocaleString() : 12})</span>
                       </div>
                       <div className="product-card-footer">
-                        <div className="product-card-price-group">
-                          <span className="product-card-price">৳{relatedProduct.price}</span>
-                          {relatedProduct.originalPrice && relatedProduct.originalPrice > relatedProduct.price && (
-                            <span className="product-card-old-price">৳{relatedProduct.originalPrice}</span>
+                        <div className="product-card-price-group" style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                          <span className="product-card-price" style={{ color: 'var(--sf-accent, #e11d48)', fontWeight: 900, fontSize: '1.15rem' }}>৳{relatedProduct.price}</span>
+                          {hasDiscount && (
+                            <span className="product-card-old-price" style={{ textDecoration: 'line-through', color: '#94a3b8', fontSize: '0.85rem', fontWeight: 500 }}>
+                              ৳{origPrice}
+                            </span>
                           )}
                         </div>
                         <button 

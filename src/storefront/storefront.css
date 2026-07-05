@@ -883,17 +883,27 @@
   padding-top: 12px;
 }
 
-.product-card-price {
-  font-size: 1.125rem;
-  font-weight: 800;
-  color: var(--sf-text-primary);
+.product-card-price-group {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
+.product-card-price {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: var(--sf-accent, #e11d48);
+}
+
+.product-card-old-price,
 .product-card-original-price {
-  font-size: 0.8rem;
-  color: var(--sf-text-tertiary);
+  font-size: 0.85rem;
+  color: #94a3b8;
   text-decoration: line-through;
-  margin-left: 8px;
+  font-weight: 500;
+  margin-left: 4px;
+  white-space: nowrap;
 }
 
 .product-card-cart-btn {
