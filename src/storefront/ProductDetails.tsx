@@ -733,7 +733,7 @@ export default function ProductDetails() {
           <button className={`pdp-tab ${activeTab === 'specs' ? 'active' : ''}`} onClick={() => setActiveTab('specs')}>Specifications</button>
           <button className={`pdp-tab ${activeTab === 'reviews' ? 'active' : ''}`} onClick={() => setActiveTab('reviews')}>Reviews ({product.customerReviews?.length || 0})</button>
           {(product.videoUrl || product.photoContent || product.video_url || product.photo_content) && (
-            <button className={`pdp-tab ${activeTab === 'media' ? 'active' : ''}`} onClick={() => setActiveTab('media')}>Video & Photos</button>
+            <button className={`pdp-tab ${activeTab === 'media' ? 'active' : ''}`} onClick={() => setActiveTab('media')}>Video & Photo</button>
           )}
         </div>
         
@@ -767,35 +767,40 @@ export default function ProductDetails() {
           {activeTab === 'media' && (
             <div className="pdp-media-tab" style={{ display: 'flex', flexDirection: 'column', gap: '24px', padding: '10px 0' }}>
               {(product.videoUrl || product.video_url) && (
-                <div style={{ background: 'var(--bg-secondary)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-secondary)' }}>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-primary)' }} />
-                    Product Video Content
+                <div style={{ background: 'var(--sf-bg-light)', padding: '20px', borderRadius: '12px', border: '1px solid var(--sf-border)' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--sf-text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--sf-accent)' }} />
+                    ভিডিও ও কনটেন্ট রিভিউ (Product Video Content)
                   </h3>
-                  {((product.videoUrl || product.video_url).includes('youtube.com') || (product.videoUrl || product.video_url).includes('youtu.be')) ? (
-                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+                  {((product.videoUrl || product.video_url).includes('youtube.com') || (product.videoUrl || product.video_url).includes('youtu.be') || (product.videoUrl || product.video_url).includes('shorts')) ? (
+                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '12px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }}>
                       <iframe
                         src={getEmbedUrl(product.videoUrl || product.video_url)}
                         title="Product Video"
                         frameBorder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
-                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: '12px' }}
                       />
                     </div>
                   ) : (
-                    <video controls src={product.videoUrl || product.video_url} style={{ width: '100%', borderRadius: '8px', maxHeight: '480px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} />
+                    <video controls src={product.videoUrl || product.video_url} style={{ width: '100%', borderRadius: '12px', maxHeight: '480px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }} />
                   )}
                 </div>
               )}
               {(product.photoContent || product.photo_content) && (
-                <div style={{ background: 'var(--bg-secondary)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-secondary)' }}>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-primary)' }} />
-                    Additional Photo Content
+                <div style={{ background: 'var(--sf-bg-light)', padding: '20px', borderRadius: '12px', border: '1px solid var(--sf-border)' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--sf-text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--sf-accent)' }} />
+                    ছবি রিভিউ কনটেন্ট (Additional Photo Review)
                   </h3>
-                  <div style={{ display: 'flex', justifyContent: 'center', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
-                    <img src={product.photoContent || product.photo_content} alt="Product Photo Content" style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px', maxHeight: '600px', objectFit: 'contain' }} />
+                  <div style={{ display: 'flex', justifyContent: 'center', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }}>
+                    <img 
+                      src={product.photoContent || product.photo_content} 
+                      alt="Product Photo Content" 
+                      onClick={() => setLightboxImage(product.photoContent || product.photo_content)}
+                      style={{ maxWidth: '100%', height: 'auto', borderRadius: '12px', maxHeight: '600px', objectFit: 'contain', cursor: 'pointer' }} 
+                    />
                   </div>
                 </div>
               )}
@@ -1667,10 +1672,12 @@ const getEmbedUrl = (url: string) => {
   if (!url) return '';
   if (url.includes('embed/')) return url;
   let videoId = '';
-  if (url.includes('youtu.be/')) {
+  if (url.includes('shorts/')) {
+    videoId = url.split('shorts/')[1]?.split('?')[0] || '';
+  } else if (url.includes('youtu.be/')) {
     videoId = url.split('youtu.be/')[1]?.split('?')[0] || '';
-  } else {
+  } else if (url.includes('v=')) {
     videoId = url.split('v=')[1]?.split('&')[0] || '';
   }
-  return `https://www.youtube.com/embed/${videoId}`;
+  return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
 };
