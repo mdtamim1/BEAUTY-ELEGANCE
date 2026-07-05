@@ -13,7 +13,9 @@ import {
   deleteCampaign,
   getSpinWheelConfig,
   spinWheelPlay,
-  updateSpinWheelConfig
+  updateSpinWheelConfig,
+  getCustomerCoupons,
+  dispatchDirectCoupon
 } from '../controllers/marketingController';
 import { authenticateToken, requireRole } from '../middleware/auth';
 
@@ -25,9 +27,11 @@ router.get('/coupons/validate/:code', validateCoupon);
 router.get('/campaigns', getCampaigns); // Public: so storefront visitors can sync active campaigns!
 router.get('/spin-wheel', getSpinWheelConfig); // Public: fetch spin wheel config
 router.post('/spin-wheel/spin', spinWheelPlay); // Public: server weighted outcome picker
+router.get('/my-coupons', getCustomerCoupons); // Public/Customer: fetch coupons saved to account
 
 // Protected admin/moderator routes
 router.post('/spin-wheel/settings', authenticateToken, requireRole(['Super Admin', 'Admin']), updateSpinWheelConfig);
+router.post('/dispatch-coupon', authenticateToken, requireRole(['Super Admin', 'Admin']), dispatchDirectCoupon);
 
 router.get('/coupons', authenticateToken, requireRole(['Super Admin', 'Admin']), getCoupons);
 router.post('/coupons', authenticateToken, requireRole(['Super Admin', 'Admin']), createCoupon);

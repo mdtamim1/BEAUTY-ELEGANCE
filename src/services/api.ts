@@ -771,11 +771,12 @@ export const fetchSpinWheelConfig = async (): Promise<any> => {
 };
 
 // Play Spin Wheel (Server-calculated outcome picker)
-export const playSpinWheel = async (): Promise<any> => {
+export const playSpinWheel = async (customerEmail?: string): Promise<any> => {
   try {
     const res = await fetch(`${API_BASE}/marketing/spin-wheel/spin`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customer_email: customerEmail || '' })
     });
     return await res.json();
   } catch (e) {
@@ -797,6 +798,33 @@ export const updateSpinWheelSettings = async (payload: any): Promise<any> => {
     return await res.json();
   } catch (e) {
     return { status: 'error', message: 'Failed to update spin wheel settings' };
+  }
+};
+
+// Fetch Customer Account Coupons (Public/Customer)
+export const fetchCustomerCoupons = async (email: string): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/marketing/my-coupons?email=${encodeURIComponent(email)}`);
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to fetch customer coupons' };
+  }
+};
+
+// Dispatch Direct Coupon to Customer Accounts (Admin Protected)
+export const dispatchDirectOffer = async (payload: any): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/marketing/dispatch-coupon`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
+      body: JSON.stringify(payload)
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to dispatch offer' };
   }
 };
 

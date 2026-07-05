@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchSpinWheelConfig, updateSpinWheelSettings } from '../../services/api';
-import { Sparkles, Save, Plus, Trash2, ToggleLeft, ToggleRight, RefreshCw, AlertCircle, HelpCircle } from 'lucide-react';
+import { DirectCouponDispatcher } from './DirectCouponDispatcher';
+import { Sparkles, Save, Plus, Trash2, ToggleLeft, ToggleRight, RefreshCw, AlertCircle, HelpCircle, ShoppingBag } from 'lucide-react';
 
 interface WheelSlice {
   id: string;
@@ -16,6 +17,7 @@ export const SpinWheelControl: React.FC = () => {
   const [enabled, setEnabled] = useState(true);
   const [title, setTitle] = useState('🎁 ঘুরে জিতুন স্পেশাল ডিসকাউন্ট!');
   const [subtitle, setSubtitle] = useState('আজকের সৌভাগ্যজনক কুপন কোড জিততে চাকাটি ঘোরান!');
+  const [respinOrderCount, setRespinOrderCount] = useState(1);
   const [slices, setSlices] = useState<WheelSlice[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -33,6 +35,7 @@ export const SpinWheelControl: React.FC = () => {
         setEnabled(Boolean(res.data.enabled));
         setTitle(res.data.title || '🎁 ঘুরে জিতুন স্পেশাল ডিসকাউন্ট!');
         setSubtitle(res.data.subtitle || 'আজকের সৌভাগ্যজনক কুপন কোড জিততে চাকাটি ঘোরান!');
+        setRespinOrderCount(Number(res.data.respin_order_count_required) || 1);
         setSlices(res.data.slices || []);
       }
     } catch (e) {
@@ -85,6 +88,7 @@ export const SpinWheelControl: React.FC = () => {
         enabled,
         title,
         subtitle,
+        respin_order_count_required: respinOrderCount,
         slices
       });
 
@@ -166,7 +170,7 @@ export const SpinWheelControl: React.FC = () => {
       )}
 
       {/* Main Form Fields */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         <div>
           <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
             পপআপ টাইটেল (Modal Title)
@@ -190,6 +194,21 @@ export const SpinWheelControl: React.FC = () => {
             onChange={(e) => setSubtitle(e.target.value)}
             placeholder="আজকের সৌভাগ্যজনক কুপন কোড জিততে চাকাটি ঘোরান!"
           />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+            পুনরায় ঘোরানোর অর্ডার রিকোয়ারমেন্ট (Re-Spin Orders)
+          </label>
+          <input
+            type="number"
+            className="input-field"
+            value={respinOrderCount}
+            onChange={(e) => setRespinOrderCount(Math.max(1, Number(e.target.value)))}
+            min={1}
+          />
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '4px', display: 'block' }}>
+            কাস্টমার ১টি স্পিন করার পর আবার ঘুরানোর জন্য কতটি সফল অর্ডার প্রয়োজন।
+          </span>
         </div>
       </div>
 
@@ -368,6 +387,9 @@ export const SpinWheelControl: React.FC = () => {
           <span>{saving ? 'সেভ হচ্ছে...' : 'সেটিংস সেভ করুন'}</span>
         </button>
       </div>
+
+      {/* DIRECT COUPON DISPATCHER PANEL */}
+      <DirectCouponDispatcher />
     </div>
   );
 };

@@ -5,11 +5,12 @@ import {
   User, Mail, Phone, Calendar, ShoppingBag, MessageSquare, LogOut, 
   Lock, ArrowRight, ShieldCheck, MapPin, Truck, CheckCircle2, 
   Clock, AlertCircle, HelpCircle, Send, Plus, ArrowLeft, RefreshCw,
-  Trash2, Edit, X, Heart, ShoppingCart
+  Trash2, Edit, X, Heart, ShoppingCart, Ticket
 } from 'lucide-react';
 import { fetchOrdersFromBackend, fetchChatHistory } from '../services/api';
 import { generateOrders as getOrders } from '../mock/data';
 import { useStorefrontConfig } from '../store/storefrontConfig';
+import { CustomerCouponsTab } from './CustomerCouponsTab';
 import './storefront-account.css';
 
 interface OrderItem {
@@ -69,7 +70,7 @@ export default function CustomerAccount() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   // Dashboard state
-  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'wishlist' | 'cart' | 'chat'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'coupons' | 'wishlist' | 'cart' | 'chat'>('profile');
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
@@ -643,6 +644,12 @@ export default function CustomerAccount() {
             <ShoppingBag size={18} /> আমার অর্ডারসমূহ ({orders.length})
           </button>
           <button 
+            onClick={() => { setActiveTab('coupons'); setSelectedOrder(null); }}
+            style={{ width: '100%', padding: '12px 16px', background: activeTab === 'coupons' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'coupons' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+          >
+            <Ticket size={18} /> আমার কুপন ও অফারসমূহ
+          </button>
+          <button 
             onClick={() => { setActiveTab('wishlist'); setSelectedOrder(null); }}
             style={{ width: '100%', padding: '12px 16px', background: activeTab === 'wishlist' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'wishlist' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
           >
@@ -673,6 +680,9 @@ export default function CustomerAccount() {
         {/* Tab Contents */}
         <div className="account-content-card">
           
+          {/* MY COUPONS TAB */}
+          {activeTab === 'coupons' && <CustomerCouponsTab email={customer.email} />}
+
           {/* PROFILE TAB */}
           {activeTab === 'profile' && (
             <div>

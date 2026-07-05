@@ -507,6 +507,20 @@ function initializeDatabase() {
     `);
 
     db.run(`
+      CREATE TABLE IF NOT EXISTS customer_coupons (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customer_email TEXT NOT NULL,
+        code TEXT NOT NULL,
+        title TEXT,
+        discount_type TEXT DEFAULT 'percentage',
+        discount_value REAL DEFAULT 0.0,
+        status TEXT DEFAULT 'active',
+        source TEXT DEFAULT 'spin_wheel',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    db.run(`
       CREATE TABLE IF NOT EXISTS orders (
         id TEXT PRIMARY KEY,
         customer TEXT NOT NULL,

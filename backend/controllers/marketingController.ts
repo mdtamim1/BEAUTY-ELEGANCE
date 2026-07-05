@@ -255,6 +255,7 @@ const DEFAULT_SPIN_WHEEL_CONFIG = {
   enabled: true,
   title: 'ঘুরে জিতুন স্পেশাল ডিসকাউন্ট!',
   subtitle: 'আজকের সৌভাগ্যজনক কুপন কোড জিততে চাকাটি ঘোরান!',
+  respin_order_count_required: 1,
   slices: [
     { id: '1', label: '10% OFF', coupon_code: 'SPIN10', type: 'percentage', value: 10, weight: 40, color: '#7c3aed' },
     { id: '2', label: '৳100 OFF', coupon_code: 'SPIN100', type: 'fixed', value: 100, weight: 30, color: '#059669' },
@@ -277,7 +278,7 @@ export const getSpinWheelConfig = (req: Request, res: Response) => {
 
     try {
       const config = JSON.parse(row.setting_value);
-      return res.json({ status: 'success', data: config });
+      return res.json({ status: 'success', data: { ...DEFAULT_SPIN_WHEEL_CONFIG, ...config } });
     } catch (e) {
       return res.json({ status: 'success', data: DEFAULT_SPIN_WHEEL_CONFIG });
     }
@@ -285,11 +286,13 @@ export const getSpinWheelConfig = (req: Request, res: Response) => {
 };
 
 export const spinWheelPlay = (req: Request, res: Response) => {
+  const customerEmail = (req.body?.customer_email || req.body?.email || '').trim().toLowerCase();
+
   db.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'spin_wheel_settings'`, [], (err, row: any) => {
     let config = DEFAULT_SPIN_WHEEL_CONFIG;
     if (row && row.setting_value) {
       try {
-        config = JSON.parse(row.setting_value);
+        config = { ...DEFAULT_SPIN_WHEEL_CONFIG, ...JSON.parse(row.setting_value) };
       } catch (e) {}
     }
 
@@ -317,47 +320,55 @@ export const spinWheelPlay = (req: Request, res: Response) => {
 
     const winningSlice = config.slices[winningIndex];
 
-    // Ensure coupon exists in database so customer can redeem it
-    if (winningSlice && winningSlice.coupon_code) {
-      const cleanCode = winningSlice.coupon_code.trim().toUpperCase();
+    // Generate Unique Single-Use Coupon Code
+    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const baseCode = (winningSlice.coupon_code || 'SPIN').toUpperCase();
+    const uniqueCouponCode = `${baseCode}-${randomSuffix}`;
+
+    // Insert single-use coupon into coupons table
+    db.run(
+      `INSERT INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, '2030-12-31', 'active')`,
+      [uniqueCouponCode, winningSlice.type || 'percentage', Number(winningSlice.value) || 10]
+    );
+
+    // Save coupon to Customer Account if email is provided
+    if (customerEmail) {
       db.run(
-        `INSERT OR IGNORE INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, '2030-12-31', 'active')`,
-        [cleanCode, winningSlice.type || 'percentage', Number(winningSlice.value) || 10]
+        `INSERT INTO customer_coupons (customer_email, code, title, discount_type, discount_value, status, source)
+         VALUES (?, ?, ?, ?, ?, 'active', 'spin_wheel')`,
+        [
+          customerEmail,
+          uniqueCouponCode,
+          winningSlice.label,
+          winningSlice.type || 'percentage',
+          Number(winningSlice.value) || 10
+        ]
       );
     }
 
     return res.json({
       status: 'success',
-      data: winningSlice,
+      data: {
+        ...winningSlice,
+        coupon_code: uniqueCouponCode
+      },
       winningIndex
     });
   });
 };
 
 export const updateSpinWheelConfig = (req: Request, res: Response) => {
-  const { enabled, title, subtitle, slices } = req.body;
+  const { enabled, title, subtitle, respin_order_count_required, slices } = req.body;
 
   const newConfig = {
     enabled: enabled !== undefined ? Boolean(enabled) : true,
     title: title || DEFAULT_SPIN_WHEEL_CONFIG.title,
     subtitle: subtitle || DEFAULT_SPIN_WHEEL_CONFIG.subtitle,
+    respin_order_count_required: Number(respin_order_count_required) || 1,
     slices: Array.isArray(slices) ? slices : DEFAULT_SPIN_WHEEL_CONFIG.slices
   };
 
   const jsonVal = JSON.stringify(newConfig);
-
-  // Auto-sync coupons to database
-  if (Array.isArray(newConfig.slices)) {
-    newConfig.slices.forEach((s: any) => {
-      if (s.coupon_code) {
-        const code = String(s.coupon_code).trim().toUpperCase();
-        db.run(
-          `INSERT OR IGNORE INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, '2030-12-31', 'active')`,
-          [code, s.type || 'percentage', Number(s.value) || 10]
-        );
-      }
-    });
-  }
 
   db.run(
     `INSERT OR REPLACE INTO system_settings (setting_key, setting_value, group_name, is_public)
@@ -371,4 +382,79 @@ export const updateSpinWheelConfig = (req: Request, res: Response) => {
       res.json({ status: 'success', message: 'স্পিন হুইল সেটিংস সফলভাবে সেভ করা হয়েছে!', data: newConfig });
     }
   );
+};
+
+// Get Customer Coupons for Account Dashboard
+export const getCustomerCoupons = (req: Request, res: Response) => {
+  const email = (req.query.email || '').toString().trim().toLowerCase();
+
+  if (!email) {
+    return res.status(400).json({ status: 'error', message: 'Customer email is required' });
+  }
+
+  db.all(
+    `SELECT * FROM customer_coupons WHERE LOWER(customer_email) = ? ORDER BY created_at DESC`,
+    [email],
+    (err, rows) => {
+      if (err) {
+        console.error('Failed to fetch customer coupons:', err);
+        return res.status(500).json({ status: 'error', message: 'Database error' });
+      }
+      res.json({ status: 'success', data: rows || [] });
+    }
+  );
+};
+
+// Admin Direct Coupon Dispatcher (Extra Task)
+export const dispatchDirectCoupon = (req: Request, res: Response) => {
+  const { title, code, discount_type, discount_value, target, customer_email } = req.body;
+
+  if (!title || !code || discount_value === undefined) {
+    return res.status(400).json({ status: 'error', message: 'কুপনের শিরোনাম, কোড এবং ছাড়ের পরিমাণ বাধ্যতামূলক।' });
+  }
+
+  const cleanCode = String(code).trim().toUpperCase();
+  const type = discount_type || 'percentage';
+  const val = Number(discount_value);
+
+  // Insert code into main coupons table
+  db.run(
+    `INSERT OR REPLACE INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, '2030-12-31', 'active')`,
+    [cleanCode, type, val]
+  );
+
+  if (target === 'specific' && customer_email) {
+    const email = String(customer_email).trim().toLowerCase();
+    db.run(
+      `INSERT INTO customer_coupons (customer_email, code, title, discount_type, discount_value, status, source)
+       VALUES (?, ?, ?, ?, ?, 'active', 'admin_gift')`,
+      [email, cleanCode, title, type, val],
+      (err) => {
+        if (err) {
+          console.error('Failed to dispatch coupon:', err);
+          return res.status(500).json({ status: 'error', message: 'Database error' });
+        }
+        res.json({ status: 'success', message: `কুপন কোডটি ${email} একাউন্টে পাঠানো হয়েছে!` });
+      }
+    );
+  } else {
+    // Dispatch to ALL registered customers
+    db.all(`SELECT email FROM customers`, [], (err, rows: any[]) => {
+      if (err || !rows || rows.length === 0) {
+        return res.json({ status: 'success', message: 'কুপন ডাটাবেজে তৈরি হয়েছে!' });
+      }
+
+      rows.forEach((c) => {
+        if (c.email) {
+          db.run(
+            `INSERT INTO customer_coupons (customer_email, code, title, discount_type, discount_value, status, source)
+             VALUES (?, ?, ?, ?, ?, 'active', 'admin_gift')`,
+            [c.email.trim().toLowerCase(), cleanCode, title, type, val]
+          );
+        }
+      });
+
+      res.json({ status: 'success', message: `সকল (${rows.length} জন) রেজিস্টার্ড কাস্টমারের একাউন্টে কুপন পাঠানো হয়েছে!` });
+    });
+  }
 };

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { fetchSpinWheelConfig, playSpinWheel } from '../services/api';
+import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { Sparkles, X, Check, Copy, Flame, Trophy } from 'lucide-react';
 
 interface WheelSlice {
@@ -27,6 +28,7 @@ export const SpinWheelModal: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const [rotationDeg, setRotationDeg] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const { customer } = useCustomerAuth();
 
   useEffect(() => {
     const loadConfig = async () => {
@@ -158,7 +160,7 @@ export const SpinWheelModal: React.FC = () => {
     setIsSpinning(true);
 
     try {
-      const res = await playSpinWheel();
+      const res = await playSpinWheel(customer?.email);
       if (res && res.status === 'success' && res.data) {
         const sliceCount = config.slices.length;
         const targetIndex = res.winningIndex !== undefined ? res.winningIndex : 0;

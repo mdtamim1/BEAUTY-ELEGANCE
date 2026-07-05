@@ -689,6 +689,19 @@ function initializeDatabase() {
       )
     `);
     db.run(`
+      CREATE TABLE IF NOT EXISTS customer_coupons (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customer_email TEXT NOT NULL,
+        code TEXT NOT NULL,
+        title TEXT,
+        discount_type TEXT DEFAULT 'percentage',
+        discount_value REAL DEFAULT 0.0,
+        status TEXT DEFAULT 'active',
+        source TEXT DEFAULT 'spin_wheel',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    db.run(`
       CREATE TABLE IF NOT EXISTS orders (
         id TEXT PRIMARY KEY,
         customer TEXT NOT NULL,
@@ -4504,6 +4517,7 @@ var DEFAULT_SPIN_WHEEL_CONFIG = {
   enabled: true,
   title: "\u0998\u09C1\u09B0\u09C7 \u099C\u09BF\u09A4\u09C1\u09A8 \u09B8\u09CD\u09AA\u09C7\u09B6\u09BE\u09B2 \u09A1\u09BF\u09B8\u0995\u09BE\u0989\u09A8\u09CD\u099F!",
   subtitle: "\u0986\u099C\u0995\u09C7\u09B0 \u09B8\u09CC\u09AD\u09BE\u0997\u09CD\u09AF\u099C\u09A8\u0995 \u0995\u09C1\u09AA\u09A8 \u0995\u09CB\u09A1 \u099C\u09BF\u09A4\u09A4\u09C7 \u099A\u09BE\u0995\u09BE\u099F\u09BF \u0998\u09CB\u09B0\u09BE\u09A8!",
+  respin_order_count_required: 1,
   slices: [
     { id: "1", label: "10% OFF", coupon_code: "SPIN10", type: "percentage", value: 10, weight: 40, color: "#7c3aed" },
     { id: "2", label: "\u09F3100 OFF", coupon_code: "SPIN100", type: "fixed", value: 100, weight: 30, color: "#059669" },
@@ -4523,18 +4537,19 @@ var getSpinWheelConfig = (req, res) => {
     }
     try {
       const config = JSON.parse(row.setting_value);
-      return res.json({ status: "success", data: config });
+      return res.json({ status: "success", data: { ...DEFAULT_SPIN_WHEEL_CONFIG, ...config } });
     } catch (e) {
       return res.json({ status: "success", data: DEFAULT_SPIN_WHEEL_CONFIG });
     }
   });
 };
 var spinWheelPlay = (req, res) => {
+  const customerEmail = (req.body?.customer_email || req.body?.email || "").trim().toLowerCase();
   db_default.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'spin_wheel_settings'`, [], (err, row) => {
     let config = DEFAULT_SPIN_WHEEL_CONFIG;
     if (row && row.setting_value) {
       try {
-        config = JSON.parse(row.setting_value);
+        config = { ...DEFAULT_SPIN_WHEEL_CONFIG, ...JSON.parse(row.setting_value) };
       } catch (e) {
       }
     }
@@ -4557,40 +4572,46 @@ var spinWheelPlay = (req, res) => {
       randomWeight -= sliceWeight;
     }
     const winningSlice = config.slices[winningIndex];
-    if (winningSlice && winningSlice.coupon_code) {
-      const cleanCode = winningSlice.coupon_code.trim().toUpperCase();
+    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const baseCode = (winningSlice.coupon_code || "SPIN").toUpperCase();
+    const uniqueCouponCode = `${baseCode}-${randomSuffix}`;
+    db_default.run(
+      `INSERT INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, '2030-12-31', 'active')`,
+      [uniqueCouponCode, winningSlice.type || "percentage", Number(winningSlice.value) || 10]
+    );
+    if (customerEmail) {
       db_default.run(
-        `INSERT OR IGNORE INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, '2030-12-31', 'active')`,
-        [cleanCode, winningSlice.type || "percentage", Number(winningSlice.value) || 10]
+        `INSERT INTO customer_coupons (customer_email, code, title, discount_type, discount_value, status, source)
+         VALUES (?, ?, ?, ?, ?, 'active', 'spin_wheel')`,
+        [
+          customerEmail,
+          uniqueCouponCode,
+          winningSlice.label,
+          winningSlice.type || "percentage",
+          Number(winningSlice.value) || 10
+        ]
       );
     }
     return res.json({
       status: "success",
-      data: winningSlice,
+      data: {
+        ...winningSlice,
+        coupon_code: uniqueCouponCode
+      },
       winningIndex
     });
   });
 };
 var updateSpinWheelConfig = (req, res) => {
-  const { enabled, title, subtitle, slices } = req.body;
+  const { enabled, title, subtitle, respin_order_count_required, slices } = req.body;
   const newConfig = {
     enabled: enabled !== void 0 ? Boolean(enabled) : true,
     title: title || DEFAULT_SPIN_WHEEL_CONFIG.title,
     subtitle: subtitle || DEFAULT_SPIN_WHEEL_CONFIG.subtitle,
+    respin_order_count_required: Number(respin_order_count_required) || 1,
     slices: Array.isArray(slices) ? slices : DEFAULT_SPIN_WHEEL_CONFIG.slices
   };
   const jsonVal = JSON.stringify(newConfig);
-  if (Array.isArray(newConfig.slices)) {
-    newConfig.slices.forEach((s) => {
-      if (s.coupon_code) {
-        const code = String(s.coupon_code).trim().toUpperCase();
-        db_default.run(
-          `INSERT OR IGNORE INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, '2030-12-31', 'active')`,
-          [code, s.type || "percentage", Number(s.value) || 10]
-        );
-      }
-    });
-  }
   db_default.run(
     `INSERT OR REPLACE INTO system_settings (setting_key, setting_value, group_name, is_public)
      VALUES ('spin_wheel_settings', ?, 'marketing', 1)`,
@@ -4604,6 +4625,67 @@ var updateSpinWheelConfig = (req, res) => {
     }
   );
 };
+var getCustomerCoupons = (req, res) => {
+  const email = (req.query.email || "").toString().trim().toLowerCase();
+  if (!email) {
+    return res.status(400).json({ status: "error", message: "Customer email is required" });
+  }
+  db_default.all(
+    `SELECT * FROM customer_coupons WHERE LOWER(customer_email) = ? ORDER BY created_at DESC`,
+    [email],
+    (err, rows) => {
+      if (err) {
+        console.error("Failed to fetch customer coupons:", err);
+        return res.status(500).json({ status: "error", message: "Database error" });
+      }
+      res.json({ status: "success", data: rows || [] });
+    }
+  );
+};
+var dispatchDirectCoupon = (req, res) => {
+  const { title, code, discount_type, discount_value, target, customer_email } = req.body;
+  if (!title || !code || discount_value === void 0) {
+    return res.status(400).json({ status: "error", message: "\u0995\u09C1\u09AA\u09A8\u09C7\u09B0 \u09B6\u09BF\u09B0\u09CB\u09A8\u09BE\u09AE, \u0995\u09CB\u09A1 \u098F\u09AC\u0982 \u099B\u09BE\u09DC\u09C7\u09B0 \u09AA\u09B0\u09BF\u09AE\u09BE\u09A3 \u09AC\u09BE\u09A7\u09CD\u09AF\u09A4\u09BE\u09AE\u09C2\u09B2\u0995\u0964" });
+  }
+  const cleanCode = String(code).trim().toUpperCase();
+  const type = discount_type || "percentage";
+  const val = Number(discount_value);
+  db_default.run(
+    `INSERT OR REPLACE INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, '2030-12-31', 'active')`,
+    [cleanCode, type, val]
+  );
+  if (target === "specific" && customer_email) {
+    const email = String(customer_email).trim().toLowerCase();
+    db_default.run(
+      `INSERT INTO customer_coupons (customer_email, code, title, discount_type, discount_value, status, source)
+       VALUES (?, ?, ?, ?, ?, 'active', 'admin_gift')`,
+      [email, cleanCode, title, type, val],
+      (err) => {
+        if (err) {
+          console.error("Failed to dispatch coupon:", err);
+          return res.status(500).json({ status: "error", message: "Database error" });
+        }
+        res.json({ status: "success", message: `\u0995\u09C1\u09AA\u09A8 \u0995\u09CB\u09A1\u099F\u09BF ${email} \u098F\u0995\u09BE\u0989\u09A8\u09CD\u099F\u09C7 \u09AA\u09BE\u09A0\u09BE\u09A8\u09CB \u09B9\u09DF\u09C7\u099B\u09C7!` });
+      }
+    );
+  } else {
+    db_default.all(`SELECT email FROM customers`, [], (err, rows) => {
+      if (err || !rows || rows.length === 0) {
+        return res.json({ status: "success", message: "\u0995\u09C1\u09AA\u09A8 \u09A1\u09BE\u099F\u09BE\u09AC\u09C7\u099C\u09C7 \u09A4\u09C8\u09B0\u09BF \u09B9\u09DF\u09C7\u099B\u09C7!" });
+      }
+      rows.forEach((c) => {
+        if (c.email) {
+          db_default.run(
+            `INSERT INTO customer_coupons (customer_email, code, title, discount_type, discount_value, status, source)
+             VALUES (?, ?, ?, ?, ?, 'active', 'admin_gift')`,
+            [c.email.trim().toLowerCase(), cleanCode, title, type, val]
+          );
+        }
+      });
+      res.json({ status: "success", message: `\u09B8\u0995\u09B2 (${rows.length} \u099C\u09A8) \u09B0\u09C7\u099C\u09BF\u09B8\u09CD\u099F\u09BE\u09B0\u09CD\u09A1 \u0995\u09BE\u09B8\u09CD\u099F\u09AE\u09BE\u09B0\u09C7\u09B0 \u098F\u0995\u09BE\u0989\u09A8\u09CD\u099F\u09C7 \u0995\u09C1\u09AA\u09A8 \u09AA\u09BE\u09A0\u09BE\u09A8\u09CB \u09B9\u09DF\u09C7\u099B\u09C7!` });
+    });
+  }
+};
 
 // backend/routes/marketing.ts
 var router10 = Router10();
@@ -4612,7 +4694,9 @@ router10.get("/coupons/validate/:code", validateCoupon);
 router10.get("/campaigns", getCampaigns);
 router10.get("/spin-wheel", getSpinWheelConfig);
 router10.post("/spin-wheel/spin", spinWheelPlay);
+router10.get("/my-coupons", getCustomerCoupons);
 router10.post("/spin-wheel/settings", authenticateToken, requireRole(["Super Admin", "Admin"]), updateSpinWheelConfig);
+router10.post("/dispatch-coupon", authenticateToken, requireRole(["Super Admin", "Admin"]), dispatchDirectCoupon);
 router10.get("/coupons", authenticateToken, requireRole(["Super Admin", "Admin"]), getCoupons);
 router10.post("/coupons", authenticateToken, requireRole(["Super Admin", "Admin"]), createCoupon);
 router10.delete("/coupons/:code", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteCoupon);
