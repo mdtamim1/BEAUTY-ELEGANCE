@@ -4692,62 +4692,81 @@ var getSpinWheelConfig = (req, res) => {
 };
 var spinWheelPlay = (req, res) => {
   const customerEmail = (req.body?.customer_email || req.body?.email || "").trim().toLowerCase();
-  db_default.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'spin_wheel_settings'`, [], (err, row) => {
-    let config = DEFAULT_SPIN_WHEEL_CONFIG;
-    if (row && row.setting_value) {
-      try {
-        config = { ...DEFAULT_SPIN_WHEEL_CONFIG, ...JSON.parse(row.setting_value) };
-      } catch (e) {
+  if (customerEmail) {
+    db_default.get(
+      `SELECT id FROM customer_coupons WHERE LOWER(customer_email) = ? AND source = 'spin_wheel'`,
+      [customerEmail],
+      (checkErr, existingClaim) => {
+        if (existingClaim) {
+          return res.status(400).json({
+            status: "error",
+            message: "\u0986\u09AA\u09A8\u09BF \u098F\u0987 \u0985\u09CD\u09AF\u09BE\u0995\u09BE\u0989\u09A8\u09CD\u099F \u09A6\u09BF\u09DF\u09C7 \u0987\u09A4\u09BF\u09AA\u09C2\u09B0\u09CD\u09AC\u09C7 \u09E7 \u09AC\u09BE\u09B0 \u09B8\u09CD\u09AA\u09BF\u09A8 \u09B9\u09C1\u0987\u09B2 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0 \u0995\u09B0\u09C7\u099B\u09C7\u09A8\u0964 \u09AA\u09CD\u09B0\u09A4\u09BF \u0985\u09CD\u09AF\u09BE\u0995\u09BE\u0989\u09A8\u09CD\u099F\u09C7 \u09E7 \u09AC\u09BE\u09B0\u0987 \u09B8\u09CD\u09AA\u09BF\u09A8 \u09AA\u09CD\u09B0\u09AF\u09CB\u099C\u09CD\u09AF\u0964"
+          });
+        }
+        processSpin();
       }
-    }
-    if (!config.enabled || !config.slices || config.slices.length === 0) {
-      return res.status(400).json({ status: "error", message: "\u09B8\u09CD\u09AA\u09BF\u09A8 \u09B9\u09C1\u0987\u09B2 \u0985\u09AB\u09BE\u09B0 \u0986\u09AA\u09BE\u09A4\u09A4 \u09AC\u09A8\u09CD\u09A7 \u09B0\u09DF\u09C7\u099B\u09C7\u0964" });
-    }
-    const totalWeight = config.slices.reduce((sum, s) => sum + (Number(s.weight) || 0), 0);
-    if (totalWeight <= 0) {
-      const defaultSlice = config.slices[0];
-      return res.json({ status: "success", data: defaultSlice, winningIndex: 0 });
-    }
-    let randomWeight = Math.random() * totalWeight;
-    let winningIndex = 0;
-    for (let i = 0; i < config.slices.length; i++) {
-      const sliceWeight = Number(config.slices[i].weight) || 0;
-      if (randomWeight < sliceWeight) {
-        winningIndex = i;
-        break;
-      }
-      randomWeight -= sliceWeight;
-    }
-    const winningSlice = config.slices[winningIndex];
-    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const baseCode = (winningSlice.coupon_code || "SPIN").toUpperCase();
-    const uniqueCouponCode = `${baseCode}-${randomSuffix}`;
-    db_default.run(
-      `INSERT INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, '2030-12-31', 'active')`,
-      [uniqueCouponCode, winningSlice.type || "percentage", Number(winningSlice.value) || 10]
     );
-    if (customerEmail) {
+  } else {
+    processSpin();
+  }
+  function processSpin() {
+    db_default.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'spin_wheel_settings'`, [], (err, row) => {
+      let config = DEFAULT_SPIN_WHEEL_CONFIG;
+      if (row && row.setting_value) {
+        try {
+          config = { ...DEFAULT_SPIN_WHEEL_CONFIG, ...JSON.parse(row.setting_value) };
+        } catch (e) {
+        }
+      }
+      if (!config.enabled || !config.slices || config.slices.length === 0) {
+        return res.status(400).json({ status: "error", message: "\u09B8\u09CD\u09AA\u09BF\u09A8 \u09B9\u09C1\u0987\u09B2 \u0985\u09AB\u09BE\u09B0 \u0986\u09AA\u09BE\u09A4\u09A4 \u09AC\u09A8\u09CD\u09A7 \u09B0\u09DF\u09C7\u099B\u09C7\u0964" });
+      }
+      const totalWeight = config.slices.reduce((sum, s) => sum + (Number(s.weight) || 0), 0);
+      if (totalWeight <= 0) {
+        const defaultSlice = config.slices[0];
+        return res.json({ status: "success", data: defaultSlice, winningIndex: 0 });
+      }
+      let randomWeight = Math.random() * totalWeight;
+      let winningIndex = 0;
+      for (let i = 0; i < config.slices.length; i++) {
+        const sliceWeight = Number(config.slices[i].weight) || 0;
+        if (randomWeight < sliceWeight) {
+          winningIndex = i;
+          break;
+        }
+        randomWeight -= sliceWeight;
+      }
+      const winningSlice = config.slices[winningIndex];
+      const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const baseCode = (winningSlice.coupon_code || "SPIN").toUpperCase();
+      const uniqueCouponCode = `${baseCode}-${randomSuffix}`;
       db_default.run(
-        `INSERT INTO customer_coupons (customer_email, code, title, discount_type, discount_value, status, source)
-         VALUES (?, ?, ?, ?, ?, 'active', 'spin_wheel')`,
-        [
-          customerEmail,
-          uniqueCouponCode,
-          winningSlice.label,
-          winningSlice.type || "percentage",
-          Number(winningSlice.value) || 10
-        ]
+        `INSERT INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, '2030-12-31', 'active')`,
+        [uniqueCouponCode, winningSlice.type || "percentage", Number(winningSlice.value) || 10]
       );
-    }
-    return res.json({
-      status: "success",
-      data: {
-        ...winningSlice,
-        coupon_code: uniqueCouponCode
-      },
-      winningIndex
+      if (customerEmail) {
+        db_default.run(
+          `INSERT INTO customer_coupons (customer_email, code, title, discount_type, discount_value, status, source)
+           VALUES (?, ?, ?, ?, ?, 'active', 'spin_wheel')`,
+          [
+            customerEmail,
+            uniqueCouponCode,
+            winningSlice.label,
+            winningSlice.type || "percentage",
+            Number(winningSlice.value) || 10
+          ]
+        );
+      }
+      return res.json({
+        status: "success",
+        data: {
+          ...winningSlice,
+          coupon_code: uniqueCouponCode
+        },
+        winningIndex
+      });
     });
-  });
+  }
 };
 var updateSpinWheelConfig = (req, res) => {
   const { enabled, title, subtitle, respin_order_count_required, slices } = req.body;

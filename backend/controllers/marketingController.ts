@@ -332,73 +332,94 @@ export const getSpinWheelConfig = (req: Request, res: Response) => {
 export const spinWheelPlay = (req: Request, res: Response) => {
   const customerEmail = (req.body?.customer_email || req.body?.email || '').trim().toLowerCase();
 
-  db.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'spin_wheel_settings'`, [], (err, row: any) => {
-    let config = DEFAULT_SPIN_WHEEL_CONFIG;
-    if (row && row.setting_value) {
-      try {
-        config = { ...DEFAULT_SPIN_WHEEL_CONFIG, ...JSON.parse(row.setting_value) };
-      } catch (e) {}
-    }
-
-    if (!config.enabled || !config.slices || config.slices.length === 0) {
-      return res.status(400).json({ status: 'error', message: 'স্পিন হুইল অফার আপাতত বন্ধ রয়েছে।' });
-    }
-
-    const totalWeight = config.slices.reduce((sum: number, s: any) => sum + (Number(s.weight) || 0), 0);
-    if (totalWeight <= 0) {
-      const defaultSlice = config.slices[0];
-      return res.json({ status: 'success', data: defaultSlice, winningIndex: 0 });
-    }
-
-    let randomWeight = Math.random() * totalWeight;
-    let winningIndex = 0;
-
-    for (let i = 0; i < config.slices.length; i++) {
-      const sliceWeight = Number(config.slices[i].weight) || 0;
-      if (randomWeight < sliceWeight) {
-        winningIndex = i;
-        break;
+  // Enforce strict 1 spin per customer account / email
+  if (customerEmail) {
+    db.get(
+      `SELECT id FROM customer_coupons WHERE LOWER(customer_email) = ? AND source = 'spin_wheel'`,
+      [customerEmail],
+      (checkErr, existingClaim: any) => {
+        if (existingClaim) {
+          return res.status(400).json({
+            status: 'error',
+            message: 'আপনি এই অ্যাকাউন্ট দিয়ে ইতিপূর্বে ১ বার স্পিন হুইল ব্যবহার করেছেন। প্রতি অ্যাকাউন্টে ১ বারই স্পিন প্রযোজ্য।'
+          });
+        }
+        processSpin();
       }
-      randomWeight -= sliceWeight;
-    }
-
-    const winningSlice = config.slices[winningIndex];
-
-    // Generate Unique Single-Use Coupon Code
-    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const baseCode = (winningSlice.coupon_code || 'SPIN').toUpperCase();
-    const uniqueCouponCode = `${baseCode}-${randomSuffix}`;
-
-    // Insert single-use coupon into coupons table
-    db.run(
-      `INSERT INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, '2030-12-31', 'active')`,
-      [uniqueCouponCode, winningSlice.type || 'percentage', Number(winningSlice.value) || 10]
     );
+  } else {
+    processSpin();
+  }
 
-    // Save coupon to Customer Account if email is provided
-    if (customerEmail) {
+  function processSpin() {
+    db.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'spin_wheel_settings'`, [], (err, row: any) => {
+      let config = DEFAULT_SPIN_WHEEL_CONFIG;
+      if (row && row.setting_value) {
+        try {
+          config = { ...DEFAULT_SPIN_WHEEL_CONFIG, ...JSON.parse(row.setting_value) };
+        } catch (e) {}
+      }
+
+      if (!config.enabled || !config.slices || config.slices.length === 0) {
+        return res.status(400).json({ status: 'error', message: 'স্পিন হুইল অফার আপাতত বন্ধ রয়েছে।' });
+      }
+
+      const totalWeight = config.slices.reduce((sum: number, s: any) => sum + (Number(s.weight) || 0), 0);
+      if (totalWeight <= 0) {
+        const defaultSlice = config.slices[0];
+        return res.json({ status: 'success', data: defaultSlice, winningIndex: 0 });
+      }
+
+      let randomWeight = Math.random() * totalWeight;
+      let winningIndex = 0;
+
+      for (let i = 0; i < config.slices.length; i++) {
+        const sliceWeight = Number(config.slices[i].weight) || 0;
+        if (randomWeight < sliceWeight) {
+          winningIndex = i;
+          break;
+        }
+        randomWeight -= sliceWeight;
+      }
+
+      const winningSlice = config.slices[winningIndex];
+
+      // Generate Unique Single-Use Coupon Code
+      const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const baseCode = (winningSlice.coupon_code || 'SPIN').toUpperCase();
+      const uniqueCouponCode = `${baseCode}-${randomSuffix}`;
+
+      // Insert single-use coupon into coupons table
       db.run(
-        `INSERT INTO customer_coupons (customer_email, code, title, discount_type, discount_value, status, source)
-         VALUES (?, ?, ?, ?, ?, 'active', 'spin_wheel')`,
-        [
-          customerEmail,
-          uniqueCouponCode,
-          winningSlice.label,
-          winningSlice.type || 'percentage',
-          Number(winningSlice.value) || 10
-        ]
+        `INSERT INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, '2030-12-31', 'active')`,
+        [uniqueCouponCode, winningSlice.type || 'percentage', Number(winningSlice.value) || 10]
       );
-    }
 
-    return res.json({
-      status: 'success',
-      data: {
-        ...winningSlice,
-        coupon_code: uniqueCouponCode
-      },
-      winningIndex
+      // Save coupon to Customer Account if email is provided
+      if (customerEmail) {
+        db.run(
+          `INSERT INTO customer_coupons (customer_email, code, title, discount_type, discount_value, status, source)
+           VALUES (?, ?, ?, ?, ?, 'active', 'spin_wheel')`,
+          [
+            customerEmail,
+            uniqueCouponCode,
+            winningSlice.label,
+            winningSlice.type || 'percentage',
+            Number(winningSlice.value) || 10
+          ]
+        );
+      }
+
+      return res.json({
+        status: 'success',
+        data: {
+          ...winningSlice,
+          coupon_code: uniqueCouponCode
+        },
+        winningIndex
+      });
     });
-  });
+  }
 };
 
 export const updateSpinWheelConfig = (req: Request, res: Response) => {

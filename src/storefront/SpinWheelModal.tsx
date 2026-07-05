@@ -194,23 +194,26 @@ export const SpinWheelModal: React.FC = () => {
           setIsSpinning(false);
           setWinningSlice(res.data);
 
-          // Save claim in localStorage
-          localStorage.setItem(
-            'spin_wheel_claimed',
-            JSON.stringify({
-              code: res.data.coupon_code,
-              label: res.data.label,
-              timestamp: Date.now()
-            })
-          );
+          const claimData = JSON.stringify({
+            code: res.data.coupon_code,
+            label: res.data.label,
+            timestamp: Date.now()
+          });
+
+          // Save claim in localStorage (global & customer-specific)
+          localStorage.setItem('spin_wheel_claimed', claimData);
+          if (customer && customer.email) {
+            localStorage.setItem(`spin_wheel_claimed_${customer.email.trim().toLowerCase()}`, claimData);
+          }
         }, 4600);
       } else {
         setIsSpinning(false);
-        alert('দুঃখিত, স্পিন হুইল প্রসেস করা যাচ্ছে না। আবার চেষ্টা করুন।');
+        alert(res?.message || 'আপনি এই অ্যাকাউন্ট দিয়ে ইতিপূর্বে ১ বার স্পিন হুইল ব্যবহার করেছেন। প্রতি অ্যাকাউন্টে ১ বারই স্পিন প্রযোজ্য।');
       }
     } catch (e) {
       setIsSpinning(false);
       console.error(e);
+      alert('একটি সমস্যা হয়েছে। দয়া করে একটু পর আবার চেষ্টা করুন।');
     }
   };
 
