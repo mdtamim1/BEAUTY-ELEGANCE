@@ -542,3 +542,51 @@
   display: flex;
   align-items: center;
 }
+
+/* ---- Mobile Responsive Layout & Touch-Friendly Account Sidebar ---- */
+.store-products-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 992px) {
+  .store-products-layout {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .account-sidebar {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    padding: 8px !important;
+    gap: 8px !important;
+    border: 1px solid var(--sf-border) !important;
+    border-radius: 12px !important;
+    background: white !important;
+    margin-bottom: 16px !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: thin !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04) !important;
+  }
+
+  .account-sidebar::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .account-sidebar::-webkit-scrollbar-thumb {
+    background-color: var(--sf-accent);
+    border-radius: 4px;
+  }
+
+  .account-sidebar button {
+    flex-shrink: 0 !important;
+    width: auto !important;
+    padding: 8px 14px !important;
+    font-size: 0.85rem !important;
+    white-space: nowrap !important;
+    border-radius: 8px !important;
+  }
+}

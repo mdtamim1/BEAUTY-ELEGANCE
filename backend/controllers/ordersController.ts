@@ -97,6 +97,57 @@ export const getOrderById = (req: Request, res: Response) => {
   });
 };
 
+// Fetch orders matching customer email or phone (Public / Customer Account)
+export const getMyOrders = (req: Request, res: Response) => {
+  const email = (req.query.email || '').toString().trim().toLowerCase();
+  const phone = (req.query.phone || '').toString().trim().replace(/[^0-9]/g, '');
+
+  if (!email && !phone) {
+    return res.status(400).json({ status: 'error', message: 'Email or phone parameter is required' });
+  }
+
+  db.all(
+    `SELECT * FROM orders 
+     WHERE (LOWER(email) = ? AND ? != '') 
+        OR (REPLACE(REPLACE(phone, '-', ''), ' ', '') LIKE ? AND ? != '')
+     ORDER BY created_at DESC`,
+    [email, email, `%${phone}%`, phone],
+    (err, orderRows: any[]) => {
+      if (err) {
+        console.error('Error fetching customer orders:', err);
+        return res.status(500).json({ status: 'error', message: 'Database error' });
+      }
+      if (!orderRows || orderRows.length === 0) {
+        return res.json({ status: 'success', data: [] });
+      }
+
+      db.all(`SELECT * FROM order_items`, [], (err, itemRows: any[]) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ status: 'error', message: 'Database error' });
+        }
+
+        const ordersWithItems = orderRows.map((order) => {
+          const items = itemRows ? itemRows.filter((item) => item.order_id === order.id) : [];
+          return {
+            ...order,
+            productsList: items.map((item) => ({
+              name: item.product_name,
+              color: item.color,
+              size: item.size,
+              code: item.code,
+              quantity: item.quantity,
+              price: item.price
+            }))
+          };
+        });
+
+        res.json({ status: 'success', data: ordersWithItems });
+      });
+    }
+  );
+};
+
 export const createOrder = (req: Request, res: Response) => {
   const {
     customer,

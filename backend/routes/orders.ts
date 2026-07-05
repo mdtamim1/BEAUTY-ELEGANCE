@@ -1,11 +1,12 @@
 import { Router } from 'express';
-import { getOrders, getOrderById, createOrder, updateOrderStatus, updateOrder, syncOrders, assignOrder, getOrderHistory } from '../controllers/ordersController';
+import { getOrders, getOrderById, createOrder, updateOrderStatus, updateOrder, syncOrders, assignOrder, getOrderHistory, getMyOrders } from '../controllers/ordersController';
 import { authenticateToken, requireRole } from '../middleware/auth';
 
 const router = Router();
 
-// Customer can place orders directly
+// Customer can place orders & lookup their orders directly
 router.post('/', createOrder);
+router.get('/my-orders', getMyOrders);
 
 // Admin / staff / moderator can view orders
 router.get('/', authenticateToken, requireRole(['Super Admin', 'Admin', 'Staff', 'Moderator']), getOrders);

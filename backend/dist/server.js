@@ -2026,6 +2026,50 @@ var getOrderById = (req, res) => {
     });
   });
 };
+var getMyOrders = (req, res) => {
+  const email = (req.query.email || "").toString().trim().toLowerCase();
+  const phone = (req.query.phone || "").toString().trim().replace(/[^0-9]/g, "");
+  if (!email && !phone) {
+    return res.status(400).json({ status: "error", message: "Email or phone parameter is required" });
+  }
+  db_default.all(
+    `SELECT * FROM orders 
+     WHERE (LOWER(email) = ? AND ? != '') 
+        OR (REPLACE(REPLACE(phone, '-', ''), ' ', '') LIKE ? AND ? != '')
+     ORDER BY created_at DESC`,
+    [email, email, `%${phone}%`, phone],
+    (err, orderRows) => {
+      if (err) {
+        console.error("Error fetching customer orders:", err);
+        return res.status(500).json({ status: "error", message: "Database error" });
+      }
+      if (!orderRows || orderRows.length === 0) {
+        return res.json({ status: "success", data: [] });
+      }
+      db_default.all(`SELECT * FROM order_items`, [], (err2, itemRows) => {
+        if (err2) {
+          console.error(err2);
+          return res.status(500).json({ status: "error", message: "Database error" });
+        }
+        const ordersWithItems = orderRows.map((order) => {
+          const items = itemRows ? itemRows.filter((item) => item.order_id === order.id) : [];
+          return {
+            ...order,
+            productsList: items.map((item) => ({
+              name: item.product_name,
+              color: item.color,
+              size: item.size,
+              code: item.code,
+              quantity: item.quantity,
+              price: item.price
+            }))
+          };
+        });
+        res.json({ status: "success", data: ordersWithItems });
+      });
+    }
+  );
+};
 var createOrder = (req, res) => {
   const {
     customer,
@@ -2512,6 +2556,7 @@ var getOrderHistory = (req, res) => {
 // backend/routes/orders.ts
 var router3 = Router3();
 router3.post("/", createOrder);
+router3.get("/my-orders", getMyOrders);
 router3.get("/", authenticateToken, requireRole(["Super Admin", "Admin", "Staff", "Moderator"]), getOrders);
 router3.get("/:id", authenticateToken, requireRole(["Super Admin", "Admin", "Staff", "Moderator"]), getOrderById);
 router3.get("/:id/history", authenticateToken, requireRole(["Super Admin", "Admin", "Staff", "Moderator"]), getOrderHistory);

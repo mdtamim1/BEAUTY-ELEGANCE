@@ -7,7 +7,7 @@ import {
   Clock, AlertCircle, HelpCircle, Send, Plus, ArrowLeft, RefreshCw,
   Trash2, Edit, X, Heart, ShoppingCart, Ticket
 } from 'lucide-react';
-import { fetchOrdersFromBackend, fetchChatHistory } from '../services/api';
+import { fetchOrdersFromBackend, fetchCustomerOrdersFromBackend, fetchChatHistory } from '../services/api';
 import { generateOrders as getOrders } from '../mock/data';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import { CustomerCouponsTab } from './CustomerCouponsTab';
@@ -245,25 +245,54 @@ export default function CustomerAccount() {
     }
   };
 
-  // Load orders
+  // Load orders with persistent caching and dedicated backend customer lookup
   const loadCustomerOrders = async () => {
     if (!customer) return;
     setLoadingOrders(true);
     try {
-      // Fetch from backend
-      const backendOrders = await fetchOrdersFromBackend();
-      // Combine with local mock fallback
-      const allOrders = backendOrders || getOrders() || [];
+      // 1. Load local persistent cache first
+      const cacheKey = `customer_orders_${customer.email.toLowerCase()}`;
+      let cachedOrders: any[] = [];
+      const storedCache = localStorage.getItem(cacheKey);
+      if (storedCache) {
+        try { cachedOrders = JSON.parse(storedCache); } catch (e) {}
+      }
+
+      // 2. Fetch directly from customer backend route (Public / Customer query)
+      const backendCustomerOrders = await fetchCustomerOrdersFromBackend(customer.email, customer.phone);
       
+      // 3. Fallback to general orders query if available
+      const generalOrders = await fetchOrdersFromBackend();
+      const mockFallback = getOrders() || [];
+
+      // Combine all sources
+      const rawCombined = [
+        ...(backendCustomerOrders || []),
+        ...cachedOrders,
+        ...(generalOrders || []),
+        ...mockFallback
+      ];
+
       // Filter matching this customer's email or phone
-      const matched = allOrders.filter((o: any) => 
-        (o.email && o.email.toLowerCase() === customer.email.toLowerCase()) || 
-        (o.phone && customer.phone && o.phone.replace(/[^0-9]/g, '') === customer.phone.replace(/[^0-9]/g, ''))
-      );
+      const matchedMap = new Map();
+      rawCombined.forEach((o: any) => {
+        if (!o || !o.id) return;
+        const matchesEmail = o.email && o.email.toLowerCase() === customer.email.toLowerCase();
+        const matchesPhone = o.phone && customer.phone && o.phone.replace(/[^0-9]/g, '') === customer.phone.replace(/[^0-9]/g, '');
+        if (matchesEmail || matchesPhone) {
+          if (!matchedMap.has(o.id)) {
+            matchedMap.set(o.id, o);
+          }
+        }
+      });
+
+      const finalOrders = Array.from(matchedMap.values());
       
-      setOrders(matched as any[]);
+      // Save updated persistent cache
+      localStorage.setItem(cacheKey, JSON.stringify(finalOrders));
+      setOrders(finalOrders as any[]);
     } catch (e) {
-      console.error(e);
+      console.error('Error loading customer orders:', e);
     } finally {
       setLoadingOrders(false);
     }

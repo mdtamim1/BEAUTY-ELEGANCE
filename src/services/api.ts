@@ -60,7 +60,51 @@ export const sendOrderToBackend = async (orderData: any): Promise<boolean> => {
   }
 };
 
-// Fetch all orders from backend database
+// Fetch customer orders matching email or phone
+export const fetchCustomerOrdersFromBackend = async (email: string, phone?: string): Promise<Order[] | null> => {
+  try {
+    const params = new URLSearchParams();
+    if (email) params.append('email', email);
+    if (phone) params.append('phone', phone);
+
+    const response = await fetch(`${API_BASE}/orders/my-orders?${params.toString()}`);
+    if (!response.ok) return null;
+    const result = await response.json();
+    if (result.status !== 'success' || !Array.isArray(result.data)) return null;
+
+    return result.data.map((order: any) => ({
+      id: order.id,
+      customer: order.customer,
+      email: order.email,
+      amount: order.amount,
+      status: order.status,
+      items: order.items,
+      date: order.created_at || order.date,
+      paymentMethod: order.payment_method || order.paymentMethod,
+      storeName: order.store_name || order.storeName,
+      phone: order.phone,
+      address: order.address,
+      courier: order.courier,
+      city: order.city,
+      thana: order.thana,
+      area: order.area,
+      customerNote: order.customer_note || order.customerNote,
+      shopNote: order.shop_note || order.shopNote,
+      paymentType: order.payment_type || order.paymentType,
+      memoNumber: order.memo_number || order.memoNumber,
+      deliveryCharge: order.delivery_charge || order.deliveryCharge,
+      discount: order.discount,
+      paidAmount: order.paid_amount || order.paidAmount,
+      subtotal: order.subtotal,
+      productsList: order.productsList || []
+    }));
+  } catch (e) {
+    console.error('Failed to fetch customer orders from backend:', e);
+    return null;
+  }
+};
+
+// Fetch all orders from backend database (Admin/Staff)
 export const fetchOrdersFromBackend = async (): Promise<Order[] | null> => {
   try {
     const response = await fetch(`${API_BASE}/orders`, {
