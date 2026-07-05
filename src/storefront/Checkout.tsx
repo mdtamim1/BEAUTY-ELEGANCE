@@ -226,6 +226,34 @@ export default function Checkout() {
 
     // Save locally for redundancy & to ensure local Admin panel functions properly
     addOrder(orderData);
+
+    // Remove used coupon from customer account local cache & spin wheel storage
+    if (appliedCoupon) {
+      const cleanCode = appliedCoupon.code.trim().toUpperCase();
+      try {
+        const spinReward = localStorage.getItem('spin_win_reward');
+        if (spinReward) {
+          const parsed = JSON.parse(spinReward);
+          if (parsed.code && parsed.code.trim().toUpperCase() === cleanCode) {
+            localStorage.removeItem('spin_win_reward');
+          }
+        }
+      } catch (e) {}
+
+      if (customer && customer.email) {
+        const cacheKey = `customer_coupons_${customer.email.trim().toLowerCase()}`;
+        try {
+          const stored = localStorage.getItem(cacheKey);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+              const updated = parsed.filter((c: any) => c.code.trim().toUpperCase() !== cleanCode);
+              localStorage.setItem(cacheKey, JSON.stringify(updated));
+            }
+          }
+        } catch (e) {}
+      }
+    }
     
     // Clear storefront cart if checkout succeeded
     if (clearCart && !buyNowProduct) {

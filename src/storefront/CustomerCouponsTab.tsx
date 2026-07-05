@@ -69,6 +69,8 @@ export const CustomerCouponsTab: React.FC<{ email: string }> = ({ email }) => {
     );
   }
 
+  const activeCoupons = coupons.filter(c => c.status !== 'used');
+
   return (
     <div style={{ padding: '8px 0' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
@@ -102,7 +104,7 @@ export const CustomerCouponsTab: React.FC<{ email: string }> = ({ email }) => {
         </button>
       </div>
 
-      {coupons.length === 0 ? (
+      {activeCoupons.length === 0 ? (
         <div style={{ padding: '40px', textAlign: 'center', background: 'rgba(255,255,255,0.02)', border: '1px dashed var(--border)', borderRadius: '16px' }}>
           <Gift size={40} style={{ color: '#94a3b8', margin: '0 auto 12px auto' }} />
           <h4 style={{ margin: '0 0 6px 0', fontSize: '1rem', color: 'var(--text-primary)' }}>কোনো কুপন কোড নেই</h4>
@@ -112,7 +114,7 @@ export const CustomerCouponsTab: React.FC<{ email: string }> = ({ email }) => {
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-          {coupons.map((coupon) => {
+          {activeCoupons.map((coupon) => {
             const isUsed = coupon.status === 'used';
             const isPercentage = coupon.discount_type === 'percentage';
             const displayValue = isPercentage ? `${coupon.discount_value}% OFF` : `৳${coupon.discount_value} OFF`;

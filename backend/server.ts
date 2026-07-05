@@ -40,15 +40,25 @@ dotenv.config();
 import { rateLimit } from 'express-rate-limit';
 
 const app = express();
+app.set('trust proxy', 1);
 const server = createServer(app);
 const PORT = process.env.PORT || 5000;
 
 // --- Rate Limiting Config ---
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: 200, // Limit each IP to 200 requests per 15 minutes
+  limit: 2000, // Increased limit per 15 minutes to accommodate background polling
   standardHeaders: 'draft-7',
   legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for static settings, health check, and coupon validation attempts
+    return (
+      req.path.includes('/settings') || 
+      req.path.includes('/health') || 
+      req.path.includes('/marketing/validate-coupon') ||
+      req.path.includes('/chats')
+    );
+  },
   message: {
     status: 'error',
     message: 'Too many requests from this IP, please try again after 15 minutes'

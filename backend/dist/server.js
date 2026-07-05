@@ -4464,7 +4464,27 @@ var validateCoupon = (req, res) => {
       return res.status(500).json({ status: "error", message: "Database error" });
     }
     if (!coupon) {
-      return res.status(404).json({ status: "error", message: "\u09A6\u09C1\u0983\u0996\u09BF\u09A4, \u0995\u09C1\u09AA\u09A8 \u0995\u09CB\u09A1\u099F\u09BF \u09B8\u09A0\u09BF\u0995 \u09A8\u09DF\u0964" });
+      db_default.get(
+        `SELECT * FROM customer_coupons WHERE UPPER(code) = ?`,
+        [cleanCode],
+        (err2, custCoupon) => {
+          if (err2 || !custCoupon) {
+            return res.status(404).json({ status: "error", message: "\u09A6\u09C1\u0983\u0996\u09BF\u09A4, \u0995\u09C1\u09AA\u09A8 \u0995\u09CB\u09A1\u099F\u09BF \u09B8\u09A0\u09BF\u0995 \u09A8\u09DF\u0964" });
+          }
+          if (custCoupon.status === "used") {
+            return res.status(400).json({ status: "error", message: "\u098F\u0987 \u0995\u09C1\u09AA\u09A8\u099F\u09BF \u0986\u09AA\u09A8\u09BF \u0987\u09A4\u09BF\u09AA\u09C2\u09B0\u09CD\u09AC\u09C7 \u09E7 \u09AC\u09BE\u09B0 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0 \u0995\u09B0\u09C7 \u09AB\u09C7\u09B2\u09C7\u099B\u09C7\u09A8!" });
+          }
+          return res.json({
+            status: "success",
+            data: {
+              code: custCoupon.code,
+              type: custCoupon.discount_type || "percentage",
+              value: custCoupon.discount_value
+            }
+          });
+        }
+      );
+      return;
     }
     if (coupon.status !== "active") {
       return res.status(400).json({ status: "error", message: "\u098F\u0987 \u0995\u09C1\u09AA\u09A8 \u0995\u09CB\u09A1\u099F\u09BF \u0987\u09A4\u09BF\u09AE\u09A7\u09CD\u09AF\u09C7 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0 \u0995\u09B0\u09BE \u09B9\u09DF\u09C7\u099B\u09C7 \u0985\u09A5\u09AC\u09BE \u09A8\u09BF\u09B7\u09CD\u0995\u09CD\u09B0\u09BF\u09DF \u0995\u09B0\u09BE \u09B9\u09DF\u09C7\u099B\u09C7\u0964" });
@@ -5460,15 +5480,19 @@ var __filename2 = fileURLToPath2(import.meta.url);
 var __dirname2 = path2.dirname(__filename2);
 dotenv3.config();
 var app = express();
+app.set("trust proxy", 1);
 var server = createServer(app);
 var PORT = process.env.PORT || 5e3;
 var apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1e3,
   // 15 minutes
-  limit: 200,
-  // Limit each IP to 200 requests per 15 minutes
+  limit: 2e3,
+  // Increased limit per 15 minutes to accommodate background polling
   standardHeaders: "draft-7",
   legacyHeaders: false,
+  skip: (req) => {
+    return req.path.includes("/settings") || req.path.includes("/health") || req.path.includes("/marketing/validate-coupon") || req.path.includes("/chats");
+  },
   message: {
     status: "error",
     message: "Too many requests from this IP, please try again after 15 minutes"

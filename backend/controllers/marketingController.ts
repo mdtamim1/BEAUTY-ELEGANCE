@@ -79,7 +79,28 @@ export const validateCoupon = (req: Request, res: Response) => {
     }
 
     if (!coupon) {
-      return res.status(404).json({ status: 'error', message: 'দুঃখিত, কুপন কোডটি সঠিক নয়।' });
+      // Fallback check in customer_coupons for user-specific gifts or spin-win coupons
+      db.get(
+        `SELECT * FROM customer_coupons WHERE UPPER(code) = ?`,
+        [cleanCode],
+        (err, custCoupon: any) => {
+          if (err || !custCoupon) {
+            return res.status(404).json({ status: 'error', message: 'দুঃখিত, কুপন কোডটি সঠিক নয়।' });
+          }
+          if (custCoupon.status === 'used') {
+            return res.status(400).json({ status: 'error', message: 'এই কুপনটি আপনি ইতিপূর্বে ১ বার ব্যবহার করে ফেলেছেন!' });
+          }
+          return res.json({
+            status: 'success',
+            data: {
+              code: custCoupon.code,
+              type: custCoupon.discount_type || 'percentage',
+              value: custCoupon.discount_value
+            }
+          });
+        }
+      );
+      return;
     }
 
     if (coupon.status !== 'active') {
