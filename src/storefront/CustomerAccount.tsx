@@ -70,7 +70,7 @@ export default function CustomerAccount() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   // Dashboard state
-  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'coupons' | 'wishlist' | 'cart' | 'chat'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'coupons' | 'addresses' | 'wishlist' | 'cart' | 'chat'>('profile');
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
@@ -635,26 +635,37 @@ export default function CustomerAccount() {
             onClick={() => { setActiveTab('profile'); setSelectedOrder(null); }}
             style={{ width: '100%', padding: '12px 16px', background: activeTab === 'profile' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'profile' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
           >
-            <User size={18} /> প্রোফাইল তথ্য
+            <User size={18} /> প্রোফাইল তথ্য (Profile)
           </button>
+          
           <button 
             onClick={() => { setActiveTab('orders'); setSelectedOrder(null); }}
             style={{ width: '100%', padding: '12px 16px', background: activeTab === 'orders' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'orders' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
           >
             <ShoppingBag size={18} /> আমার অর্ডারসমূহ ({orders.length})
           </button>
+          
           <button 
             onClick={() => { setActiveTab('coupons'); setSelectedOrder(null); }}
             style={{ width: '100%', padding: '12px 16px', background: activeTab === 'coupons' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'coupons' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
           >
             <Ticket size={18} /> আমার কুপন ও অফারসমূহ
           </button>
+
+          <button 
+            onClick={() => { setActiveTab('addresses'); setSelectedOrder(null); }}
+            style={{ width: '100%', padding: '12px 16px', background: activeTab === 'addresses' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'addresses' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+          >
+            <MapPin size={18} /> সংরক্ষিত ঠিকানা ({customer.addresses?.length || 0})
+          </button>
+          
           <button 
             onClick={() => { setActiveTab('wishlist'); setSelectedOrder(null); }}
             style={{ width: '100%', padding: '12px 16px', background: activeTab === 'wishlist' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'wishlist' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
           >
             <Heart size={18} /> আমার উইশলিস্ট ({wishlist.length})
           </button>
+          
           <button 
             onClick={() => { setActiveTab('cart'); setSelectedOrder(null); }}
             style={{ width: '100%', padding: '12px 16px', background: activeTab === 'cart' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'cart' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
@@ -665,7 +676,7 @@ export default function CustomerAccount() {
           {/* Divider */}
           <div style={{ margin: '12px 0', borderTop: '1px solid var(--sf-border)' }} />
 
-          {/* Prominent Support Box */}
+          {/* Support Box */}
           <div style={{ padding: '10px', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0.03) 100%)', border: '1px dashed var(--sf-accent)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--sf-accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>কাস্টমার সাপোর্ট</div>
             <button 
@@ -675,6 +686,14 @@ export default function CustomerAccount() {
               <MessageSquare size={16} /> লাইভ চ্যাট অ্যাসিস্ট্যান্ট
             </button>
           </div>
+
+          {/* Logout Action */}
+          <button 
+            onClick={() => { logout(); navigate('/'); }}
+            style={{ width: '100%', padding: '10px 16px', background: 'rgba(239, 68, 68, 0.08)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', marginTop: '12px' }}
+          >
+            <LogOut size={16} /> লগআউট করুন (Logout)
+          </button>
         </div>
 
         {/* Tab Contents */}
@@ -682,6 +701,85 @@ export default function CustomerAccount() {
           
           {/* MY COUPONS TAB */}
           {activeTab === 'coupons' && <CustomerCouponsTab email={customer.email} />}
+
+          {/* SAVED ADDRESSES TAB */}
+          {activeTab === 'addresses' && (
+            <div>
+              <div className="addresses-section-header" style={{ marginBottom: '20px' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--sf-text-primary)' }}>
+                  <MapPin size={20} style={{ color: 'var(--sf-accent)' }} /> সংরক্ষিত ডেলিভারি ঠিকানা (Saved Address Book)
+                </h3>
+                <button 
+                  onClick={openAddAddressModal} 
+                  className="address-action-btn set-default"
+                  style={{ width: 'auto', padding: '0 16px', height: '38px', borderRadius: '8px' }}
+                >
+                  <Plus size={16} /> নতুন ঠিকানা যোগ করুন
+                </button>
+              </div>
+
+              {!customer.addresses || customer.addresses.length === 0 ? (
+                <div className="address-empty-state">
+                  <MapPin size={48} style={{ opacity: 0.3, color: 'var(--sf-accent)' }} />
+                  <p style={{ fontWeight: 700, fontSize: '1.05rem', margin: '12px 0 4px 0' }}>আপনার কোনো ঠিকানা সংরক্ষিত নেই</p>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--sf-text-secondary)', margin: 0 }}>ভবিষ্যতে ১-ক্লিকে দ্রুত অর্ডার করার জন্য এখানে আপনার বাসা বা অফিসের ঠিকানা সংরক্ষণ করুন।</p>
+                  <button 
+                    onClick={openAddAddressModal}
+                    style={{ marginTop: '16px', padding: '10px 20px', background: 'var(--sf-accent)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    <Plus size={16} /> ঠিকানা যোগ করুন
+                  </button>
+                </div>
+              ) : (
+                <div className="address-grid">
+                  {customer.addresses.map((addr) => (
+                    <div key={addr.id} className={`address-card ${addr.isDefault ? 'default-address' : ''}`}>
+                      <div>
+                        <div className="address-card-header">
+                          <span className="address-label">{addr.label}</span>
+                          {addr.isDefault && (
+                            <span className="address-default-badge">
+                              <CheckCircle2 size={12} /> ডিফল্ট
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="address-card-body" style={{ marginTop: '12px' }}>
+                          <div className="address-user-name">{addr.name}</div>
+                          <div className="address-user-phone">📞 {addr.phone}</div>
+                          <div className="address-details">{addr.address}</div>
+                        </div>
+                      </div>
+
+                      <div className="address-card-actions">
+                        {!addr.isDefault && (
+                          <button 
+                            onClick={() => setDefaultCustomerAddress(addr.id)} 
+                            className="address-action-btn set-default"
+                          >
+                            ডিফল্ট করুন
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => openEditAddressModal(addr)} 
+                          className="address-action-btn"
+                        >
+                          <Edit size={12} /> এডিট
+                        </button>
+                        <button 
+                          onClick={() => deleteCustomerAddress(addr.id)} 
+                          className="address-action-btn" 
+                          style={{ color: '#ef4444' }}
+                        >
+                          <Trash2 size={12} /> ডিলিট
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* PROFILE TAB */}
           {activeTab === 'profile' && (
