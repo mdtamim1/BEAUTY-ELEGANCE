@@ -4502,14 +4502,14 @@ var deleteCampaign = (req, res) => {
 };
 var DEFAULT_SPIN_WHEEL_CONFIG = {
   enabled: true,
-  title: "\u{1F381} \u0998\u09C1\u09B0\u09C7 \u099C\u09BF\u09A4\u09C1\u09A8 \u09B8\u09CD\u09AA\u09C7\u09B6\u09BE\u09B2 \u09A1\u09BF\u09B8\u0995\u09BE\u0989\u09A8\u09CD\u099F!",
+  title: "\u0998\u09C1\u09B0\u09C7 \u099C\u09BF\u09A4\u09C1\u09A8 \u09B8\u09CD\u09AA\u09C7\u09B6\u09BE\u09B2 \u09A1\u09BF\u09B8\u0995\u09BE\u0989\u09A8\u09CD\u099F!",
   subtitle: "\u0986\u099C\u0995\u09C7\u09B0 \u09B8\u09CC\u09AD\u09BE\u0997\u09CD\u09AF\u099C\u09A8\u0995 \u0995\u09C1\u09AA\u09A8 \u0995\u09CB\u09A1 \u099C\u09BF\u09A4\u09A4\u09C7 \u099A\u09BE\u0995\u09BE\u099F\u09BF \u0998\u09CB\u09B0\u09BE\u09A8!",
   slices: [
-    { id: "1", label: "10% OFF", coupon_code: "SPIN10", type: "percentage", value: 10, weight: 40, color: "#8b5cf6" },
-    { id: "2", label: "\u09F3100 OFF", coupon_code: "SPIN100", type: "fixed", value: 100, weight: 30, color: "#10b981" },
-    { id: "3", label: "15% OFF", coupon_code: "VIP15", type: "percentage", value: 15, weight: 15, color: "#f59e0b" },
-    { id: "4", label: "Free Delivery", coupon_code: "FREEDEL", type: "fixed", value: 60, weight: 10, color: "#ec4899" },
-    { id: "5", label: "25% OFF MEGA", coupon_code: "MEGA25", type: "percentage", value: 25, weight: 5, color: "#6366f1" }
+    { id: "1", label: "10% OFF", coupon_code: "SPIN10", type: "percentage", value: 10, weight: 40, color: "#7c3aed" },
+    { id: "2", label: "\u09F3100 OFF", coupon_code: "SPIN100", type: "fixed", value: 100, weight: 30, color: "#059669" },
+    { id: "3", label: "15% OFF", coupon_code: "VIP15", type: "percentage", value: 15, weight: 15, color: "#d97706" },
+    { id: "4", label: "Free Delivery", coupon_code: "FREEDEL", type: "fixed", value: 60, weight: 10, color: "#e11d48" },
+    { id: "5", label: "25% MEGA", coupon_code: "MEGA25", type: "percentage", value: 25, weight: 5, color: "#2563eb" }
   ]
 };
 var getSpinWheelConfig = (req, res) => {

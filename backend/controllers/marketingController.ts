@@ -253,14 +253,14 @@ export const deleteCampaign = (req: Request, res: Response) => {
 
 const DEFAULT_SPIN_WHEEL_CONFIG = {
   enabled: true,
-  title: '🎁 ঘুরে জিতুন স্পেশাল ডিসকাউন্ট!',
+  title: 'ঘুরে জিতুন স্পেশাল ডিসকাউন্ট!',
   subtitle: 'আজকের সৌভাগ্যজনক কুপন কোড জিততে চাকাটি ঘোরান!',
   slices: [
-    { id: '1', label: '10% OFF', coupon_code: 'SPIN10', type: 'percentage', value: 10, weight: 40, color: '#8b5cf6' },
-    { id: '2', label: '৳100 OFF', coupon_code: 'SPIN100', type: 'fixed', value: 100, weight: 30, color: '#10b981' },
-    { id: '3', label: '15% OFF', coupon_code: 'VIP15', type: 'percentage', value: 15, weight: 15, color: '#f59e0b' },
-    { id: '4', label: 'Free Delivery', coupon_code: 'FREEDEL', type: 'fixed', value: 60, weight: 10, color: '#ec4899' },
-    { id: '5', label: '25% OFF MEGA', coupon_code: 'MEGA25', type: 'percentage', value: 25, weight: 5, color: '#6366f1' }
+    { id: '1', label: '10% OFF', coupon_code: 'SPIN10', type: 'percentage', value: 10, weight: 40, color: '#7c3aed' },
+    { id: '2', label: '৳100 OFF', coupon_code: 'SPIN100', type: 'fixed', value: 100, weight: 30, color: '#059669' },
+    { id: '3', label: '15% OFF', coupon_code: 'VIP15', type: 'percentage', value: 15, weight: 15, color: '#d97706' },
+    { id: '4', label: 'Free Delivery', coupon_code: 'FREEDEL', type: 'fixed', value: 60, weight: 10, color: '#e11d48' },
+    { id: '5', label: '25% MEGA', coupon_code: 'MEGA25', type: 'percentage', value: 25, weight: 5, color: '#2563eb' }
   ]
 };
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { fetchSpinWheelConfig, playSpinWheel } from '../services/api';
-import { Gift, Sparkles, X, Check, Copy, Flame, Trophy } from 'lucide-react';
+import { Sparkles, X, Check, Copy, Flame, Trophy } from 'lucide-react';
 
 interface WheelSlice {
   id: string;
@@ -62,16 +62,46 @@ export const SpinWheelModal: React.FC = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Use High-DPI canvas (600x600) for ultra-crisp luxury text
     const width = canvas.width;
     const height = canvas.height;
     const centerX = width / 2;
     const centerY = height / 2;
-    const radius = Math.min(centerX, centerY) - 10;
+    const outerRingRadius = Math.min(centerX, centerY) - 8;
+    const wheelRadius = outerRingRadius - 16;
     const slices = config!.slices;
     const sliceAngle = (2 * Math.PI) / slices.length;
 
     ctx.clearRect(0, 0, width, height);
 
+    // 1. Draw Outer Gold Metallic Rim
+    const rimGradient = ctx.createRadialGradient(centerX, centerY, wheelRadius, centerX, centerY, outerRingRadius);
+    rimGradient.addColorStop(0, '#d97706');
+    rimGradient.addColorStop(0.5, '#fbbf24');
+    rimGradient.addColorStop(1, '#78350f');
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, outerRingRadius, 0, 2 * Math.PI);
+    ctx.fillStyle = rimGradient;
+    ctx.fill();
+
+    // 2. Draw Studded Lights around the Rim
+    const studCount = slices.length * 4;
+    for (let s = 0; s < studCount; s++) {
+      const studAngle = (s * 2 * Math.PI) / studCount;
+      const studX = centerX + (outerRingRadius - 8) * Math.cos(studAngle);
+      const studY = centerY + (outerRingRadius - 8) * Math.sin(studAngle);
+
+      ctx.beginPath();
+      ctx.arc(studX, studY, 3.5, 0, 2 * Math.PI);
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#fbbf24';
+      ctx.shadowBlur = 6;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // 3. Draw Luxury Slices & Centered Text
     slices.forEach((slice, i) => {
       const startAngle = i * sliceAngle - Math.PI / 2;
       const endAngle = startAngle + sliceAngle;
@@ -79,43 +109,48 @@ export const SpinWheelModal: React.FC = () => {
       // Draw Slice Sector
       ctx.beginPath();
       ctx.moveTo(centerX, centerY);
-      ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+      ctx.arc(centerX, centerY, wheelRadius, startAngle, endAngle);
       ctx.closePath();
-      ctx.fillStyle = slice.color || (i % 2 === 0 ? '#8b5cf6' : '#10b981');
+
+      // Fallback luxury colors if not assigned
+      const defaultLuxuryColors = ['#7c3aed', '#059669', '#d97706', '#e11d48', '#2563eb', '#4f46e5'];
+      ctx.fillStyle = slice.color || defaultLuxuryColors[i % defaultLuxuryColors.length];
       ctx.fill();
 
-      // Outer Border Glow Line
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = '#ffffff33';
+      // Divider Lines
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = 'rgba(251, 191, 36, 0.4)';
       ctx.stroke();
 
-      // Draw Label Text
+      // Draw Perfectly Centered Text (No overlap/clipping)
       ctx.save();
       ctx.translate(centerX, centerY);
       ctx.rotate(startAngle + sliceAngle / 2);
-      ctx.textAlign = 'right';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 13px system-ui, sans-serif';
-      ctx.shadowColor = 'rgba(0,0,0,0.8)';
-      ctx.shadowBlur = 4;
-      ctx.fillText(slice.label, radius - 20, 5);
+
+      // Dynamic font size scaling
+      const fontSize = slice.label.length > 11 ? 16 : slice.label.length > 8 ? 19 : 22;
+      ctx.font = `900 ${fontSize}px system-ui, -apple-system, sans-serif`;
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 2;
+
+      // Position centered nicely inside the slice sector
+      ctx.fillText(slice.label, wheelRadius * 0.62, 0);
       ctx.restore();
     });
 
-    // Draw Center Cap
+    // 4. Draw Center Cap Gold Base
     ctx.beginPath();
-    ctx.arc(centerX, centerY, 32, 0, 2 * Math.PI);
-    ctx.fillStyle = '#1e1b4b';
+    ctx.arc(centerX, centerY, 48, 0, 2 * Math.PI);
+    ctx.fillStyle = '#0f172a';
     ctx.fill();
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = '#fbbf24';
     ctx.stroke();
-
-    // Center Icon / Text
-    ctx.fillStyle = '#fbbf24';
-    ctx.font = '900 12px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('SPIN', centerX, centerY + 4);
   };
 
   const handleSpin = async () => {
@@ -172,7 +207,7 @@ export const SpinWheelModal: React.FC = () => {
 
   return (
     <>
-      {/* Floating Badge (If modal is closed and user has not claimed yet) */}
+      {/* Floating Badge */}
       {!isOpen && !winningSlice && (
         <button
           onClick={() => setIsOpen(true)}
@@ -181,25 +216,25 @@ export const SpinWheelModal: React.FC = () => {
             bottom: '24px',
             left: '24px',
             zIndex: 998,
-            background: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)',
+            background: 'linear-gradient(135deg, #d97706 0%, #7c3aed 100%)',
             color: '#fff',
-            border: '2px solid rgba(255,255,255,0.4)',
+            border: '2px solid rgba(251, 191, 36, 0.6)',
             borderRadius: '50px',
             padding: '10px 18px',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            fontWeight: 700,
+            fontWeight: 800,
             fontSize: '0.85rem',
             cursor: 'pointer',
-            boxShadow: '0 10px 25px -5px rgba(139, 92, 246, 0.6)',
+            boxShadow: '0 10px 25px -5px rgba(217, 119, 6, 0.6)',
             transition: 'all 0.3s ease',
             animation: 'pulse 2s infinite'
           }}
         >
           <Sparkles size={18} style={{ color: '#fbbf24' }} />
           <span>লটারি হুইল ঘুরান!</span>
-          <Flame size={16} style={{ color: '#f97316' }} />
+          <Flame size={16} style={{ color: '#fbbf24' }} />
         </button>
       )}
 
@@ -210,8 +245,8 @@ export const SpinWheelModal: React.FC = () => {
             position: 'fixed',
             inset: 0,
             zIndex: 99999,
-            background: 'rgba(5, 5, 12, 0.82)',
-            backdropFilter: 'blur(10px)',
+            background: 'rgba(5, 5, 12, 0.86)',
+            backdropFilter: 'blur(12px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -223,10 +258,10 @@ export const SpinWheelModal: React.FC = () => {
               position: 'relative',
               width: '100%',
               maxWidth: '460px',
-              background: 'linear-gradient(145deg, rgba(23, 20, 52, 0.95), rgba(13, 10, 31, 0.98))',
-              border: '1px solid rgba(139, 92, 246, 0.4)',
+              background: 'linear-gradient(145deg, rgba(20, 16, 42, 0.96), rgba(10, 8, 25, 0.98))',
+              border: '1px solid rgba(251, 191, 36, 0.35)',
               borderRadius: '24px',
-              boxShadow: '0 25px 50px -12px rgba(139, 92, 246, 0.35)',
+              boxShadow: '0 25px 50px -12px rgba(217, 119, 6, 0.3)',
               padding: '28px 24px',
               textAlign: 'center',
               color: '#fff',
@@ -241,8 +276,8 @@ export const SpinWheelModal: React.FC = () => {
                 top: '16px',
                 right: '16px',
                 background: 'rgba(255,255,255,0.1)',
-                border: 'none',
-                color: '#94a3b8',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: '#cbd5e1',
                 borderRadius: '50%',
                 width: '32px',
                 height: '32px',
@@ -258,10 +293,10 @@ export const SpinWheelModal: React.FC = () => {
 
             {/* Header Title */}
             <div style={{ marginBottom: '16px' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', padding: '4px 14px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '10px', border: '1px solid rgba(245, 158, 11, 0.4)' }}>
                 <Sparkles size={14} /> VIP FORTUNE WHEEL
               </div>
-              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '0 0 6px 0', background: 'linear-gradient(135deg, #fff 0%, #cbd5e1 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              <h2 style={{ fontSize: '1.45rem', fontWeight: 800, margin: '0 0 6px 0', background: 'linear-gradient(135deg, #ffffff 0%, #fbbf24 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 {config.title}
               </h2>
               <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: 0 }}>
@@ -274,7 +309,7 @@ export const SpinWheelModal: React.FC = () => {
               <div
                 style={{
                   background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(251, 191, 36, 0.4)',
+                  border: '1px solid rgba(251, 191, 36, 0.5)',
                   borderRadius: '18px',
                   padding: '24px 16px',
                   margin: '20px 0 10px 0',
@@ -285,7 +320,7 @@ export const SpinWheelModal: React.FC = () => {
                 <h3 style={{ color: '#4ade80', fontSize: '1.25rem', fontWeight: 800, margin: '0 0 4px 0' }}>
                   অভিনন্দন! আপনি জিতেছেন 🎉
                 </h3>
-                <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#fbbf24', margin: '8px 0' }}>
+                <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#fbbf24', margin: '8px 0' }}>
                   {winningSlice.label}
                 </div>
                 <p style={{ fontSize: '0.82rem', color: '#cbd5e1', marginBottom: '16px' }}>
@@ -295,8 +330,8 @@ export const SpinWheelModal: React.FC = () => {
                 {/* Coupon Code Copy Box */}
                 <div
                   style={{
-                    background: 'rgba(15, 23, 42, 0.8)',
-                    border: '2px dashed #8b5cf6',
+                    background: 'rgba(15, 23, 42, 0.9)',
+                    border: '2px dashed #fbbf24',
                     borderRadius: '12px',
                     padding: '12px 16px',
                     display: 'flex',
@@ -305,24 +340,25 @@ export const SpinWheelModal: React.FC = () => {
                     marginBottom: '20px'
                   }}
                 >
-                  <span style={{ fontFamily: 'monospace', fontSize: '1.2rem', fontWeight: 800, color: '#a78bfa', letterSpacing: '2px' }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: '1.25rem', fontWeight: 800, color: '#fbbf24', letterSpacing: '2px' }}>
                     {winningSlice.coupon_code}
                   </span>
                   <button
                     onClick={() => handleCopyCode(winningSlice.coupon_code)}
                     style={{
-                      background: copied ? '#16a34a' : '#8b5cf6',
+                      background: copied ? '#16a34a' : 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
                       color: '#fff',
                       border: 'none',
                       padding: '8px 14px',
                       borderRadius: '8px',
                       fontSize: '0.8rem',
-                      fontWeight: 700,
+                      fontWeight: 800,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '6px',
-                      transition: 'all 0.2s'
+                      transition: 'all 0.2s',
+                      boxShadow: '0 4px 12px rgba(217, 119, 6, 0.4)'
                     }}
                   >
                     {copied ? <Check size={15} /> : <Copy size={15} />}
@@ -351,20 +387,20 @@ export const SpinWheelModal: React.FC = () => {
             ) : (
               /* Wheel Spinner View */
               <div style={{ position: 'relative', margin: '20px auto 16px auto', width: '280px', height: '280px' }}>
-                {/* Pointer Indicator Arrow */}
+                {/* Metallic Gold Pointer Arrow */}
                 <div
                   style={{
                     position: 'absolute',
-                    top: '-12px',
+                    top: '-14px',
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    zIndex: 10,
+                    zIndex: 20,
                     width: 0,
                     height: 0,
-                    borderLeft: '14px solid transparent',
-                    borderRight: '14px solid transparent',
-                    borderTop: '24px solid #f59e0b',
-                    filter: 'drop-shadow(0px 4px 6px rgba(0,0,0,0.6))'
+                    borderLeft: '15px solid transparent',
+                    borderRight: '15px solid transparent',
+                    borderTop: '26px solid #fbbf24',
+                    filter: 'drop-shadow(0px 4px 8px rgba(0,0,0,0.8))'
                   }}
                 />
 
@@ -377,10 +413,10 @@ export const SpinWheelModal: React.FC = () => {
                     transition: isSpinning ? 'transform 4.5s cubic-bezier(0.15, 0.9, 0.2, 1)' : 'none',
                     borderRadius: '50%',
                     overflow: 'hidden',
-                    boxShadow: '0 0 35px rgba(139, 92, 246, 0.5)'
+                    boxShadow: '0 0 35px rgba(251, 191, 36, 0.4)'
                   }}
                 >
-                  <canvas ref={canvasRef} width={280} height={280} />
+                  <canvas ref={canvasRef} width={600} height={600} style={{ width: '100%', height: '100%' }} />
                 </div>
 
                 {/* Spin Action Trigger Overlay Center */}
@@ -395,21 +431,21 @@ export const SpinWheelModal: React.FC = () => {
                     width: '64px',
                     height: '64px',
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                    background: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)',
                     color: '#fff',
                     border: '3px solid #ffffff',
                     fontWeight: 900,
                     fontSize: '0.85rem',
                     cursor: isSpinning ? 'not-allowed' : 'pointer',
-                    boxShadow: '0 8px 20px rgba(0,0,0,0.6)',
+                    boxShadow: '0 8px 25px rgba(245, 158, 11, 0.8)',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    zIndex: 12
+                    zIndex: 22
                   }}
                 >
-                  <Gift size={20} />
+                  <Sparkles size={18} style={{ color: '#ffffff' }} />
                   <span>SPIN</span>
                 </button>
               </div>
