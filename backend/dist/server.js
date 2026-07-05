@@ -7,6 +7,7 @@ import { createServer } from "http";
 import dotenv3 from "dotenv";
 import path2 from "path";
 import { fileURLToPath as fileURLToPath2 } from "url";
+import { onRequest } from "firebase-functions/v2/https";
 
 // backend/config/db.ts
 import sqlite3 from "sqlite3";
@@ -5126,12 +5127,16 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ status: "error", message: "Internal server error" });
 });
 initChatSocket(server);
-server.listen(PORT, () => {
-  console.log(`\u{1F680} VIP Admin API Server running on port ${PORT}`);
-  console.log(`\u{1F4CA} Health check: http://localhost:${PORT}/api/health`);
-  console.log(`\u{1F4C2} API Base: http://localhost:${PORT}/api/v1`);
-});
+if (!process.env.FUNCTION_TARGET && !process.env.FIREBASE_CONFIG) {
+  server.listen(PORT, () => {
+    console.log(`\u{1F680} VIP Admin API Server running on port ${PORT}`);
+    console.log(`\u{1F4CA} Health check: http://localhost:${PORT}/api/health`);
+    console.log(`\u{1F4C2} API Base: http://localhost:${PORT}/api/v1`);
+  });
+}
+var api = onRequest({ region: "us-central1" }, app);
 var server_default = app;
 export {
+  api,
   server_default as default
 };

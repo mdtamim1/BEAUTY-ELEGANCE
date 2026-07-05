@@ -2,6 +2,7 @@
   "name": "new-project",
   "private": true,
   "version": "0.0.0",
+  "main": "backend/dist/server.js",
   "type": "module",
   "engines": {
     "node": "20.12.2"

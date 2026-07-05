@@ -11,6 +11,7 @@ import { createServer } from 'http';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { onRequest } from 'firebase-functions/v2/https';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -190,13 +191,19 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 });
 
 // ========================================
-// Start Server
+// Start Server / Export Firebase Function
 // ========================================
 initChatSocket(server);
-server.listen(PORT, () => {
-  console.log(`🚀 VIP Admin API Server running on port ${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`📂 API Base: http://localhost:${PORT}/api/v1`);
-});
+
+if (!process.env.FUNCTION_TARGET && !process.env.FIREBASE_CONFIG) {
+  server.listen(PORT, () => {
+    console.log(`🚀 VIP Admin API Server running on port ${PORT}`);
+    console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+    console.log(`📂 API Base: http://localhost:${PORT}/api/v1`);
+  });
+}
+
+// Export Cloud Function for Firebase
+export const api = onRequest({ region: 'us-central1' }, app);
 
 export default app;
