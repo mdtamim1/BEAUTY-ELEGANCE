@@ -504,7 +504,7 @@ export default function Checkout() {
                         required
                         value={senderNumber}
                         onChange={(e) => setSenderNumber(e.target.value)}
-                        style={{ width: '100%', height: '40px', border: '1.5px solid var(--sf-border)', borderRadius: '8px', padding: '0 12px', fontSize: '0.85rem' }}
+                        style={{ width: '100%', height: '40px', border: '1.5px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', fontSize: '0.85rem', color: '#0f172a', backgroundColor: '#ffffff', fontWeight: 600 }}
                       />
                     </div>
 
@@ -518,7 +518,7 @@ export default function Checkout() {
                         required
                         value={trxId}
                         onChange={(e) => setTrxId(e.target.value.toUpperCase())}
-                        style={{ width: '100%', height: '40px', border: '1.5px solid var(--sf-border)', borderRadius: '8px', padding: '0 12px', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}
+                        style={{ width: '100%', height: '40px', border: '1.5px solid #cbd5e1', borderRadius: '8px', padding: '0 12px', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, color: '#0f172a', backgroundColor: '#ffffff' }}
                       />
                     </div>
                   </div>
