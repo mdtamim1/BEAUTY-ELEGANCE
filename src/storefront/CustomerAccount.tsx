@@ -663,18 +663,17 @@ export default function CustomerAccount() {
           onClick={() => setIsMobileDrawerOpen(true)}
           className="account-drawer-toggle-btn"
         >
-          <Menu size={20} />
+          <Menu size={18} />
           <span>☰ একাউন্ট মেনু (Account Menu)</span>
         </button>
-        <div className="account-active-badge">
-          {activeTab === 'profile' && '👤 প্রোফাইল'}
-          {activeTab === 'orders' && `🛍️ অর্ডার (${orders.length})`}
-          {activeTab === 'coupons' && '🎟️ কুপন ও অফার'}
-          {activeTab === 'addresses' && '📍 ঠিকানা'}
-          {activeTab === 'wishlist' && '💖 উইশলিস্ট'}
-          {activeTab === 'cart' && '🛒 কার্ট'}
-          {activeTab === 'chat' && '💬 লাইভ চ্যাট'}
-        </div>
+
+        <button 
+          onClick={() => setIsChatOpen(true)}
+          className="account-mobile-chat-trigger-btn"
+        >
+          <MessageSquare size={16} />
+          <span>লাইভ চ্যাট</span>
+        </button>
       </div>
 
       {/* Backdrop Overlay for Mobile Side Drawer */}
@@ -691,11 +690,17 @@ export default function CustomerAccount() {
         <div className={`account-sidebar ${isMobileDrawerOpen ? 'drawer-open' : ''}`}>
           {/* Drawer Header (Mobile Only) */}
           <div className="mobile-drawer-header">
-            <div style={{ fontWeight: 800, color: 'var(--sf-accent)', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <User size={18} /> একাউন্ট অপশনসমূহ
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--sf-accent) 0%, var(--sf-accent-hover) 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '14px' }}>
+                {customer.avatar || 'C'}
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, color: 'var(--sf-text-primary)', fontSize: '0.9rem' }}>{customer.name}</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--sf-text-tertiary)', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{customer.email}</div>
+              </div>
             </div>
             <button onClick={() => setIsMobileDrawerOpen(false)} className="drawer-close-btn" aria-label="Close menu">
-              <X size={20} />
+              <X size={18} />
             </button>
           </div>
 
@@ -748,10 +753,10 @@ export default function CustomerAccount() {
           <div style={{ padding: '10px', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0.03) 100%)', border: '1px dashed var(--sf-accent)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--sf-accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>কাস্টমার সাপোর্ট</div>
             <button 
-              onClick={() => { setActiveTab('chat'); setSelectedOrder(null); setIsMobileDrawerOpen(false); }}
-              style={{ width: '100%', padding: '10px 12px', background: activeTab === 'chat' ? 'var(--sf-accent)' : 'white', color: activeTab === 'chat' ? 'white' : 'var(--sf-accent)', border: '1px solid var(--sf-accent)', borderRadius: '6px', textAlign: 'left', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.2s', fontSize: '0.85rem' }}
+              onClick={() => { setIsChatOpen(true); setIsMobileDrawerOpen(false); }}
+              style={{ width: '100%', padding: '10px 12px', background: 'linear-gradient(135deg, var(--sf-accent) 0%, var(--sf-accent-hover) 100%)', color: 'white', border: 'none', borderRadius: '6px', textAlign: 'left', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.2s', fontSize: '0.85rem', boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)' }}
             >
-              <MessageSquare size={16} /> লাইভ চ্যাট অ্যাসিস্ট্যান্ট
+              <MessageSquare size={16} /> 24/7 লাইভ চ্যাট সাহায্য
             </button>
           </div>
 

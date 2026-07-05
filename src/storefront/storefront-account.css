@@ -596,14 +596,23 @@
     box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
   }
 
-  .account-active-badge {
-    font-size: 0.85rem;
+  .account-mobile-chat-trigger-btn {
+    background: white;
+    color: var(--sf-accent);
+    border: 1.5px solid var(--sf-accent);
+    padding: 8px 14px;
+    border-radius: 8px;
     font-weight: 700;
-    color: var(--sf-text-primary);
+    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .account-mobile-chat-trigger-btn:hover {
     background: var(--sf-bg-light);
-    padding: 6px 12px;
-    border-radius: 6px;
-    border: 1px solid var(--sf-border);
   }
 
   /* Backdrop Overlay */
