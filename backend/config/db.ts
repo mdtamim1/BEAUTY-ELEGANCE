@@ -81,6 +81,20 @@ function translateSqlForPostgres(sql: string, params: any[] = []): { sql: string
   let index = 1;
   translatedSql = translatedSql.replace(/\?/g, () => `$${index++}`);
 
+  // SQLite date & strftime translations for PostgreSQL
+  translatedSql = translatedSql.replace(/date\(\s*created_at\s*,\s*'localtime'\s*\)/gi, 'DATE(created_at)');
+  translatedSql = translatedSql.replace(/date\(\s*'now'\s*,\s*'localtime'\s*\)/gi, 'CURRENT_DATE');
+  translatedSql = translatedSql.replace(/date\(\s*'now'\s*,\s*'-1 day'\s*,\s*'localtime'\s*\)/gi, "(CURRENT_DATE - INTERVAL '1 day')");
+  translatedSql = translatedSql.replace(/date\(\s*'now'\s*,\s*'-30 day'\s*\)/gi, "(CURRENT_DATE - INTERVAL '30 days')");
+  translatedSql = translatedSql.replace(/date\(\s*'now'\s*,\s*'-6 month'\s*,\s*'start of month'\s*\)/gi, "DATE_TRUNC('month', CURRENT_DATE - INTERVAL '6 months')");
+
+  translatedSql = translatedSql.replace(/strftime\('%Y-%m',\s*created_at,\s*'localtime'\)/gi, "TO_CHAR(created_at, 'YYYY-MM')");
+  translatedSql = translatedSql.replace(/strftime\('%Y-%m',\s*'now',\s*'localtime'\)/gi, "TO_CHAR(CURRENT_DATE, 'YYYY-MM')");
+  translatedSql = translatedSql.replace(/strftime\('%Y-%m',\s*'now',\s*'-1 month',\s*'localtime'\)/gi, "TO_CHAR(CURRENT_DATE - INTERVAL '1 month', 'YYYY-MM')");
+  translatedSql = translatedSql.replace(/strftime\('%Y',\s*created_at,\s*'localtime'\)/gi, "TO_CHAR(created_at, 'YYYY')");
+  translatedSql = translatedSql.replace(/strftime\('%Y',\s*'now',\s*'localtime'\)/gi, "TO_CHAR(CURRENT_DATE, 'YYYY')");
+  translatedSql = translatedSql.replace(/strftime\('%H',\s*created_at,\s*'localtime'\)/gi, "TO_CHAR(created_at, 'HH24')");
+
   // Replace SQLite upserts
   if (translatedSql.toUpperCase().includes('INSERT OR REPLACE INTO SYSTEM_SETTINGS')) {
     if (translatedSql.includes('group_name') && translatedSql.includes('is_public')) {
@@ -165,14 +179,23 @@ if (DB_TYPE === 'sqlite') {
   console.log('🔌 Connected to MySQL database pool.');
   initializeDatabase();
 } else if (DB_TYPE === 'postgres') {
-  pgPool = new pg.Pool({
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '5432'),
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'beauty_elegance',
-    max: 10
-  });
+  const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  if (connectionString) {
+    pgPool = new pg.Pool({
+      connectionString,
+      ssl: process.env.DB_SSL === 'true' || connectionString.includes('sslmode=require') ? { rejectUnauthorized: false } : false,
+      max: 10
+    });
+  } else {
+    pgPool = new pg.Pool({
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432'),
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'beauty_elegance',
+      max: 10
+    });
+  }
   console.log('🔌 Connected to PostgreSQL database pool.');
   initializeDatabase();
 }
