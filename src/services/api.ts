@@ -828,6 +828,31 @@ export const dispatchDirectOffer = async (payload: any): Promise<any> => {
   }
 };
 
+// Fetch Active Auto-Dispatch Campaigns (Admin Protected)
+export const fetchAutoDispatchCoupons = async (): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/marketing/auto-dispatch-coupons`, {
+      headers: getAuthHeaders()
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to fetch auto-dispatch campaigns' };
+  }
+};
+
+// Stop/Delete Auto-Dispatch Campaign (Admin Protected)
+export const stopAutoDispatchCoupon = async (id: string): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/marketing/auto-dispatch-coupons/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to stop campaign' };
+  }
+};
+
 // Fetch newsletter subscribers
 export const fetchSubscribers = async (): Promise<any[] | null> => {
   try {

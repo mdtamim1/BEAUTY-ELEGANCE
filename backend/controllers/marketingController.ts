@@ -405,9 +405,9 @@ export const getCustomerCoupons = (req: Request, res: Response) => {
   );
 };
 
-// Admin Direct Coupon Dispatcher (Extra Task)
+// Admin Direct Coupon Dispatcher (Extra Task & Auto-Dispatch)
 export const dispatchDirectCoupon = (req: Request, res: Response) => {
-  const { title, code, discount_type, discount_value, target, customer_email } = req.body;
+  const { title, code, discount_type, discount_value, target, customer_email, auto_enroll_future } = req.body;
 
   if (!title || !code || discount_value === undefined) {
     return res.status(400).json({ status: 'error', message: 'কুপনের শিরোনাম, কোড এবং ছাড়ের পরিমাণ বাধ্যতামূলক।' });
@@ -422,6 +422,39 @@ export const dispatchDirectCoupon = (req: Request, res: Response) => {
     `INSERT OR REPLACE INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, '2030-12-31', 'active')`,
     [cleanCode, type, val]
   );
+
+  // If auto_enroll_future is checked, save campaign to auto_dispatch_coupons in system_settings
+  if (auto_enroll_future) {
+    db.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'auto_dispatch_coupons'`, [], (err, row: any) => {
+      let existingCampaigns: any[] = [];
+      if (row && row.setting_value) {
+        try {
+          existingCampaigns = JSON.parse(row.setting_value);
+        } catch (e) {}
+      }
+
+      const newCampaign = {
+        id: `auto-${Date.now()}`,
+        title,
+        code: cleanCode,
+        discount_type: type,
+        discount_value: val,
+        enabled: true,
+        created_at: new Date().toISOString()
+      };
+
+      // Filter out duplicate code
+      existingCampaigns = existingCampaigns.filter((c: any) => c.code !== cleanCode);
+      existingCampaigns.unshift(newCampaign);
+
+      const jsonVal = JSON.stringify(existingCampaigns);
+      db.run(
+        `INSERT OR REPLACE INTO system_settings (setting_key, setting_value, group_name, is_public)
+         VALUES ('auto_dispatch_coupons', ?, 'marketing', 1)`,
+        [jsonVal]
+      );
+    });
+  }
 
   if (target === 'specific' && customer_email) {
     const email = String(customer_email).trim().toLowerCase();
@@ -441,7 +474,7 @@ export const dispatchDirectCoupon = (req: Request, res: Response) => {
     // Dispatch to ALL registered customers
     db.all(`SELECT email FROM customers`, [], (err, rows: any[]) => {
       if (err || !rows || rows.length === 0) {
-        return res.json({ status: 'success', message: 'কুপন ডাটাবেজে তৈরি হয়েছে!' });
+        return res.json({ status: 'success', message: 'কুপন ডাটাবেজে তৈরি হয়েছে এবং অটো-ডিচপ্যাচ অন করা হয়েছে!' });
       }
 
       rows.forEach((c) => {
@@ -454,7 +487,51 @@ export const dispatchDirectCoupon = (req: Request, res: Response) => {
         }
       });
 
-      res.json({ status: 'success', message: `সকল (${rows.length} জন) রেজিস্টার্ড কাস্টমারের একাউন্টে কুপন পাঠানো হয়েছে!` });
+      const autoMsg = auto_enroll_future ? ' এবং ভবিষ্যত নতুন একাউন্টগুলোর জন্য অটো-ডিচপ্যাচ অন করা হয়েছে!' : '';
+      res.json({ status: 'success', message: `সকল (${rows.length} জন) রেজিস্টার্ড কাস্টমারের একাউন্টে কুপন পাঠানো হয়েছে${autoMsg}` });
     });
   }
+};
+
+// Fetch Auto-Dispatch Campaigns (Admin)
+export const getAutoDispatchCoupons = (req: Request, res: Response) => {
+  db.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'auto_dispatch_coupons'`, [], (err, row: any) => {
+    if (err || !row || !row.setting_value) {
+      return res.json({ status: 'success', data: [] });
+    }
+    try {
+      const data = JSON.parse(row.setting_value);
+      return res.json({ status: 'success', data: Array.isArray(data) ? data : [] });
+    } catch (e) {
+      return res.json({ status: 'success', data: [] });
+    }
+  });
+};
+
+// Delete/Stop Auto-Dispatch Campaign (Admin)
+export const deleteAutoDispatchCoupon = (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  db.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'auto_dispatch_coupons'`, [], (err, row: any) => {
+    if (err || !row || !row.setting_value) {
+      return res.json({ status: 'success', message: 'ক্যাম্পেইন রিমুভ করা হয়েছে' });
+    }
+    try {
+      let existingCampaigns: any[] = JSON.parse(row.setting_value);
+      existingCampaigns = existingCampaigns.filter((c: any) => c.id !== id);
+      const jsonVal = JSON.stringify(existingCampaigns);
+
+      db.run(
+        `INSERT OR REPLACE INTO system_settings (setting_key, setting_value, group_name, is_public)
+         VALUES ('auto_dispatch_coupons', ?, 'marketing', 1)`,
+        [jsonVal],
+        function (err) {
+          if (err) return res.status(500).json({ status: 'error', message: 'Database error' });
+          res.json({ status: 'success', message: 'অটো-ডিচপ্যাচ ক্যাম্পেইন বন্ধ করা হয়েছে!' });
+        }
+      );
+    } catch (e) {
+      return res.status(500).json({ status: 'error', message: 'Failed to update' });
+    }
+  });
 };

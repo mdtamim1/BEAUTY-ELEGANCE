@@ -13,6 +13,56 @@ const parseName = (fullName: string) => {
   return { first_name, last_name };
 };
 
+// Helper function to grant 10% Welcome Coupon and Auto-Dispatch Campaigns to new customer
+export const grantNewCustomerWelcomeAndAutoCoupons = (email: string) => {
+  const cleanEmail = email.trim().toLowerCase();
+
+  // 1. Generate 10% Welcome Coupon
+  const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+  const welcomeCode = `WELCOME10-${randomSuffix}`;
+
+  // Insert code into main coupons table (single use)
+  db.run(
+    `INSERT INTO coupons (code, type, value, expiry, status) VALUES (?, 'percentage', 10, '2030-12-31', 'active')`,
+    [welcomeCode]
+  );
+
+  // Insert code into customer_coupons
+  db.run(
+    `INSERT INTO customer_coupons (customer_email, code, title, discount_type, discount_value, status, source)
+     VALUES (?, ?, '🎉 নিউ অ্যাকাউন্ট ওয়েলকাম ১০% ছাড় (১ম অর্ডার)', 'percentage', 10, 'active', 'welcome_gift')`,
+    [cleanEmail, welcomeCode]
+  );
+
+  // 2. Check for active Auto-Dispatch Campaigns stored in system_settings
+  db.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'auto_dispatch_coupons'`, [], (err, row: any) => {
+    if (err || !row || !row.setting_value) return;
+
+    try {
+      const activeCampaigns: any[] = JSON.parse(row.setting_value);
+      if (Array.isArray(activeCampaigns) && activeCampaigns.length > 0) {
+        activeCampaigns.forEach((camp) => {
+          if (camp && camp.enabled && camp.code) {
+            db.run(
+              `INSERT INTO customer_coupons (customer_email, code, title, discount_type, discount_value, status, source)
+               VALUES (?, ?, ?, ?, ?, 'active', 'admin_gift')`,
+              [
+                cleanEmail,
+                camp.code,
+                camp.title || 'বিশেষ উপহার',
+                camp.discount_type || 'fixed',
+                Number(camp.discount_value) || 0
+              ]
+            );
+          }
+        });
+      }
+    } catch (e) {
+      console.error('Error parsing auto_dispatch_coupons:', e);
+    }
+  });
+};
+
 // Register customer
 export const registerCustomer = (req: Request, res: Response) => {
   const { name, email, password, phone } = req.body;
@@ -50,6 +100,9 @@ export const registerCustomer = (req: Request, res: Response) => {
             console.error('Error creating customer:', err);
             return res.status(500).json({ status: 'error', message: 'Failed to create customer' });
           }
+
+          // Grant 10% Welcome Coupon & active Auto-Dispatch Campaigns to new customer
+          grantNewCustomerWelcomeAndAutoCoupons(email);
 
           // Return JWT
           const token = jwt.sign(
@@ -237,6 +290,9 @@ export const loginGmailCustomer = async (req: Request, res: Response) => {
               console.error('Error creating Gmail customer:', err);
               return res.status(500).json({ status: 'error', message: 'Database write failed' });
             }
+
+            // Grant 10% Welcome Coupon & active Auto-Dispatch Campaigns to new Gmail customer
+            grantNewCustomerWelcomeAndAutoCoupons(email);
 
             const token = jwt.sign(
               { id: customerId, email, role: 'customer', name },

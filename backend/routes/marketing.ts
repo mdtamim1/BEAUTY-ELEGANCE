@@ -15,7 +15,9 @@ import {
   spinWheelPlay,
   updateSpinWheelConfig,
   getCustomerCoupons,
-  dispatchDirectCoupon
+  dispatchDirectCoupon,
+  getAutoDispatchCoupons,
+  deleteAutoDispatchCoupon
 } from '../controllers/marketingController';
 import { authenticateToken, requireRole } from '../middleware/auth';
 
@@ -32,6 +34,8 @@ router.get('/my-coupons', getCustomerCoupons); // Public/Customer: fetch coupons
 // Protected admin/moderator routes
 router.post('/spin-wheel/settings', authenticateToken, requireRole(['Super Admin', 'Admin']), updateSpinWheelConfig);
 router.post('/dispatch-coupon', authenticateToken, requireRole(['Super Admin', 'Admin']), dispatchDirectCoupon);
+router.get('/auto-dispatch-coupons', authenticateToken, requireRole(['Super Admin', 'Admin']), getAutoDispatchCoupons);
+router.delete('/auto-dispatch-coupons/:id', authenticateToken, requireRole(['Super Admin', 'Admin']), deleteAutoDispatchCoupon);
 
 router.get('/coupons', authenticateToken, requireRole(['Super Admin', 'Admin']), getCoupons);
 router.post('/coupons', authenticateToken, requireRole(['Super Admin', 'Admin']), createCoupon);
