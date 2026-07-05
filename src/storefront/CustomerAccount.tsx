@@ -5,7 +5,7 @@ import {
   User, Mail, Phone, Calendar, ShoppingBag, MessageSquare, LogOut, 
   Lock, ArrowRight, ShieldCheck, MapPin, Truck, CheckCircle2, 
   Clock, AlertCircle, HelpCircle, Send, Plus, ArrowLeft, RefreshCw,
-  Trash2, Edit, X, Heart, ShoppingCart, Ticket
+  Trash2, Edit, X, Heart, ShoppingCart, Ticket, Menu
 } from 'lucide-react';
 import { fetchOrdersFromBackend, fetchCustomerOrdersFromBackend, fetchChatHistory } from '../services/api';
 import { generateOrders as getOrders } from '../mock/data';
@@ -71,6 +71,7 @@ export default function CustomerAccount() {
 
   // Dashboard state
   const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'coupons' | 'addresses' | 'wishlist' | 'cart' | 'chat'>('profile');
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderItem | null>(null);
@@ -656,47 +657,85 @@ export default function CustomerAccount() {
         </button>
       </div>
 
+      {/* Mobile Drawer Toggle Bar */}
+      <div className="account-mobile-bar">
+        <button 
+          onClick={() => setIsMobileDrawerOpen(true)}
+          className="account-drawer-toggle-btn"
+        >
+          <Menu size={20} />
+          <span>☰ একাউন্ট মেনু (Account Menu)</span>
+        </button>
+        <div className="account-active-badge">
+          {activeTab === 'profile' && '👤 প্রোফাইল'}
+          {activeTab === 'orders' && `🛍️ অর্ডার (${orders.length})`}
+          {activeTab === 'coupons' && '🎟️ কুপন ও অফার'}
+          {activeTab === 'addresses' && '📍 ঠিকানা'}
+          {activeTab === 'wishlist' && '💖 উইশলিস্ট'}
+          {activeTab === 'cart' && '🛒 কার্ট'}
+          {activeTab === 'chat' && '💬 লাইভ চ্যাট'}
+        </div>
+      </div>
+
+      {/* Backdrop Overlay for Mobile Side Drawer */}
+      {isMobileDrawerOpen && (
+        <div 
+          className="account-drawer-overlay"
+          onClick={() => setIsMobileDrawerOpen(false)}
+        />
+      )}
+
       <div className="store-products-layout">
         
-        {/* Navigation Sidebar */}
-        <div className="account-sidebar">
+        {/* Navigation Sidebar / Mobile Slide Drawer */}
+        <div className={`account-sidebar ${isMobileDrawerOpen ? 'drawer-open' : ''}`}>
+          {/* Drawer Header (Mobile Only) */}
+          <div className="mobile-drawer-header">
+            <div style={{ fontWeight: 800, color: 'var(--sf-accent)', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <User size={18} /> একাউন্ট অপশনসমূহ
+            </div>
+            <button onClick={() => setIsMobileDrawerOpen(false)} className="drawer-close-btn" aria-label="Close menu">
+              <X size={20} />
+            </button>
+          </div>
+
           <button 
-            onClick={() => { setActiveTab('profile'); setSelectedOrder(null); }}
+            onClick={() => { setActiveTab('profile'); setSelectedOrder(null); setIsMobileDrawerOpen(false); }}
             style={{ width: '100%', padding: '12px 16px', background: activeTab === 'profile' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'profile' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
           >
             <User size={18} /> প্রোফাইল তথ্য (Profile)
           </button>
           
           <button 
-            onClick={() => { setActiveTab('orders'); setSelectedOrder(null); }}
+            onClick={() => { setActiveTab('orders'); setSelectedOrder(null); setIsMobileDrawerOpen(false); }}
             style={{ width: '100%', padding: '12px 16px', background: activeTab === 'orders' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'orders' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
           >
             <ShoppingBag size={18} /> আমার অর্ডারসমূহ ({orders.length})
           </button>
           
           <button 
-            onClick={() => { setActiveTab('coupons'); setSelectedOrder(null); }}
+            onClick={() => { setActiveTab('coupons'); setSelectedOrder(null); setIsMobileDrawerOpen(false); }}
             style={{ width: '100%', padding: '12px 16px', background: activeTab === 'coupons' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'coupons' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
           >
             <Ticket size={18} /> আমার কুপন ও অফারসমূহ
           </button>
 
           <button 
-            onClick={() => { setActiveTab('addresses'); setSelectedOrder(null); }}
+            onClick={() => { setActiveTab('addresses'); setSelectedOrder(null); setIsMobileDrawerOpen(false); }}
             style={{ width: '100%', padding: '12px 16px', background: activeTab === 'addresses' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'addresses' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
           >
             <MapPin size={18} /> সংরক্ষিত ঠিকানা ({customer.addresses?.length || 0})
           </button>
           
           <button 
-            onClick={() => { setActiveTab('wishlist'); setSelectedOrder(null); }}
+            onClick={() => { setActiveTab('wishlist'); setSelectedOrder(null); setIsMobileDrawerOpen(false); }}
             style={{ width: '100%', padding: '12px 16px', background: activeTab === 'wishlist' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'wishlist' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
           >
             <Heart size={18} /> আমার উইশলিস্ট ({wishlist.length})
           </button>
           
           <button 
-            onClick={() => { setActiveTab('cart'); setSelectedOrder(null); }}
+            onClick={() => { setActiveTab('cart'); setSelectedOrder(null); setIsMobileDrawerOpen(false); }}
             style={{ width: '100%', padding: '12px 16px', background: activeTab === 'cart' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'cart' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
           >
             <ShoppingCart size={18} /> শপিং কার্ট ({cart.reduce((s: number, i: any) => s + i.quantity, 0)})
@@ -709,7 +748,7 @@ export default function CustomerAccount() {
           <div style={{ padding: '10px', background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0.03) 100%)', border: '1px dashed var(--sf-accent)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--sf-accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>কাস্টমার সাপোর্ট</div>
             <button 
-              onClick={() => { setActiveTab('chat'); setSelectedOrder(null); }}
+              onClick={() => { setActiveTab('chat'); setSelectedOrder(null); setIsMobileDrawerOpen(false); }}
               style={{ width: '100%', padding: '10px 12px', background: activeTab === 'chat' ? 'var(--sf-accent)' : 'white', color: activeTab === 'chat' ? 'white' : 'var(--sf-accent)', border: '1px solid var(--sf-accent)', borderRadius: '6px', textAlign: 'left', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.2s', fontSize: '0.85rem' }}
             >
               <MessageSquare size={16} /> লাইভ চ্যাট অ্যাসিস্ট্যান্ট
@@ -718,7 +757,7 @@ export default function CustomerAccount() {
 
           {/* Logout Action */}
           <button 
-            onClick={() => { logout(); navigate('/'); }}
+            onClick={() => { logout(); navigate('/'); setIsMobileDrawerOpen(false); }}
             style={{ width: '100%', padding: '10px 16px', background: 'rgba(239, 68, 68, 0.08)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', marginTop: '12px' }}
           >
             <LogOut size={16} /> লগআউট করুন (Logout)
