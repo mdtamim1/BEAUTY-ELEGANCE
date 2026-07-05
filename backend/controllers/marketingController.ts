@@ -62,15 +62,18 @@ export const deleteCoupon = (req: Request, res: Response) => {
   });
 };
 
-// Validate coupon (Customer checkout validation)
+// Validate coupon (Customer checkout validation with strict single-use check)
 export const validateCoupon = (req: Request, res: Response) => {
   const { code } = req.params;
+  const email = (req.query.email || '').toString().trim().toLowerCase();
 
   if (!code) {
     return res.status(400).json({ status: 'error', message: 'Coupon code is required' });
   }
 
-  db.get(`SELECT * FROM coupons WHERE code = ?`, [String(code).trim().toUpperCase()], (err, coupon: any) => {
+  const cleanCode = String(code).trim().toUpperCase();
+
+  db.get(`SELECT * FROM coupons WHERE UPPER(code) = ?`, [cleanCode], (err, coupon: any) => {
     if (err) {
       return res.status(500).json({ status: 'error', message: 'Database error' });
     }
@@ -80,24 +83,44 @@ export const validateCoupon = (req: Request, res: Response) => {
     }
 
     if (coupon.status !== 'active') {
-      return res.status(400).json({ status: 'error', message: 'এই কুপন কোডটি এখন সচল নেই।' });
+      return res.status(400).json({ status: 'error', message: 'এই কুপন কোডটি ইতিমধ্যে ব্যবহার করা হয়েছে অথবা নিষ্ক্রিয় করা হয়েছে।' });
     }
 
-    const expiryTime = new Date(coupon.expiry).getTime() + (24 * 3600 * 1000); // Expiry day end
+    const expiryTime = new Date(coupon.expiry).getTime() + (24 * 3600 * 1000);
     if (expiryTime < Date.now()) {
-      // Mark as expired in DB
-      db.run("UPDATE coupons SET status = 'expired' WHERE code = ?", [coupon.code]);
+      db.run("UPDATE coupons SET status = 'expired' WHERE UPPER(code) = ?", [cleanCode]);
       return res.status(400).json({ status: 'error', message: 'এই কুপন কোডটির মেয়াদ শেষ হয়ে গেছে।' });
     }
 
-    res.json({
-      status: 'success',
-      data: {
-        code: coupon.code,
-        type: coupon.type,
-        value: coupon.value
-      }
-    });
+    // If customer email is passed, check if they have already used this specific coupon
+    if (email) {
+      db.get(
+        `SELECT status FROM customer_coupons WHERE LOWER(customer_email) = ? AND UPPER(code) = ?`,
+        [email, cleanCode],
+        (err, custCoupon: any) => {
+          if (custCoupon && custCoupon.status === 'used') {
+            return res.status(400).json({ status: 'error', message: 'এই কুপনটি আপনি ইতিপূর্বে ১ বার ব্যবহার করে ফেলেছেন!' });
+          }
+          res.json({
+            status: 'success',
+            data: {
+              code: coupon.code,
+              type: coupon.type,
+              value: coupon.value
+            }
+          });
+        }
+      );
+    } else {
+      res.json({
+        status: 'success',
+        data: {
+          code: coupon.code,
+          type: coupon.type,
+          value: coupon.value
+        }
+      });
+    }
   });
 };
 
@@ -402,7 +425,39 @@ export const getCustomerCoupons = (req: Request, res: Response) => {
         return res.status(500).json({ status: 'error', message: 'Database error' });
       }
 
-      let couponsList = userRows || [];
+      let couponsList: any[] = userRows || [];
+
+      // Check if a welcome gift coupon already exists for this email
+      const hasWelcomeGift = couponsList.some(c => c.source === 'welcome_gift' || (c.code || '').toUpperCase().startsWith('WELCOME10'));
+
+      if (!hasWelcomeGift) {
+        // Auto-generate unique 10% Welcome Coupon on the fly for this customer
+        const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const welcomeCode = `WELCOME10-${randomSuffix}`;
+        const welcomeTitle = '🎉 নিউ অ্যাকাউন্ট ওয়েলকাম ১০% ছাড় (১ম অর্ডার)';
+
+        db.run(
+          `INSERT INTO coupons (code, type, value, expiry, status) VALUES (?, 'percentage', 10, '2030-12-31', 'active')`,
+          [welcomeCode]
+        );
+
+        db.run(
+          `INSERT INTO customer_coupons (customer_email, code, title, discount_type, discount_value, status, source)
+           VALUES (?, ?, ?, 'percentage', 10, 'active', 'welcome_gift')`,
+          [email, welcomeCode, welcomeTitle]
+        );
+
+        couponsList.unshift({
+          customer_email: email,
+          code: welcomeCode,
+          title: welcomeTitle,
+          discount_type: 'percentage',
+          discount_value: 10,
+          status: 'active',
+          source: 'welcome_gift',
+          created_at: new Date().toISOString()
+        });
+      }
 
       // 2. ALSO auto-sync active global auto-dispatch campaigns from system_settings
       db.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'auto_dispatch_coupons'`, [], (err, settingRow: any) => {

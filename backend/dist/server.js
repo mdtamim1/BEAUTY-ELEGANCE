@@ -2185,6 +2185,12 @@ var createOrder = (req, res) => {
                       cacheService.del("dashboard:stats").catch(console.error);
                       const performedBy = req.user ? `${req.user.name} (${req.user.role})` : "Customer";
                       logOrderHistory(id, "create", null, initialStatus, performedBy);
+                      const appliedCoupon = req.body.couponCode || req.body.discountCode || req.body.coupon;
+                      if (appliedCoupon) {
+                        const cleanCode = String(appliedCoupon).trim().toUpperCase();
+                        db_default.run(`UPDATE coupons SET status = 'used' WHERE UPPER(code) = ?`, [cleanCode]);
+                        db_default.run(`UPDATE customer_coupons SET status = 'used' WHERE UPPER(code) = ?`, [cleanCode]);
+                      }
                       res.json({ status: "success", message: "Order created successfully", data: { id } });
                     });
                   });
@@ -2204,6 +2210,12 @@ var createOrder = (req, res) => {
             cacheService.del("dashboard:stats").catch(console.error);
             const performedBy = req.user ? `${req.user.name} (${req.user.role})` : "Customer";
             logOrderHistory(id, "create", null, initialStatus, performedBy);
+            const appliedCoupon = req.body.couponCode || req.body.discountCode || req.body.coupon;
+            if (appliedCoupon) {
+              const cleanCode = String(appliedCoupon).trim().toUpperCase();
+              db_default.run(`UPDATE coupons SET status = 'used' WHERE UPPER(code) = ?`, [cleanCode]);
+              db_default.run(`UPDATE customer_coupons SET status = 'used' WHERE UPPER(code) = ?`, [cleanCode]);
+            }
             res.json({ status: "success", message: "Order created successfully", data: { id } });
           });
         }
@@ -4439,10 +4451,12 @@ var deleteCoupon = (req, res) => {
 };
 var validateCoupon = (req, res) => {
   const { code } = req.params;
+  const email = (req.query.email || "").toString().trim().toLowerCase();
   if (!code) {
     return res.status(400).json({ status: "error", message: "Coupon code is required" });
   }
-  db_default.get(`SELECT * FROM coupons WHERE code = ?`, [String(code).trim().toUpperCase()], (err, coupon) => {
+  const cleanCode = String(code).trim().toUpperCase();
+  db_default.get(`SELECT * FROM coupons WHERE UPPER(code) = ?`, [cleanCode], (err, coupon) => {
     if (err) {
       return res.status(500).json({ status: "error", message: "Database error" });
     }
@@ -4450,21 +4464,41 @@ var validateCoupon = (req, res) => {
       return res.status(404).json({ status: "error", message: "\u09A6\u09C1\u0983\u0996\u09BF\u09A4, \u0995\u09C1\u09AA\u09A8 \u0995\u09CB\u09A1\u099F\u09BF \u09B8\u09A0\u09BF\u0995 \u09A8\u09DF\u0964" });
     }
     if (coupon.status !== "active") {
-      return res.status(400).json({ status: "error", message: "\u098F\u0987 \u0995\u09C1\u09AA\u09A8 \u0995\u09CB\u09A1\u099F\u09BF \u098F\u0996\u09A8 \u09B8\u099A\u09B2 \u09A8\u09C7\u0987\u0964" });
+      return res.status(400).json({ status: "error", message: "\u098F\u0987 \u0995\u09C1\u09AA\u09A8 \u0995\u09CB\u09A1\u099F\u09BF \u0987\u09A4\u09BF\u09AE\u09A7\u09CD\u09AF\u09C7 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0 \u0995\u09B0\u09BE \u09B9\u09DF\u09C7\u099B\u09C7 \u0985\u09A5\u09AC\u09BE \u09A8\u09BF\u09B7\u09CD\u0995\u09CD\u09B0\u09BF\u09DF \u0995\u09B0\u09BE \u09B9\u09DF\u09C7\u099B\u09C7\u0964" });
     }
     const expiryTime = new Date(coupon.expiry).getTime() + 24 * 3600 * 1e3;
     if (expiryTime < Date.now()) {
-      db_default.run("UPDATE coupons SET status = 'expired' WHERE code = ?", [coupon.code]);
+      db_default.run("UPDATE coupons SET status = 'expired' WHERE UPPER(code) = ?", [cleanCode]);
       return res.status(400).json({ status: "error", message: "\u098F\u0987 \u0995\u09C1\u09AA\u09A8 \u0995\u09CB\u09A1\u099F\u09BF\u09B0 \u09AE\u09C7\u09DF\u09BE\u09A6 \u09B6\u09C7\u09B7 \u09B9\u09DF\u09C7 \u0997\u09C7\u099B\u09C7\u0964" });
     }
-    res.json({
-      status: "success",
-      data: {
-        code: coupon.code,
-        type: coupon.type,
-        value: coupon.value
-      }
-    });
+    if (email) {
+      db_default.get(
+        `SELECT status FROM customer_coupons WHERE LOWER(customer_email) = ? AND UPPER(code) = ?`,
+        [email, cleanCode],
+        (err2, custCoupon) => {
+          if (custCoupon && custCoupon.status === "used") {
+            return res.status(400).json({ status: "error", message: "\u098F\u0987 \u0995\u09C1\u09AA\u09A8\u099F\u09BF \u0986\u09AA\u09A8\u09BF \u0987\u09A4\u09BF\u09AA\u09C2\u09B0\u09CD\u09AC\u09C7 \u09E7 \u09AC\u09BE\u09B0 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0 \u0995\u09B0\u09C7 \u09AB\u09C7\u09B2\u09C7\u099B\u09C7\u09A8!" });
+          }
+          res.json({
+            status: "success",
+            data: {
+              code: coupon.code,
+              type: coupon.type,
+              value: coupon.value
+            }
+          });
+        }
+      );
+    } else {
+      res.json({
+        status: "success",
+        data: {
+          code: coupon.code,
+          type: coupon.type,
+          value: coupon.value
+        }
+      });
+    }
   });
 };
 var getSubscribers = (req, res) => {
@@ -4729,6 +4763,31 @@ var getCustomerCoupons = (req, res) => {
         return res.status(500).json({ status: "error", message: "Database error" });
       }
       let couponsList = userRows || [];
+      const hasWelcomeGift = couponsList.some((c) => c.source === "welcome_gift" || (c.code || "").toUpperCase().startsWith("WELCOME10"));
+      if (!hasWelcomeGift) {
+        const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const welcomeCode = `WELCOME10-${randomSuffix}`;
+        const welcomeTitle = "\u{1F389} \u09A8\u09BF\u0989 \u0985\u09CD\u09AF\u09BE\u0995\u09BE\u0989\u09A8\u09CD\u099F \u0993\u09DF\u09C7\u09B2\u0995\u09BE\u09AE \u09E7\u09E6% \u099B\u09BE\u09DC (\u09E7\u09AE \u0985\u09B0\u09CD\u09A1\u09BE\u09B0)";
+        db_default.run(
+          `INSERT INTO coupons (code, type, value, expiry, status) VALUES (?, 'percentage', 10, '2030-12-31', 'active')`,
+          [welcomeCode]
+        );
+        db_default.run(
+          `INSERT INTO customer_coupons (customer_email, code, title, discount_type, discount_value, status, source)
+           VALUES (?, ?, ?, 'percentage', 10, 'active', 'welcome_gift')`,
+          [email, welcomeCode, welcomeTitle]
+        );
+        couponsList.unshift({
+          customer_email: email,
+          code: welcomeCode,
+          title: welcomeTitle,
+          discount_type: "percentage",
+          discount_value: 10,
+          status: "active",
+          source: "welcome_gift",
+          created_at: (/* @__PURE__ */ new Date()).toISOString()
+        });
+      }
       db_default.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'auto_dispatch_coupons'`, [], (err2, settingRow) => {
         if (!err2 && settingRow && settingRow.setting_value) {
           try {

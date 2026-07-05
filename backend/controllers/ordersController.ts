@@ -254,6 +254,15 @@ export const createOrder = (req: Request, res: Response) => {
                       cacheService.del('dashboard:stats').catch(console.error);
                       const performedBy = (req as any).user ? `${(req as any).user.name} (${(req as any).user.role})` : 'Customer';
                       logOrderHistory(id, 'create', null, initialStatus, performedBy);
+
+                      // Permanently disable used coupon code
+                      const appliedCoupon = req.body.couponCode || req.body.discountCode || req.body.coupon;
+                      if (appliedCoupon) {
+                        const cleanCode = String(appliedCoupon).trim().toUpperCase();
+                        db.run(`UPDATE coupons SET status = 'used' WHERE UPPER(code) = ?`, [cleanCode]);
+                        db.run(`UPDATE customer_coupons SET status = 'used' WHERE UPPER(code) = ?`, [cleanCode]);
+                      }
+
                       res.json({ status: 'success', message: 'Order created successfully', data: { id } });
                     });
                   });
@@ -273,6 +282,15 @@ export const createOrder = (req: Request, res: Response) => {
             cacheService.del('dashboard:stats').catch(console.error);
             const performedBy = (req as any).user ? `${(req as any).user.name} (${(req as any).user.role})` : 'Customer';
             logOrderHistory(id, 'create', null, initialStatus, performedBy);
+
+            // Permanently disable used coupon code
+            const appliedCoupon = req.body.couponCode || req.body.discountCode || req.body.coupon;
+            if (appliedCoupon) {
+              const cleanCode = String(appliedCoupon).trim().toUpperCase();
+              db.run(`UPDATE coupons SET status = 'used' WHERE UPPER(code) = ?`, [cleanCode]);
+              db.run(`UPDATE customer_coupons SET status = 'used' WHERE UPPER(code) = ?`, [cleanCode]);
+            }
+
             res.json({ status: 'success', message: 'Order created successfully', data: { id } });
           });
         }
