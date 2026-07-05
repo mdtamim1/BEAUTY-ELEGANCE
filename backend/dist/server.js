@@ -1908,6 +1908,7 @@ var products_default = router2;
 import { Router as Router3 } from "express";
 
 // backend/controllers/ordersController.ts
+import jwt3 from "jsonwebtoken";
 var logOrderHistory = (orderId, actionType, oldValue, newValue, performedBy) => {
   db_default.run(
     `INSERT INTO order_history (order_id, action_type, old_value, new_value, performed_by)
@@ -1925,6 +1926,7 @@ var getOrders = (req, res) => {
     `SELECT o.*, e.first_name as assigned_first_name, e.last_name as assigned_last_name 
      FROM orders o 
      LEFT JOIN employees e ON o.assigned_to = e.id 
+     WHERE o.status != 'pending_sync'
      ORDER BY o.created_at DESC`,
     [],
     (err, orderRows) => {
@@ -2005,11 +2007,21 @@ var createOrder = (req, res) => {
     discount,
     paidAmount,
     subtotal,
-    status,
     productsList
   } = req.body;
   const id = "ORD-" + Math.floor(1e4 + Math.random() * 9e4);
-  const initialStatus = status || "pending";
+  let initialStatus = "pending_sync";
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.split(" ")[1];
+    try {
+      const decoded = jwt3.verify(token, process.env.JWT_SECRET || "fallback-secret");
+      if (decoded) {
+        initialStatus = "processing";
+      }
+    } catch (e) {
+    }
+  }
   db_default.run("BEGIN TRANSACTION", (txErr) => {
     if (txErr) {
       console.error("Failed to start transaction:", txErr);
@@ -2297,15 +2309,15 @@ var syncOrders = (req, res) => {
     `SELECT e.id, e.first_name, e.last_name, r.name as role
      FROM employees e 
      JOIN roles r ON e.role_id = r.id 
-     WHERE e.status = 'active'
+     WHERE e.status = 'active' AND r.name = 'Moderator'
      ORDER BY e.first_name ASC`,
     [],
-    (err, activeEmployees) => {
+    (err, activeModerators) => {
       if (err) {
-        console.error("Error fetching active employees:", err);
+        console.error("Error fetching active moderators:", err);
         return res.status(500).json({ status: "error", message: "Database error" });
       }
-      let assignees = activeEmployees || [];
+      let assignees = activeModerators || [];
       const adminUser = req.user;
       if (assignees.length === 0 && adminUser) {
         const nameParts = (adminUser.name || "").split(" ");
@@ -2317,18 +2329,18 @@ var syncOrders = (req, res) => {
         }];
       }
       if (assignees.length === 0) {
-        return res.status(400).json({ status: "error", message: "\u0995\u09CB\u09A8\u09CB active employee \u09AA\u09BE\u0993\u09AF\u09BC\u09BE \u09AF\u09BE\u09AF\u09BC\u09A8\u09BF \u098F\u09AC\u0982 admin \u09A4\u09A5\u09CD\u09AF\u0993 \u09AA\u09BE\u0993\u09AF\u09BC\u09BE \u09AF\u09BE\u09AF\u09BC\u09A8\u09BF\u0964" });
+        return res.status(400).json({ status: "error", message: "\u0995\u09CB\u09A8\u09CB active moderator \u09AA\u09BE\u0993\u09AF\u09BC\u09BE \u09AF\u09BE\u09AF\u09BC\u09A8\u09BF \u098F\u09AC\u0982 admin \u09A4\u09A5\u09CD\u09AF\u0993 \u09AA\u09BE\u0993\u09AF\u09BC\u09BE \u09AF\u09BE\u09AF\u09BC\u09A8\u09BF\u0964" });
       }
       db_default.all(
-        `SELECT id FROM orders WHERE assigned_to IS NULL AND status = 'pending' ORDER BY created_at ASC`,
+        `SELECT id FROM orders WHERE status = 'pending_sync' ORDER BY created_at ASC`,
         [],
-        (err2, unassignedOrders) => {
+        (err2, unsyncedOrders) => {
           if (err2) {
-            console.error("Error fetching unassigned orders:", err2);
+            console.error("Error fetching unsynced orders:", err2);
             return res.status(500).json({ status: "error", message: "Database error" });
           }
-          if (!unassignedOrders || unassignedOrders.length === 0) {
-            return res.json({ status: "success", message: "\u0995\u09CB\u09A8\u09CB unassigned pending order \u09A8\u09C7\u0987", data: { assigned: 0 } });
+          if (!unsyncedOrders || unsyncedOrders.length === 0) {
+            return res.json({ status: "success", message: "\u0995\u09CB\u09A8\u09CB \u09B8\u09BF\u0999\u09CD\u0995 \u0995\u09B0\u09BE\u09B0 \u09AE\u09A4 \u0985\u09B0\u09CD\u09A1\u09BE\u09B0 \u09A8\u09C7\u0987 (No unsynced orders found)", data: { assigned: 0 } });
           }
           db_default.run("BEGIN TRANSACTION", (txErr) => {
             if (txErr) {
@@ -2337,20 +2349,21 @@ var syncOrders = (req, res) => {
             }
             let completed = 0;
             let hasError = false;
-            const totalOrders = unassignedOrders.length;
-            unassignedOrders.forEach((order, index) => {
+            const totalOrders = unsyncedOrders.length;
+            const performedBy = req.user ? `${req.user.name} (${req.user.role})` : "System";
+            unsyncedOrders.forEach((order, index) => {
               const employee = assignees[index % assignees.length];
               const assignedName = `${employee.first_name} ${employee.last_name}`.trim();
               db_default.run(
-                `UPDATE orders SET assigned_to = ?, assigned_name = ?, status = 'processing' WHERE id = ?`,
+                `UPDATE orders SET status = 'processing', assigned_to = ?, assigned_name = ? WHERE id = ?`,
                 [employee.id, assignedName, order.id],
                 (updateErr) => {
                   if (updateErr) {
-                    console.error("Error assigning order:", updateErr);
+                    console.error("Error updating order for sync:", updateErr);
                     hasError = true;
                   } else {
-                    const performedBy = req.user ? `${req.user.name} (${req.user.role})` : "System";
-                    logOrderHistory(order.id, "status_change", "pending", "processing", performedBy);
+                    logOrderHistory(order.id, "create", null, "processing", performedBy);
+                    logOrderHistory(order.id, "status_change", "pending_sync", "processing", performedBy);
                     logOrderHistory(order.id, "assignment", null, assignedName, performedBy);
                   }
                   completed++;
@@ -2372,7 +2385,7 @@ var syncOrders = (req, res) => {
                       cacheService.del("dashboard:stats").catch(console.error);
                       res.json({
                         status: "success",
-                        message: `${totalOrders} \u099F\u09BF \u0985\u09B0\u09CD\u09A1\u09BE\u09B0 ${assignees.length} \u099C\u09A8 employee \u098F\u09B0 \u09AE\u09A7\u09CD\u09AF\u09C7 assign \u09B9\u09AF\u09BC\u09C7\u099B\u09C7`,
+                        message: `${totalOrders} \u099F\u09BF \u09A8\u09A4\u09C1\u09A8 \u0985\u09B0\u09CD\u09A1\u09BE\u09B0 \u09B8\u09AB\u09B2\u09AD\u09BE\u09AC\u09C7 \u09B8\u09BF\u0999\u09CD\u0995 \u09B9\u09DF\u09C7\u099B\u09C7 \u098F\u09AC\u0982 ${assignees.length} \u099C\u09A8 employee \u098F\u09B0 \u09AE\u09A7\u09CD\u09AF\u09C7 \u09AC\u09A8\u09CD\u099F\u09A8 \u09B9\u09DF\u09C7\u099B\u09C7\u0964`,
                         data: {
                           assigned: totalOrders,
                           employees: assignees.map((m) => `${m.first_name} ${m.last_name}`.trim())
@@ -2472,7 +2485,7 @@ import { Router as Router4 } from "express";
 
 // backend/controllers/customersController.ts
 import bcrypt2 from "bcryptjs";
-import jwt3 from "jsonwebtoken";
+import jwt4 from "jsonwebtoken";
 var JWT_SECRET3 = process.env.JWT_SECRET || "super-premium-jwt-secret-key-1283";
 var parseName = (fullName) => {
   const parts = fullName.trim().split(" ");
@@ -2508,7 +2521,7 @@ var registerCustomer = (req, res) => {
             console.error("Error creating customer:", err3);
             return res.status(500).json({ status: "error", message: "Failed to create customer" });
           }
-          const token = jwt3.sign(
+          const token = jwt4.sign(
             { id: customerId, email, role: "customer", name },
             JWT_SECRET3,
             { expiresIn: "30d" }
@@ -2566,7 +2579,7 @@ var loginCustomer = (req, res) => {
             isDefault: r.is_default === 1
           }));
           const fullName = `${customer.first_name} ${customer.last_name}`.trim();
-          const token = jwt3.sign(
+          const token = jwt4.sign(
             { id: customer.id, email: customer.email, role: "customer", name: fullName },
             JWT_SECRET3,
             { expiresIn: "30d" }
@@ -2628,7 +2641,7 @@ var loginGmailCustomer = async (req, res) => {
               isDefault: r.is_default === 1
             }));
             const fullName = `${existing.first_name} ${existing.last_name}`.trim();
-            const token = jwt3.sign(
+            const token = jwt4.sign(
               { id: existing.id, email: existing.email, role: "customer", name: fullName },
               JWT_SECRET3,
               { expiresIn: "30d" }
@@ -2665,7 +2678,7 @@ var loginGmailCustomer = async (req, res) => {
               console.error("Error creating Gmail customer:", err2);
               return res.status(500).json({ status: "error", message: "Database write failed" });
             }
-            const token = jwt3.sign(
+            const token = jwt4.sign(
               { id: customerId, email, role: "customer", name },
               JWT_SECRET3,
               { expiresIn: "30d" }
@@ -2942,19 +2955,19 @@ var getDashboardStats = async (req, res) => {
       cachedStats.visitorStats.current = currentVisitors2;
       return res.json({ status: "success", data: cachedStats });
     }
-    const totalRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned')`);
+    const totalRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned', 'pending_sync')`);
     const totalRevenue = totalRevRow?.sum || 0;
-    const todayRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned') AND date(created_at, 'localtime') = date('now', 'localtime')`);
+    const todayRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned', 'pending_sync') AND date(created_at, 'localtime') = date('now', 'localtime')`);
     const todayRevenue = todayRevRow?.sum || 0;
-    const monthlyRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned') AND strftime('%Y-%m', created_at, 'localtime') = strftime('%Y-%m', 'now', 'localtime')`);
+    const monthlyRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned', 'pending_sync') AND strftime('%Y-%m', created_at, 'localtime') = strftime('%Y-%m', 'now', 'localtime')`);
     const monthlyRevenue = monthlyRevRow?.sum || 0;
-    const yearlyRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned') AND strftime('%Y', created_at, 'localtime') = strftime('%Y', 'now', 'localtime')`);
+    const yearlyRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned', 'pending_sync') AND strftime('%Y', created_at, 'localtime') = strftime('%Y', 'now', 'localtime')`);
     const yearlyRevenue = yearlyRevRow?.sum || 0;
-    const yesterdayRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned') AND date(created_at, 'localtime') = date('now', '-1 day', 'localtime')`);
+    const yesterdayRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned', 'pending_sync') AND date(created_at, 'localtime') = date('now', '-1 day', 'localtime')`);
     const yesterdayRevenue = yesterdayRevRow?.sum || 0;
-    const lastMonthRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned') AND strftime('%Y-%m', created_at, 'localtime') = strftime('%Y-%m', 'now', '-1 month', 'localtime')`);
+    const lastMonthRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned', 'pending_sync') AND strftime('%Y-%m', created_at, 'localtime') = strftime('%Y-%m', 'now', '-1 month', 'localtime')`);
     const lastMonthRevenue = lastMonthRevRow?.sum || 0;
-    const totalOrdersRow = await dbGet(`SELECT COUNT(*) as count FROM orders`);
+    const totalOrdersRow = await dbGet(`SELECT COUNT(*) as count FROM orders WHERE status != 'pending_sync'`);
     const totalOrders = totalOrdersRow?.count || 0;
     const totalCustomersRow = await dbGet(`SELECT COUNT(*) as count FROM customers`);
     const totalCustomers = totalCustomersRow?.count || 0;
@@ -2966,7 +2979,7 @@ var getDashboardStats = async (req, res) => {
     const monthlyRows = await dbAll(`
       SELECT strftime('%Y-%m', created_at, 'localtime') as month_str, SUM(amount) as total 
       FROM orders 
-      WHERE status NOT IN ('cancelled', 'returned') 
+      WHERE status NOT IN ('cancelled', 'returned', 'pending_sync') 
         AND created_at >= date('now', '-6 month', 'start of month') 
       GROUP BY month_str
     `);
@@ -2988,7 +3001,7 @@ var getDashboardStats = async (req, res) => {
     const dailyRows = await dbAll(`
       SELECT date(created_at, 'localtime') as date_str, SUM(amount) as total 
       FROM orders 
-      WHERE status NOT IN ('cancelled', 'returned') 
+      WHERE status NOT IN ('cancelled', 'returned', 'pending_sync') 
         AND created_at >= date('now', '-30 day') 
       GROUP BY date_str
     `);
@@ -3009,7 +3022,7 @@ var getDashboardStats = async (req, res) => {
     const hourlyRows = await dbAll(`
       SELECT strftime('%H', created_at, 'localtime') as hour_str, COUNT(*) as count 
       FROM orders 
-      WHERE date(created_at, 'localtime') = date('now', 'localtime') 
+      WHERE status != 'pending_sync' AND date(created_at, 'localtime') = date('now', 'localtime') 
       GROUP BY hour_str
     `);
     const hourlySalesData = [];
@@ -3053,7 +3066,7 @@ var getDashboardStats = async (req, res) => {
       { name: "Logistics/Delivery", value: parseFloat((totalExpenses * 0.1).toFixed(2)) || 8700 },
       { name: "Staff Salaries", value: parseFloat((totalExpenses * 0.3).toFixed(2)) || 12e4 }
     ];
-    const recentOrdersRows = await dbAll(`SELECT * FROM orders ORDER BY created_at DESC LIMIT 8`);
+    const recentOrdersRows = await dbAll(`SELECT * FROM orders WHERE status != 'pending_sync' ORDER BY created_at DESC LIMIT 8`);
     const recentOrders = recentOrdersRows.map((o) => {
       const initials = o.customer.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
       const avatarColors = ["#8b5cf6", "#10b981", "#6366f1", "#f59e0b", "#ef4444", "#06b6d4"];

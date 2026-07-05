@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import db from '../config/db';
 import { cacheService } from '../services/cacheService';
+import jwt from 'jsonwebtoken';
 
 const logOrderHistory = (
   orderId: string,
@@ -26,6 +27,7 @@ export const getOrders = (req: Request, res: Response) => {
     `SELECT o.*, e.first_name as assigned_first_name, e.last_name as assigned_last_name 
      FROM orders o 
      LEFT JOIN employees e ON o.assigned_to = e.id 
+     WHERE o.status != 'pending_sync'
      ORDER BY o.created_at DESC`, 
     [], 
     (err, orderRows: any[]) => {
@@ -117,12 +119,24 @@ export const createOrder = (req: Request, res: Response) => {
     discount,
     paidAmount,
     subtotal,
-    status,
     productsList,
   } = req.body;
 
   const id = 'ORD-' + Math.floor(10000 + Math.random() * 90000);
-  const initialStatus = status || 'pending';
+
+  let initialStatus = 'pending_sync';
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1];
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+      if (decoded) {
+        initialStatus = 'processing';
+      }
+    } catch (e) {
+      // invalid token, default to pending_sync
+    }
+  }
 
   db.run('BEGIN TRANSACTION', (txErr) => {
     if (txErr) {
@@ -396,29 +410,28 @@ export const updateOrder = (req: Request, res: Response) => {
   });
 };
 
-// Sync orders: round-robin assign unassigned processing orders to all active employees
-// If no active employees, fallback to admin (logged-in user)
+// Sync orders: round-robin assign unassigned pending_sync orders to active Moderators
+// If no active Moderators are online/active, fallback to the admin who clicked the sync button
 export const syncOrders = (req: Request, res: Response) => {
-  // Step 1: Get ALL active employees (not just moderators)
+  // Step 1: Get all active moderators
   db.all(
     `SELECT e.id, e.first_name, e.last_name, r.name as role
      FROM employees e 
      JOIN roles r ON e.role_id = r.id 
-     WHERE e.status = 'active'
+     WHERE e.status = 'active' AND r.name = 'Moderator'
      ORDER BY e.first_name ASC`,
     [],
-    (err, activeEmployees: any[]) => {
+    (err, activeModerators: any[]) => {
       if (err) {
-        console.error('Error fetching active employees:', err);
+        console.error('Error fetching active moderators:', err);
         return res.status(500).json({ status: 'error', message: 'Database error' });
       }
 
-      // If no active employees, fallback to the logged-in admin user
-      let assignees = activeEmployees || [];
+      // If no active moderators, fallback to the logged-in admin user
+      let assignees = activeModerators || [];
       const adminUser = (req as any).user;
 
       if (assignees.length === 0 && adminUser) {
-        // Use the admin's own info as the sole assignee
         const nameParts = (adminUser.name || '').split(' ');
         assignees = [{
           id: adminUser.id,
@@ -429,24 +442,24 @@ export const syncOrders = (req: Request, res: Response) => {
       }
 
       if (assignees.length === 0) {
-        return res.status(400).json({ status: 'error', message: 'কোনো active employee পাওয়া যায়নি এবং admin তথ্যও পাওয়া যায়নি।' });
+        return res.status(400).json({ status: 'error', message: 'কোনো active moderator পাওয়া যায়নি এবং admin তথ্যও পাওয়া যায়নি।' });
       }
 
-      // Step 2: Get unassigned pending orders
+      // Step 2: Get orders in 'pending_sync' status
       db.all(
-        `SELECT id FROM orders WHERE assigned_to IS NULL AND status = 'pending' ORDER BY created_at ASC`,
+        `SELECT id FROM orders WHERE status = 'pending_sync' ORDER BY created_at ASC`,
         [],
-        (err, unassignedOrders: any[]) => {
+        (err, unsyncedOrders: any[]) => {
           if (err) {
-            console.error('Error fetching unassigned orders:', err);
+            console.error('Error fetching unsynced orders:', err);
             return res.status(500).json({ status: 'error', message: 'Database error' });
           }
 
-          if (!unassignedOrders || unassignedOrders.length === 0) {
-            return res.json({ status: 'success', message: 'কোনো unassigned pending order নেই', data: { assigned: 0 } });
+          if (!unsyncedOrders || unsyncedOrders.length === 0) {
+            return res.json({ status: 'success', message: 'কোনো সিঙ্ক করার মত অর্ডার নেই (No unsynced orders found)', data: { assigned: 0 } });
           }
 
-          // Step 3: Round-robin assignment inside a transaction — save assigned_to, assigned_name, and update status to processing
+          // Step 3: Assign and update status inside a transaction
           db.run('BEGIN TRANSACTION', (txErr) => {
             if (txErr) {
               console.error('Failed to start transaction:', txErr);
@@ -455,24 +468,30 @@ export const syncOrders = (req: Request, res: Response) => {
 
             let completed = 0;
             let hasError = false;
-            const totalOrders = unassignedOrders.length;
+            const totalOrders = unsyncedOrders.length;
+            const performedBy = (req as any).user ? `${(req as any).user.name} (${(req as any).user.role})` : 'System';
 
-            unassignedOrders.forEach((order, index) => {
+            unsyncedOrders.forEach((order, index) => {
               const employee = assignees[index % assignees.length];
               const assignedName = `${employee.first_name} ${employee.last_name}`.trim();
+              
               db.run(
-                `UPDATE orders SET assigned_to = ?, assigned_name = ?, status = 'processing' WHERE id = ?`,
+                `UPDATE orders SET status = 'processing', assigned_to = ?, assigned_name = ? WHERE id = ?`,
                 [employee.id, assignedName, order.id],
                 (updateErr) => {
                   if (updateErr) {
-                    console.error('Error assigning order:', updateErr);
+                    console.error('Error updating order for sync:', updateErr);
                     hasError = true;
                   } else {
-                    const performedBy = (req as any).user ? `${(req as any).user.name} (${(req as any).user.role})` : 'System';
-                    logOrderHistory(order.id, 'status_change', 'pending', 'processing', performedBy);
+                    // Log: Order was placed & marked as processing
+                    logOrderHistory(order.id, 'create', null, 'processing', performedBy);
+                    // Log: status changed from pending_sync to processing
+                    logOrderHistory(order.id, 'status_change', 'pending_sync', 'processing', performedBy);
+                    // Log: assignment details
                     logOrderHistory(order.id, 'assignment', null, assignedName, performedBy);
                   }
                   completed++;
+                  
                   if (completed === totalOrders) {
                     if (hasError) {
                       db.run('ROLLBACK', (rbErr) => {
@@ -491,7 +510,7 @@ export const syncOrders = (req: Request, res: Response) => {
                       cacheService.del('dashboard:stats').catch(console.error);
                       res.json({
                         status: 'success',
-                        message: `${totalOrders} টি অর্ডার ${assignees.length} জন employee এর মধ্যে assign হয়েছে`,
+                        message: `${totalOrders} টি নতুন অর্ডার সফলভাবে সিঙ্ক হয়েছে এবং ${assignees.length} জন employee এর মধ্যে বন্টন হয়েছে।`,
                         data: {
                           assigned: totalOrders,
                           employees: assignees.map(m => `${m.first_name} ${m.last_name}`.trim())

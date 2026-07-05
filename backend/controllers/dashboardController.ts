@@ -34,27 +34,27 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     }
 
     // 1. Fetch Stat Metrics
-    const totalRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned')`);
+    const totalRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned', 'pending_sync')`);
     const totalRevenue = totalRevRow?.sum || 0;
 
-    const todayRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned') AND date(created_at, 'localtime') = date('now', 'localtime')`);
+    const todayRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned', 'pending_sync') AND date(created_at, 'localtime') = date('now', 'localtime')`);
     const todayRevenue = todayRevRow?.sum || 0;
 
-    const monthlyRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned') AND strftime('%Y-%m', created_at, 'localtime') = strftime('%Y-%m', 'now', 'localtime')`);
+    const monthlyRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned', 'pending_sync') AND strftime('%Y-%m', created_at, 'localtime') = strftime('%Y-%m', 'now', 'localtime')`);
     const monthlyRevenue = monthlyRevRow?.sum || 0;
 
-    const yearlyRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned') AND strftime('%Y', created_at, 'localtime') = strftime('%Y', 'now', 'localtime')`);
+    const yearlyRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned', 'pending_sync') AND strftime('%Y', created_at, 'localtime') = strftime('%Y', 'now', 'localtime')`);
     const yearlyRevenue = yearlyRevRow?.sum || 0;
 
     // Yesterday's revenue for growth calculations
-    const yesterdayRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned') AND date(created_at, 'localtime') = date('now', '-1 day', 'localtime')`);
+    const yesterdayRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned', 'pending_sync') AND date(created_at, 'localtime') = date('now', '-1 day', 'localtime')`);
     const yesterdayRevenue = yesterdayRevRow?.sum || 0;
 
     // Last month's revenue for growth calculations
-    const lastMonthRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned') AND strftime('%Y-%m', created_at, 'localtime') = strftime('%Y-%m', 'now', '-1 month', 'localtime')`);
+    const lastMonthRevRow = await dbGet(`SELECT SUM(amount) as sum FROM orders WHERE status NOT IN ('cancelled', 'returned', 'pending_sync') AND strftime('%Y-%m', created_at, 'localtime') = strftime('%Y-%m', 'now', '-1 month', 'localtime')`);
     const lastMonthRevenue = lastMonthRevRow?.sum || 0;
 
-    const totalOrdersRow = await dbGet(`SELECT COUNT(*) as count FROM orders`);
+    const totalOrdersRow = await dbGet(`SELECT COUNT(*) as count FROM orders WHERE status != 'pending_sync'`);
     const totalOrders = totalOrdersRow?.count || 0;
 
     const totalCustomersRow = await dbGet(`SELECT COUNT(*) as count FROM customers`);
@@ -77,7 +77,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     const monthlyRows = await dbAll(`
       SELECT strftime('%Y-%m', created_at, 'localtime') as month_str, SUM(amount) as total 
       FROM orders 
-      WHERE status NOT IN ('cancelled', 'returned') 
+      WHERE status NOT IN ('cancelled', 'returned', 'pending_sync') 
         AND created_at >= date('now', '-6 month', 'start of month') 
       GROUP BY month_str
     `);
@@ -102,7 +102,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     const dailyRows = await dbAll(`
       SELECT date(created_at, 'localtime') as date_str, SUM(amount) as total 
       FROM orders 
-      WHERE status NOT IN ('cancelled', 'returned') 
+      WHERE status NOT IN ('cancelled', 'returned', 'pending_sync') 
         AND created_at >= date('now', '-30 day') 
       GROUP BY date_str
     `);
@@ -127,7 +127,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     const hourlyRows = await dbAll(`
       SELECT strftime('%H', created_at, 'localtime') as hour_str, COUNT(*) as count 
       FROM orders 
-      WHERE date(created_at, 'localtime') = date('now', 'localtime') 
+      WHERE status != 'pending_sync' AND date(created_at, 'localtime') = date('now', 'localtime') 
       GROUP BY hour_str
     `);
 
@@ -181,7 +181,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     ];
 
     // 8. Recent Orders Feed
-    const recentOrdersRows = await dbAll(`SELECT * FROM orders ORDER BY created_at DESC LIMIT 8`);
+    const recentOrdersRows = await dbAll(`SELECT * FROM orders WHERE status != 'pending_sync' ORDER BY created_at DESC LIMIT 8`);
     
     const recentOrders = recentOrdersRows.map(o => {
       const initials = o.customer.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
