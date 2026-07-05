@@ -760,6 +760,46 @@ export const validateCouponCode = async (code: string): Promise<any> => {
   }
 };
 
+// Fetch Spin Wheel configuration (Public)
+export const fetchSpinWheelConfig = async (): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/marketing/spin-wheel`);
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to fetch spin wheel settings' };
+  }
+};
+
+// Play Spin Wheel (Server-calculated outcome picker)
+export const playSpinWheel = async (): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/marketing/spin-wheel/spin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to play spin wheel' };
+  }
+};
+
+// Update Spin Wheel settings (Admin Protected)
+export const updateSpinWheelSettings = async (payload: any): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/marketing/spin-wheel/settings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
+      body: JSON.stringify(payload)
+    });
+    return await res.json();
+  } catch (e) {
+    return { status: 'error', message: 'Failed to update spin wheel settings' };
+  }
+};
+
 // Fetch newsletter subscribers
 export const fetchSubscribers = async (): Promise<any[] | null> => {
   try {

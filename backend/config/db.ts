@@ -151,53 +151,55 @@ let dbInstance: any = null;
 let mysqlPool: mysql.Pool | null = null;
 let pgPool: pg.Pool | null = null;
 
-if (DB_TYPE === 'sqlite') {
-  const dbPath = process.env.DATABASE_PATH || path.resolve(__dirname, '../../database/database.sqlite');
-  const dbDir = path.dirname(dbPath);
-  if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
-  }
-  const sqlite = sqlite3.verbose();
-  dbInstance = new sqlite.Database(dbPath, (err) => {
-    if (err) {
-      console.error('❌ Failed to connect to SQLite database:', err.message);
-    } else {
-      console.log('🔌 Connected to local SQLite database.');
-      initializeDatabase();
+function connectDatabase() {
+  if (DB_TYPE === 'sqlite') {
+    const dbPath = process.env.DATABASE_PATH || path.resolve(__dirname, '../../database/database.sqlite');
+    const dbDir = path.dirname(dbPath);
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
     }
-  });
-} else if (DB_TYPE === 'mysql') {
-  mysqlPool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '3306'),
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'beauty_elegance',
-    connectionLimit: 10,
-    multipleStatements: true
-  });
-  console.log('🔌 Connected to MySQL database pool.');
-  initializeDatabase();
-} else if (DB_TYPE === 'postgres') {
-  const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-  if (connectionString) {
-    pgPool = new pg.Pool({
-      connectionString,
-      ssl: process.env.DB_SSL === 'true' || connectionString.includes('sslmode=require') ? { rejectUnauthorized: false } : false,
-      max: 10
+    const sqlite = sqlite3.verbose();
+    dbInstance = new sqlite.Database(dbPath, (err) => {
+      if (err) {
+        console.error('❌ Failed to connect to SQLite database:', err.message);
+      } else {
+        console.log('🔌 Connected to local SQLite database.');
+        initializeDatabase();
+      }
     });
-  } else {
-    pgPool = new pg.Pool({
+  } else if (DB_TYPE === 'mysql') {
+    mysqlPool = mysql.createPool({
       host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432'),
-      user: process.env.DB_USER || 'postgres',
+      port: parseInt(process.env.DB_PORT || '3306'),
+      user: process.env.DB_USER || 'root',
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_NAME || 'beauty_elegance',
-      max: 10
+      connectionLimit: 10,
+      multipleStatements: true
     });
+    console.log('🔌 Connected to MySQL database pool.');
+    initializeDatabase();
+  } else if (DB_TYPE === 'postgres') {
+    const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+    if (connectionString) {
+      pgPool = new pg.Pool({
+        connectionString,
+        ssl: process.env.DB_SSL === 'true' || connectionString.includes('sslmode=require') ? { rejectUnauthorized: false } : false,
+        max: 10
+      });
+    } else {
+      pgPool = new pg.Pool({
+        host: process.env.DB_HOST || 'localhost',
+        port: parseInt(process.env.DB_PORT || '5432'),
+        user: process.env.DB_USER || 'postgres',
+        password: process.env.DB_PASSWORD || '',
+        database: process.env.DB_NAME || 'beauty_elegance',
+        max: 10
+      });
+    }
+    console.log('🔌 Connected to PostgreSQL database pool.');
+    initializeDatabase();
   }
-  console.log('🔌 Connected to PostgreSQL database pool.');
-  initializeDatabase();
 }
 
 const db: DBWrapper = {
@@ -306,6 +308,9 @@ const db: DBWrapper = {
     }
   }
 };
+
+// Trigger database connection
+connectDatabase();
 
 // Run schema seeding
 function initializeDatabase() {

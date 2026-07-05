@@ -250,3 +250,125 @@ export const deleteCampaign = (req: Request, res: Response) => {
     res.json({ status: 'success', message: 'Campaign deleted' });
   });
 };
+
+const DEFAULT_SPIN_WHEEL_CONFIG = {
+  enabled: true,
+  title: '🎁 ঘুরে জিতুন স্পেশাল ডিসকাউন্ট!',
+  subtitle: 'আজকের সৌভাগ্যজনক কুপন কোড জিততে চাকাটি ঘোরান!',
+  slices: [
+    { id: '1', label: '10% OFF', coupon_code: 'SPIN10', type: 'percentage', value: 10, weight: 40, color: '#8b5cf6' },
+    { id: '2', label: '৳100 OFF', coupon_code: 'SPIN100', type: 'fixed', value: 100, weight: 30, color: '#10b981' },
+    { id: '3', label: '15% OFF', coupon_code: 'VIP15', type: 'percentage', value: 15, weight: 15, color: '#f59e0b' },
+    { id: '4', label: 'Free Delivery', coupon_code: 'FREEDEL', type: 'fixed', value: 60, weight: 10, color: '#ec4899' },
+    { id: '5', label: '25% OFF MEGA', coupon_code: 'MEGA25', type: 'percentage', value: 25, weight: 5, color: '#6366f1' }
+  ]
+};
+
+export const getSpinWheelConfig = (req: Request, res: Response) => {
+  db.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'spin_wheel_settings'`, [], (err, row: any) => {
+    if (err) {
+      console.error('Error fetching spin wheel config:', err);
+      return res.status(500).json({ status: 'error', message: 'Database error' });
+    }
+
+    if (!row || !row.setting_value) {
+      return res.json({ status: 'success', data: DEFAULT_SPIN_WHEEL_CONFIG });
+    }
+
+    try {
+      const config = JSON.parse(row.setting_value);
+      return res.json({ status: 'success', data: config });
+    } catch (e) {
+      return res.json({ status: 'success', data: DEFAULT_SPIN_WHEEL_CONFIG });
+    }
+  });
+};
+
+export const spinWheelPlay = (req: Request, res: Response) => {
+  db.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'spin_wheel_settings'`, [], (err, row: any) => {
+    let config = DEFAULT_SPIN_WHEEL_CONFIG;
+    if (row && row.setting_value) {
+      try {
+        config = JSON.parse(row.setting_value);
+      } catch (e) {}
+    }
+
+    if (!config.enabled || !config.slices || config.slices.length === 0) {
+      return res.status(400).json({ status: 'error', message: 'স্পিন হুইল অফার আপাতত বন্ধ রয়েছে।' });
+    }
+
+    const totalWeight = config.slices.reduce((sum: number, s: any) => sum + (Number(s.weight) || 0), 0);
+    if (totalWeight <= 0) {
+      const defaultSlice = config.slices[0];
+      return res.json({ status: 'success', data: defaultSlice, winningIndex: 0 });
+    }
+
+    let randomWeight = Math.random() * totalWeight;
+    let winningIndex = 0;
+
+    for (let i = 0; i < config.slices.length; i++) {
+      const sliceWeight = Number(config.slices[i].weight) || 0;
+      if (randomWeight < sliceWeight) {
+        winningIndex = i;
+        break;
+      }
+      randomWeight -= sliceWeight;
+    }
+
+    const winningSlice = config.slices[winningIndex];
+
+    // Ensure coupon exists in database so customer can redeem it
+    if (winningSlice && winningSlice.coupon_code) {
+      const cleanCode = winningSlice.coupon_code.trim().toUpperCase();
+      db.run(
+        `INSERT OR IGNORE INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, '2030-12-31', 'active')`,
+        [cleanCode, winningSlice.type || 'percentage', Number(winningSlice.value) || 10]
+      );
+    }
+
+    return res.json({
+      status: 'success',
+      data: winningSlice,
+      winningIndex
+    });
+  });
+};
+
+export const updateSpinWheelConfig = (req: Request, res: Response) => {
+  const { enabled, title, subtitle, slices } = req.body;
+
+  const newConfig = {
+    enabled: enabled !== undefined ? Boolean(enabled) : true,
+    title: title || DEFAULT_SPIN_WHEEL_CONFIG.title,
+    subtitle: subtitle || DEFAULT_SPIN_WHEEL_CONFIG.subtitle,
+    slices: Array.isArray(slices) ? slices : DEFAULT_SPIN_WHEEL_CONFIG.slices
+  };
+
+  const jsonVal = JSON.stringify(newConfig);
+
+  // Auto-sync coupons to database
+  if (Array.isArray(newConfig.slices)) {
+    newConfig.slices.forEach((s: any) => {
+      if (s.coupon_code) {
+        const code = String(s.coupon_code).trim().toUpperCase();
+        db.run(
+          `INSERT OR IGNORE INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, '2030-12-31', 'active')`,
+          [code, s.type || 'percentage', Number(s.value) || 10]
+        );
+      }
+    });
+  }
+
+  db.run(
+    `INSERT OR REPLACE INTO system_settings (setting_key, setting_value, group_name, is_public)
+     VALUES ('spin_wheel_settings', ?, 'marketing', 1)`,
+    [jsonVal],
+    function (err) {
+      if (err) {
+        console.error('Failed to update spin wheel config:', err);
+        return res.status(500).json({ status: 'error', message: 'Database error' });
+      }
+      res.json({ status: 'success', message: 'স্পিন হুইল সেটিংস সফলভাবে সেভ করা হয়েছে!', data: newConfig });
+    }
+  );
+};

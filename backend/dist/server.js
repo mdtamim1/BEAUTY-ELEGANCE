@@ -365,53 +365,55 @@ function parseArgs(args) {
 var dbInstance = null;
 var mysqlPool = null;
 var pgPool = null;
-if (DB_TYPE === "sqlite") {
-  const dbPath = process.env.DATABASE_PATH || path.resolve(__dirname, "../../database/database.sqlite");
-  const dbDir = path.dirname(dbPath);
-  if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
-  }
-  const sqlite = sqlite3.verbose();
-  dbInstance = new sqlite.Database(dbPath, (err) => {
-    if (err) {
-      console.error("\u274C Failed to connect to SQLite database:", err.message);
-    } else {
-      console.log("\u{1F50C} Connected to local SQLite database.");
-      initializeDatabase();
+function connectDatabase() {
+  if (DB_TYPE === "sqlite") {
+    const dbPath = process.env.DATABASE_PATH || path.resolve(__dirname, "../../database/database.sqlite");
+    const dbDir = path.dirname(dbPath);
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
     }
-  });
-} else if (DB_TYPE === "mysql") {
-  mysqlPool = mysql.createPool({
-    host: process.env.DB_HOST || "localhost",
-    port: parseInt(process.env.DB_PORT || "3306"),
-    user: process.env.DB_USER || "root",
-    password: process.env.DB_PASSWORD || "",
-    database: process.env.DB_NAME || "beauty_elegance",
-    connectionLimit: 10,
-    multipleStatements: true
-  });
-  console.log("\u{1F50C} Connected to MySQL database pool.");
-  initializeDatabase();
-} else if (DB_TYPE === "postgres") {
-  const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-  if (connectionString) {
-    pgPool = new pg.Pool({
-      connectionString,
-      ssl: process.env.DB_SSL === "true" || connectionString.includes("sslmode=require") ? { rejectUnauthorized: false } : false,
-      max: 10
+    const sqlite = sqlite3.verbose();
+    dbInstance = new sqlite.Database(dbPath, (err) => {
+      if (err) {
+        console.error("\u274C Failed to connect to SQLite database:", err.message);
+      } else {
+        console.log("\u{1F50C} Connected to local SQLite database.");
+        initializeDatabase();
+      }
     });
-  } else {
-    pgPool = new pg.Pool({
+  } else if (DB_TYPE === "mysql") {
+    mysqlPool = mysql.createPool({
       host: process.env.DB_HOST || "localhost",
-      port: parseInt(process.env.DB_PORT || "5432"),
-      user: process.env.DB_USER || "postgres",
+      port: parseInt(process.env.DB_PORT || "3306"),
+      user: process.env.DB_USER || "root",
       password: process.env.DB_PASSWORD || "",
       database: process.env.DB_NAME || "beauty_elegance",
-      max: 10
+      connectionLimit: 10,
+      multipleStatements: true
     });
+    console.log("\u{1F50C} Connected to MySQL database pool.");
+    initializeDatabase();
+  } else if (DB_TYPE === "postgres") {
+    const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+    if (connectionString) {
+      pgPool = new pg.Pool({
+        connectionString,
+        ssl: process.env.DB_SSL === "true" || connectionString.includes("sslmode=require") ? { rejectUnauthorized: false } : false,
+        max: 10
+      });
+    } else {
+      pgPool = new pg.Pool({
+        host: process.env.DB_HOST || "localhost",
+        port: parseInt(process.env.DB_PORT || "5432"),
+        user: process.env.DB_USER || "postgres",
+        password: process.env.DB_PASSWORD || "",
+        database: process.env.DB_NAME || "beauty_elegance",
+        max: 10
+      });
+    }
+    console.log("\u{1F50C} Connected to PostgreSQL database pool.");
+    initializeDatabase();
   }
-  console.log("\u{1F50C} Connected to PostgreSQL database pool.");
-  initializeDatabase();
 }
 var db = {
   run(sql, ...args) {
@@ -513,6 +515,7 @@ var db = {
     }
   }
 };
+connectDatabase();
 function initializeDatabase() {
   db.serialize(() => {
     db.run(`
@@ -4497,12 +4500,119 @@ var deleteCampaign = (req, res) => {
     res.json({ status: "success", message: "Campaign deleted" });
   });
 };
+var DEFAULT_SPIN_WHEEL_CONFIG = {
+  enabled: true,
+  title: "\u{1F381} \u0998\u09C1\u09B0\u09C7 \u099C\u09BF\u09A4\u09C1\u09A8 \u09B8\u09CD\u09AA\u09C7\u09B6\u09BE\u09B2 \u09A1\u09BF\u09B8\u0995\u09BE\u0989\u09A8\u09CD\u099F!",
+  subtitle: "\u0986\u099C\u0995\u09C7\u09B0 \u09B8\u09CC\u09AD\u09BE\u0997\u09CD\u09AF\u099C\u09A8\u0995 \u0995\u09C1\u09AA\u09A8 \u0995\u09CB\u09A1 \u099C\u09BF\u09A4\u09A4\u09C7 \u099A\u09BE\u0995\u09BE\u099F\u09BF \u0998\u09CB\u09B0\u09BE\u09A8!",
+  slices: [
+    { id: "1", label: "10% OFF", coupon_code: "SPIN10", type: "percentage", value: 10, weight: 40, color: "#8b5cf6" },
+    { id: "2", label: "\u09F3100 OFF", coupon_code: "SPIN100", type: "fixed", value: 100, weight: 30, color: "#10b981" },
+    { id: "3", label: "15% OFF", coupon_code: "VIP15", type: "percentage", value: 15, weight: 15, color: "#f59e0b" },
+    { id: "4", label: "Free Delivery", coupon_code: "FREEDEL", type: "fixed", value: 60, weight: 10, color: "#ec4899" },
+    { id: "5", label: "25% OFF MEGA", coupon_code: "MEGA25", type: "percentage", value: 25, weight: 5, color: "#6366f1" }
+  ]
+};
+var getSpinWheelConfig = (req, res) => {
+  db_default.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'spin_wheel_settings'`, [], (err, row) => {
+    if (err) {
+      console.error("Error fetching spin wheel config:", err);
+      return res.status(500).json({ status: "error", message: "Database error" });
+    }
+    if (!row || !row.setting_value) {
+      return res.json({ status: "success", data: DEFAULT_SPIN_WHEEL_CONFIG });
+    }
+    try {
+      const config = JSON.parse(row.setting_value);
+      return res.json({ status: "success", data: config });
+    } catch (e) {
+      return res.json({ status: "success", data: DEFAULT_SPIN_WHEEL_CONFIG });
+    }
+  });
+};
+var spinWheelPlay = (req, res) => {
+  db_default.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'spin_wheel_settings'`, [], (err, row) => {
+    let config = DEFAULT_SPIN_WHEEL_CONFIG;
+    if (row && row.setting_value) {
+      try {
+        config = JSON.parse(row.setting_value);
+      } catch (e) {
+      }
+    }
+    if (!config.enabled || !config.slices || config.slices.length === 0) {
+      return res.status(400).json({ status: "error", message: "\u09B8\u09CD\u09AA\u09BF\u09A8 \u09B9\u09C1\u0987\u09B2 \u0985\u09AB\u09BE\u09B0 \u0986\u09AA\u09BE\u09A4\u09A4 \u09AC\u09A8\u09CD\u09A7 \u09B0\u09DF\u09C7\u099B\u09C7\u0964" });
+    }
+    const totalWeight = config.slices.reduce((sum, s) => sum + (Number(s.weight) || 0), 0);
+    if (totalWeight <= 0) {
+      const defaultSlice = config.slices[0];
+      return res.json({ status: "success", data: defaultSlice, winningIndex: 0 });
+    }
+    let randomWeight = Math.random() * totalWeight;
+    let winningIndex = 0;
+    for (let i = 0; i < config.slices.length; i++) {
+      const sliceWeight = Number(config.slices[i].weight) || 0;
+      if (randomWeight < sliceWeight) {
+        winningIndex = i;
+        break;
+      }
+      randomWeight -= sliceWeight;
+    }
+    const winningSlice = config.slices[winningIndex];
+    if (winningSlice && winningSlice.coupon_code) {
+      const cleanCode = winningSlice.coupon_code.trim().toUpperCase();
+      db_default.run(
+        `INSERT OR IGNORE INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, '2030-12-31', 'active')`,
+        [cleanCode, winningSlice.type || "percentage", Number(winningSlice.value) || 10]
+      );
+    }
+    return res.json({
+      status: "success",
+      data: winningSlice,
+      winningIndex
+    });
+  });
+};
+var updateSpinWheelConfig = (req, res) => {
+  const { enabled, title, subtitle, slices } = req.body;
+  const newConfig = {
+    enabled: enabled !== void 0 ? Boolean(enabled) : true,
+    title: title || DEFAULT_SPIN_WHEEL_CONFIG.title,
+    subtitle: subtitle || DEFAULT_SPIN_WHEEL_CONFIG.subtitle,
+    slices: Array.isArray(slices) ? slices : DEFAULT_SPIN_WHEEL_CONFIG.slices
+  };
+  const jsonVal = JSON.stringify(newConfig);
+  if (Array.isArray(newConfig.slices)) {
+    newConfig.slices.forEach((s) => {
+      if (s.coupon_code) {
+        const code = String(s.coupon_code).trim().toUpperCase();
+        db_default.run(
+          `INSERT OR IGNORE INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, '2030-12-31', 'active')`,
+          [code, s.type || "percentage", Number(s.value) || 10]
+        );
+      }
+    });
+  }
+  db_default.run(
+    `INSERT OR REPLACE INTO system_settings (setting_key, setting_value, group_name, is_public)
+     VALUES ('spin_wheel_settings', ?, 'marketing', 1)`,
+    [jsonVal],
+    function(err) {
+      if (err) {
+        console.error("Failed to update spin wheel config:", err);
+        return res.status(500).json({ status: "error", message: "Database error" });
+      }
+      res.json({ status: "success", message: "\u09B8\u09CD\u09AA\u09BF\u09A8 \u09B9\u09C1\u0987\u09B2 \u09B8\u09C7\u099F\u09BF\u0982\u09B8 \u09B8\u09AB\u09B2\u09AD\u09BE\u09AC\u09C7 \u09B8\u09C7\u09AD \u0995\u09B0\u09BE \u09B9\u09DF\u09C7\u099B\u09C7!", data: newConfig });
+    }
+  );
+};
 
 // backend/routes/marketing.ts
 var router10 = Router10();
 router10.post("/subscribers/subscribe", subscribeEmail);
 router10.get("/coupons/validate/:code", validateCoupon);
 router10.get("/campaigns", getCampaigns);
+router10.get("/spin-wheel", getSpinWheelConfig);
+router10.post("/spin-wheel/spin", spinWheelPlay);
+router10.post("/spin-wheel/settings", authenticateToken, requireRole(["Super Admin", "Admin"]), updateSpinWheelConfig);
 router10.get("/coupons", authenticateToken, requireRole(["Super Admin", "Admin"]), getCoupons);
 router10.post("/coupons", authenticateToken, requireRole(["Super Admin", "Admin"]), createCoupon);
 router10.delete("/coupons/:code", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteCoupon);

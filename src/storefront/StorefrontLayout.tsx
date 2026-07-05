@@ -6,6 +6,7 @@ import './storefront.css';
 import { replaceContactInfo } from '../utils/storefrontUtils';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import AiChatWidget from './AiChatWidget';
+import { SpinWheelModal } from './SpinWheelModal';
 import { OptimizedImage } from '../components/layout/OptimizedImage';
 
 interface CartItem {
@@ -597,8 +598,9 @@ export default function StorefrontLayout() {
 
       {/* Bottom Nav Removed */}
 
-      {/* ---- AI Chat Assistant Widget ---- */}
+      {/* ---- AI Chat Assistant Widget & Lucky Spin Wheel ---- */}
       <AiChatWidget />
+      <SpinWheelModal />
     </div>
   );
 }

@@ -1,0 +1,422 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { fetchSpinWheelConfig, playSpinWheel } from '../services/api';
+import { Gift, Sparkles, X, Check, Copy, Flame, Trophy } from 'lucide-react';
+
+interface WheelSlice {
+  id: string;
+  label: string;
+  coupon_code: string;
+  type: 'percentage' | 'fixed';
+  value: number;
+  weight: number;
+  color: string;
+}
+
+interface SpinWheelConfig {
+  enabled: boolean;
+  title: string;
+  subtitle: string;
+  slices: WheelSlice[];
+}
+
+export const SpinWheelModal: React.FC = () => {
+  const [config, setConfig] = useState<SpinWheelConfig | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [winningSlice, setWinningSlice] = useState<WheelSlice | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [rotationDeg, setRotationDeg] = useState(0);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const json = await fetchSpinWheelConfig();
+        if (json && json.status === 'success' && json.data && json.data.enabled) {
+          setConfig(json.data);
+
+          // Check if user already claimed coupon
+          const claimed = localStorage.getItem('spin_wheel_claimed');
+          if (!claimed) {
+            // Automatically open modal after 1.5 seconds on visit
+            const timer = setTimeout(() => setIsOpen(true), 1500);
+            return () => clearTimeout(timer);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load spin wheel config:', e);
+      }
+    };
+    loadConfig();
+  }, []);
+
+  // Draw wheel on canvas when config is loaded
+  useEffect(() => {
+    if (!config || !config.slices || config.slices.length === 0 || !canvasRef.current) return;
+    drawWheel();
+  }, [config, isOpen]);
+
+  const drawWheel = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = Math.min(centerX, centerY) - 10;
+    const slices = config!.slices;
+    const sliceAngle = (2 * Math.PI) / slices.length;
+
+    ctx.clearRect(0, 0, width, height);
+
+    slices.forEach((slice, i) => {
+      const startAngle = i * sliceAngle - Math.PI / 2;
+      const endAngle = startAngle + sliceAngle;
+
+      // Draw Slice Sector
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+      ctx.closePath();
+      ctx.fillStyle = slice.color || (i % 2 === 0 ? '#8b5cf6' : '#10b981');
+      ctx.fill();
+
+      // Outer Border Glow Line
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#ffffff33';
+      ctx.stroke();
+
+      // Draw Label Text
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate(startAngle + sliceAngle / 2);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 13px system-ui, sans-serif';
+      ctx.shadowColor = 'rgba(0,0,0,0.8)';
+      ctx.shadowBlur = 4;
+      ctx.fillText(slice.label, radius - 20, 5);
+      ctx.restore();
+    });
+
+    // Draw Center Cap
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 32, 0, 2 * Math.PI);
+    ctx.fillStyle = '#1e1b4b';
+    ctx.fill();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#f59e0b';
+    ctx.stroke();
+
+    // Center Icon / Text
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = '900 12px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('SPIN', centerX, centerY + 4);
+  };
+
+  const handleSpin = async () => {
+    if (isSpinning || !config || config.slices.length === 0) return;
+    setIsSpinning(true);
+
+    try {
+      const res = await playSpinWheel();
+      if (res && res.status === 'success' && res.data) {
+        const sliceCount = config.slices.length;
+        const targetIndex = res.winningIndex !== undefined ? res.winningIndex : 0;
+
+        // Angle calculation
+        const sliceAngleDeg = 360 / sliceCount;
+        // Target angle to center the pointer (at top 270deg / 0deg pointer)
+        const sliceCenterAngle = targetIndex * sliceAngleDeg + sliceAngleDeg / 2;
+        const targetDegrees = 360 - sliceCenterAngle;
+
+        // 6 full rotations (2160 deg) + target angle
+        const finalRotation = rotationDeg + 2160 + (targetDegrees - (rotationDeg % 360));
+        setRotationDeg(finalRotation);
+
+        setTimeout(() => {
+          setIsSpinning(false);
+          setWinningSlice(res.data);
+
+          // Save claim in localStorage
+          localStorage.setItem(
+            'spin_wheel_claimed',
+            JSON.stringify({
+              code: res.data.coupon_code,
+              label: res.data.label,
+              timestamp: Date.now()
+            })
+          );
+        }, 4600);
+      } else {
+        setIsSpinning(false);
+        alert('দুঃখিত, স্পিন হুইল প্রসেস করা যাচ্ছে না। আবার চেষ্টা করুন।');
+      }
+    } catch (e) {
+      setIsSpinning(false);
+      console.error(e);
+    }
+  };
+
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000);
+  };
+
+  if (!config || !config.enabled) return null;
+
+  return (
+    <>
+      {/* Floating Badge (If modal is closed and user has not claimed yet) */}
+      {!isOpen && !winningSlice && (
+        <button
+          onClick={() => setIsOpen(true)}
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            left: '24px',
+            zIndex: 998,
+            background: 'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)',
+            color: '#fff',
+            border: '2px solid rgba(255,255,255,0.4)',
+            borderRadius: '50px',
+            padding: '10px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontWeight: 700,
+            fontSize: '0.85rem',
+            cursor: 'pointer',
+            boxShadow: '0 10px 25px -5px rgba(139, 92, 246, 0.6)',
+            transition: 'all 0.3s ease',
+            animation: 'pulse 2s infinite'
+          }}
+        >
+          <Sparkles size={18} style={{ color: '#fbbf24' }} />
+          <span>লটারি হুইল ঘুরান!</span>
+          <Flame size={16} style={{ color: '#f97316' }} />
+        </button>
+      )}
+
+      {/* Main Modal Backdrop */}
+      {isOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            background: 'rgba(5, 5, 12, 0.82)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px'
+          }}
+        >
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: '460px',
+              background: 'linear-gradient(145deg, rgba(23, 20, 52, 0.95), rgba(13, 10, 31, 0.98))',
+              border: '1px solid rgba(139, 92, 246, 0.4)',
+              borderRadius: '24px',
+              boxShadow: '0 25px 50px -12px rgba(139, 92, 246, 0.35)',
+              padding: '28px 24px',
+              textAlign: 'center',
+              color: '#fff',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setIsOpen(false)}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                background: 'rgba(255,255,255,0.1)',
+                border: 'none',
+                color: '#94a3b8',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              <X size={18} />
+            </button>
+
+            {/* Header Title */}
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                <Sparkles size={14} /> VIP FORTUNE WHEEL
+              </div>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '0 0 6px 0', background: 'linear-gradient(135deg, #fff 0%, #cbd5e1 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                {config.title}
+              </h2>
+              <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: 0 }}>
+                {config.subtitle}
+              </p>
+            </div>
+
+            {/* Winning Reveal Screen */}
+            {winningSlice ? (
+              <div
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(251, 191, 36, 0.4)',
+                  borderRadius: '18px',
+                  padding: '24px 16px',
+                  margin: '20px 0 10px 0',
+                  animation: 'fadeIn 0.5s ease-out'
+                }}
+              >
+                <Trophy size={48} style={{ color: '#fbbf24', margin: '0 auto 12px auto' }} />
+                <h3 style={{ color: '#4ade80', fontSize: '1.25rem', fontWeight: 800, margin: '0 0 4px 0' }}>
+                  অভিনন্দন! আপনি জিতেছেন 🎉
+                </h3>
+                <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#fbbf24', margin: '8px 0' }}>
+                  {winningSlice.label}
+                </div>
+                <p style={{ fontSize: '0.82rem', color: '#cbd5e1', marginBottom: '16px' }}>
+                  অর্ডার করার সময় নিচের কুপন কোডটি ব্যবহার করে ডিসকাউন্ট উপভোগ করুন:
+                </p>
+
+                {/* Coupon Code Copy Box */}
+                <div
+                  style={{
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    border: '2px dashed #8b5cf6',
+                    borderRadius: '12px',
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '20px'
+                  }}
+                >
+                  <span style={{ fontFamily: 'monospace', fontSize: '1.2rem', fontWeight: 800, color: '#a78bfa', letterSpacing: '2px' }}>
+                    {winningSlice.coupon_code}
+                  </span>
+                  <button
+                    onClick={() => handleCopyCode(winningSlice.coupon_code)}
+                    style={{
+                      background: copied ? '#16a34a' : '#8b5cf6',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '8px 14px',
+                      borderRadius: '8px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {copied ? <Check size={15} /> : <Copy size={15} />}
+                    <span>{copied ? 'কপি হয়েছে!' : 'কপি করুন'}</span>
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setIsOpen(false)}
+                  style={{
+                    width: '100%',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    fontWeight: 800,
+                    fontSize: '0.95rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 8px 20px -4px rgba(16, 185, 129, 0.5)'
+                  }}
+                >
+                  শপিং করুন ও কুপন দাবি করুন 🛍️
+                </button>
+              </div>
+            ) : (
+              /* Wheel Spinner View */
+              <div style={{ position: 'relative', margin: '20px auto 16px auto', width: '280px', height: '280px' }}>
+                {/* Pointer Indicator Arrow */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '-12px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 10,
+                    width: 0,
+                    height: 0,
+                    borderLeft: '14px solid transparent',
+                    borderRight: '14px solid transparent',
+                    borderTop: '24px solid #f59e0b',
+                    filter: 'drop-shadow(0px 4px 6px rgba(0,0,0,0.6))'
+                  }}
+                />
+
+                {/* Rotating Wheel Canvas */}
+                <div
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    transform: `rotate(${rotationDeg}deg)`,
+                    transition: isSpinning ? 'transform 4.5s cubic-bezier(0.15, 0.9, 0.2, 1)' : 'none',
+                    borderRadius: '50%',
+                    overflow: 'hidden',
+                    boxShadow: '0 0 35px rgba(139, 92, 246, 0.5)'
+                  }}
+                >
+                  <canvas ref={canvasRef} width={280} height={280} />
+                </div>
+
+                {/* Spin Action Trigger Overlay Center */}
+                <button
+                  onClick={handleSpin}
+                  disabled={isSpinning}
+                  style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                    color: '#fff',
+                    border: '3px solid #ffffff',
+                    fontWeight: 900,
+                    fontSize: '0.85rem',
+                    cursor: isSpinning ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 8px 20px rgba(0,0,0,0.6)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 12
+                  }}
+                >
+                  <Gift size={20} />
+                  <span>SPIN</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+};

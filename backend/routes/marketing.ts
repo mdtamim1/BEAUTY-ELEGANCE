@@ -10,7 +10,10 @@ import {
   getCampaigns,
   createCampaign,
   updateCampaign,
-  deleteCampaign
+  deleteCampaign,
+  getSpinWheelConfig,
+  spinWheelPlay,
+  updateSpinWheelConfig
 } from '../controllers/marketingController';
 import { authenticateToken, requireRole } from '../middleware/auth';
 
@@ -20,8 +23,12 @@ const router = Router();
 router.post('/subscribers/subscribe', subscribeEmail);
 router.get('/coupons/validate/:code', validateCoupon);
 router.get('/campaigns', getCampaigns); // Public: so storefront visitors can sync active campaigns!
+router.get('/spin-wheel', getSpinWheelConfig); // Public: fetch spin wheel config
+router.post('/spin-wheel/spin', spinWheelPlay); // Public: server weighted outcome picker
 
 // Protected admin/moderator routes
+router.post('/spin-wheel/settings', authenticateToken, requireRole(['Super Admin', 'Admin']), updateSpinWheelConfig);
+
 router.get('/coupons', authenticateToken, requireRole(['Super Admin', 'Admin']), getCoupons);
 router.post('/coupons', authenticateToken, requireRole(['Super Admin', 'Admin']), createCoupon);
 router.delete('/coupons/:code', authenticateToken, requireRole(['Super Admin', 'Admin']), deleteCoupon);

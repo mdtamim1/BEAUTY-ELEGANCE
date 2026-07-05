@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Megaphone, Mail, MessageSquare, Bell, Share2, Ticket, Zap, Gift, Send, Play, Pause, BarChart2, X, Plus, Trash2, Eye, DollarSign } from 'lucide-react';
+import { Megaphone, Mail, MessageSquare, Bell, Share2, Ticket, Zap, Gift, Send, Play, Pause, BarChart2, X, Plus, Trash2, Eye, DollarSign, Sparkles } from 'lucide-react';
 import { generateCampaigns, saveCampaigns, formatCurrency, formatDate } from '../../mock/data';
+import { SpinWheelControl } from './SpinWheelControl';
 import { 
   fetchCoupons, 
   createCoupon, 
@@ -78,6 +79,7 @@ export default function Marketing() {
 
   const tabs = [
     { id: 'campaigns', label: 'Campaigns', icon: Megaphone },
+    { id: 'spin-wheel', label: 'Spin & Win Wheel', icon: Sparkles },
     { id: 'coupons', label: 'Coupons Matrix', icon: Ticket },
     { id: 'subscribers', label: 'Subscribers Log', icon: Mail },
     { id: 'flash', label: 'Flash Sales', icon: Zap },
@@ -391,6 +393,9 @@ export default function Marketing() {
           </table>
         </div>
       )}
+
+      {/* SPIN & WIN WHEEL CONTROL PANEL */}
+      {activeTab === 'spin-wheel' && <SpinWheelControl />}
 
       {/* COUPONS MATRIX PANEL */}
       {activeTab === 'coupons' && (
