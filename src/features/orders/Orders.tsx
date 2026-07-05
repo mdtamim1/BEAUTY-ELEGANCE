@@ -1096,6 +1096,46 @@ export default function Orders() {
                       <div>
                         <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{order.customer}</div>
                         <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{order.email}</div>
+
+                        {/* Payment Method & TrxID Badge */}
+                        {((order.paymentMethod || order.paymentType || '').toLowerCase().includes('bkash') || (order.memoNumber || '').includes('TrxID')) && (
+                          <div style={{ 
+                            fontSize: '10px', 
+                            fontWeight: 700, 
+                            color: '#f43f5e', 
+                            background: 'rgba(244, 63, 94, 0.12)', 
+                            border: '1px solid rgba(244, 63, 94, 0.3)',
+                            padding: '2px 6px', 
+                            borderRadius: '4px', 
+                            marginTop: '4px', 
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            <span>bKash</span>
+                            <span>{order.memoNumber || 'Pending'}</span>
+                          </div>
+                        )}
+
+                        {((order.paymentMethod || order.paymentType || '').toLowerCase().includes('nagad')) && (
+                          <div style={{ 
+                            fontSize: '10px', 
+                            fontWeight: 700, 
+                            color: '#f97316', 
+                            background: 'rgba(249, 115, 22, 0.12)', 
+                            border: '1px solid rgba(249, 115, 22, 0.3)',
+                            padding: '2px 6px', 
+                            borderRadius: '4px', 
+                            marginTop: '4px', 
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            <span>Nagad</span>
+                            <span>{order.memoNumber || 'Pending'}</span>
+                          </div>
+                        )}
+
                         {order.shopNote && (
                           <div style={{ 
                             fontSize: '10px', 

@@ -39,6 +39,11 @@ export default function Checkout() {
   const [selectedAddressId, setSelectedAddressId] = useState<string | number>('');
   const [saveAddress, setSaveAddress] = useState(true);
   
+  // Payment gateway states
+  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'bkash' | 'nagad'>('cod');
+  const [senderNumber, setSenderNumber] = useState('');
+  const [trxId, setTrxId] = useState('');
+
   // Coupon states
   const [promoCodeInput, setPromoCodeInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
@@ -140,6 +145,11 @@ export default function Checkout() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if ((paymentMethod === 'bkash' || paymentMethod === 'nagad') && (!senderNumber.trim() || !trxId.trim())) {
+      alert('দয়া করে আপনার প্রেরকের বিকাশ/নগদ নম্বর এবং Transaction ID (TrxID) ইনপুট দিন।');
+      return;
+    }
+
     // If customer is logged in, sync any modified fields back to their profile
     if (customer) {
       const needsUpdate = !customer.phone || !customer.address || customer.phone !== customerPhone || customer.address !== customerAddress || customer.name !== customerName;
@@ -166,12 +176,14 @@ export default function Checkout() {
       }
     }
 
+    const formattedMemo = trxId ? `TrxID: ${trxId.toUpperCase()} | Sender: ${senderNumber}` : '';
+
     const orderData = {
       customer: customerName,
       email: customer?.email || customerPhone, // Use logged in email or fallback to phone
       amount: total,
       items: items.reduce((acc, item) => acc + item.quantity, 0),
-      paymentMethod: 'Cash on Delivery',
+      paymentMethod: paymentMethod === 'bkash' ? 'bKash (Send Money)' : paymentMethod === 'nagad' ? 'Nagad (Send Money)' : 'Cash on Delivery',
       storeName: config.branding.storeName || 'VIPCommerce',
       phone: customerPhone,
       address: customerAddress,
@@ -181,10 +193,13 @@ export default function Checkout() {
       area: '',
       customerNote: customerNote,
       shopNote: '',
-      paymentType: 'cod',
-      memoNumber: '',
+      paymentType: paymentMethod,
+      memoNumber: formattedMemo,
+      trxId: trxId.toUpperCase(),
+      senderNumber: senderNumber,
       deliveryCharge: deliveryCharge,
       discount: discount,
+      couponCode: appliedCoupon?.code || '',
       paidAmount: 0,
       subtotal: subtotal,
       productsList: items.map(item => ({
@@ -429,12 +444,86 @@ export default function Checkout() {
 
             <div>
               <h3 className="method-title">
-                <CreditCard size={18} /> পেমেন্ট পদ্ধতি (Payment)
+                <CreditCard size={18} /> পেমেন্ট পদ্ধতি (Payment Method)
               </h3>
-              <div className="payment-card active">
-                <Package size={22} />
-                <span>ক্যাশ অন ডেলিভারি (Cash on Delivery)</span>
+
+              <div className="payment-selection-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginTop: '10px' }}>
+                {/* COD */}
+                <div 
+                  className={`payment-card ${paymentMethod === 'cod' ? 'active' : ''}`}
+                  onClick={() => setPaymentMethod('cod')}
+                  style={{ cursor: 'pointer', padding: '12px', borderRadius: '10px', border: paymentMethod === 'cod' ? '2px solid var(--sf-accent)' : '1px solid var(--sf-border)', background: paymentMethod === 'cod' ? 'var(--sf-bg-light)' : 'white', display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <Package size={20} />
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>ক্যাশ অন ডেলিভারি</span>
+                </div>
+
+                {/* bKash */}
+                <div 
+                  className={`payment-card ${paymentMethod === 'bkash' ? 'active' : ''}`}
+                  onClick={() => setPaymentMethod('bkash')}
+                  style={{ cursor: 'pointer', padding: '12px', borderRadius: '10px', border: paymentMethod === 'bkash' ? '2px solid #e11d48' : '1px solid var(--sf-border)', background: paymentMethod === 'bkash' ? 'rgba(225, 29, 72, 0.06)' : 'white', display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <div style={{ background: '#e11d48', color: 'white', fontWeight: 800, fontSize: '10px', padding: '3px 6px', borderRadius: '4px' }}>bKash</div>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e11d48' }}>বিকাশ</span>
+                </div>
+
+                {/* Nagad */}
+                <div 
+                  className={`payment-card ${paymentMethod === 'nagad' ? 'active' : ''}`}
+                  onClick={() => setPaymentMethod('nagad')}
+                  style={{ cursor: 'pointer', padding: '12px', borderRadius: '10px', border: paymentMethod === 'nagad' ? '2px solid #ea580c' : '1px solid var(--sf-border)', background: paymentMethod === 'nagad' ? 'rgba(234, 88, 12, 0.06)' : 'white', display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <div style={{ background: '#ea580c', color: 'white', fontWeight: 800, fontSize: '10px', padding: '3px 6px', borderRadius: '4px' }}>NAGAD</div>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ea580c' }}>নগদ</span>
+                </div>
               </div>
+
+              {/* Instructions & Inputs for bKash / Nagad */}
+              {(paymentMethod === 'bkash' || paymentMethod === 'nagad') && (
+                <div style={{ marginTop: '16px', padding: '16px', background: paymentMethod === 'bkash' ? 'rgba(225, 29, 72, 0.04)' : 'rgba(234, 88, 12, 0.04)', border: `1.5px dashed ${paymentMethod === 'bkash' ? '#e11d48' : '#ea580c'}`, borderRadius: '12px' }}>
+                  <div style={{ fontWeight: 800, fontSize: '0.9rem', color: paymentMethod === 'bkash' ? '#e11d48' : '#ea580c', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CreditCard size={18} /> {paymentMethod === 'bkash' ? 'bKash (বিকাশ)' : 'Nagad (নগদ)'} টাকা পাঠানোর নিয়মাবলী:
+                  </div>
+
+                  <ol style={{ paddingLeft: '20px', fontSize: '0.82rem', lineHeight: 1.6, color: 'var(--sf-text-secondary)', margin: '0 0 14px 0' }}>
+                    <li>আপনার <b>{paymentMethod === 'bkash' ? 'bKash' : 'Nagad'}</b> অ্যাপ খুলুন অথবা <b>{paymentMethod === 'bkash' ? '*247#' : '*167#'}</b> ডায়াল করে <b>Send Money / Cash Out</b> এ ক্লিক করুন।</li>
+                    <li>টাকা পাঠানোর নম্বর: <b style={{ fontSize: '0.95rem', color: paymentMethod === 'bkash' ? '#e11d48' : '#ea580c', background: 'white', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--sf-border)' }}>{paymentMethod === 'bkash' ? '01700000000' : '01800000000'}</b> (Personal)</li>
+                    <li>মোট পরিশোধযোগ্য টাকার পরিমাণ: <b style={{ color: 'var(--sf-text-primary)' }}>৳{total.toFixed(2)}</b> পাঠাবেন।</li>
+                    <li>টাকা পাঠানোর পর প্রাপ্ত <b>Transaction ID (TrxID)</b> ও <b>আপনার নম্বরটি</b> নিচে ইনপুট দিন।</li>
+                  </ol>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                    <div>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--sf-text-primary)', display: 'block', marginBottom: '4px' }}>
+                        প্রেরকের বিকাশ/নগদ নম্বর (Sender Phone) <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <input 
+                        type="tel"
+                        placeholder="যেমন: ০১৭XXXXXXXX"
+                        required
+                        value={senderNumber}
+                        onChange={(e) => setSenderNumber(e.target.value)}
+                        style={{ width: '100%', height: '40px', border: '1.5px solid var(--sf-border)', borderRadius: '8px', padding: '0 12px', fontSize: '0.85rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--sf-text-primary)', display: 'block', marginBottom: '4px' }}>
+                        Transaction ID (TrxID) <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <input 
+                        type="text"
+                        placeholder="যেমন: 8N7X9K2L1"
+                        required
+                        value={trxId}
+                        onChange={(e) => setTrxId(e.target.value.toUpperCase())}
+                        style={{ width: '100%', height: '40px', border: '1.5px solid var(--sf-border)', borderRadius: '8px', padding: '0 12px', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
