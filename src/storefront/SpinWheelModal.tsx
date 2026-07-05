@@ -30,6 +30,17 @@ export const SpinWheelModal: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const { customer } = useCustomerAuth();
 
+  const handleClose = () => {
+    sessionStorage.setItem('spin_wheel_shown', 'true');
+    setIsOpen(false);
+  };
+
+  useEffect(() => {
+    const handleManualOpen = () => setIsOpen(true);
+    window.addEventListener('open-spin-wheel', handleManualOpen);
+    return () => window.removeEventListener('open-spin-wheel', handleManualOpen);
+  }, []);
+
   useEffect(() => {
     const loadConfig = async () => {
       try {
@@ -37,11 +48,15 @@ export const SpinWheelModal: React.FC = () => {
         if (json && json.status === 'success' && json.data && json.data.enabled) {
           setConfig(json.data);
 
-          // Check if user already claimed coupon
+          // Check if user already claimed coupon or if wheel popup was already shown in this session
           const claimed = localStorage.getItem('spin_wheel_claimed');
-          if (!claimed) {
-            // Automatically open modal after 1.5 seconds on visit
-            const timer = setTimeout(() => setIsOpen(true), 1500);
+          const shownInSession = sessionStorage.getItem('spin_wheel_shown');
+          if (!claimed && !shownInSession) {
+            // Automatically open modal ONCE per browser session after 1.5 seconds
+            const timer = setTimeout(() => {
+              setIsOpen(true);
+              sessionStorage.setItem('spin_wheel_shown', 'true');
+            }, 1500);
             return () => clearTimeout(timer);
           }
         }
@@ -272,7 +287,7 @@ export const SpinWheelModal: React.FC = () => {
           >
             {/* Close Button */}
             <button
-              onClick={() => setIsOpen(false)}
+              onClick={handleClose}
               style={{
                 position: 'absolute',
                 top: '16px',

@@ -5,12 +5,13 @@ import {
   User, Mail, Phone, Calendar, ShoppingBag, MessageSquare, LogOut, 
   Lock, ArrowRight, ShieldCheck, MapPin, Truck, CheckCircle2, 
   Clock, AlertCircle, HelpCircle, Send, Plus, ArrowLeft, RefreshCw,
-  Trash2, Edit, X, Heart, ShoppingCart, Ticket, Menu, RotateCcw
+  Trash2, Edit, X, Heart, ShoppingCart, Ticket, Menu, RotateCcw, Trophy
 } from 'lucide-react';
 import { fetchOrdersFromBackend, fetchCustomerOrdersFromBackend, fetchChatHistory } from '../services/api';
 import { generateOrders as getOrders } from '../mock/data';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import { CustomerCouponsTab } from './CustomerCouponsTab';
+import { CustomerEventsTab } from './CustomerEventsTab';
 import './storefront-account.css';
 
 interface OrderItem {
@@ -71,7 +72,7 @@ export default function CustomerAccount() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   // Dashboard state
-  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'coupons' | 'addresses' | 'wishlist' | 'cart' | 'chat'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'coupons' | 'events' | 'addresses' | 'wishlist' | 'cart' | 'chat'>('profile');
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
@@ -762,6 +763,13 @@ export default function CustomerAccount() {
           </button>
           
           <button 
+            onClick={() => { setActiveTab('events'); setSelectedOrder(null); setIsMobileDrawerOpen(false); }}
+            style={{ width: '100%', padding: '12px 16px', background: activeTab === 'events' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'events' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+          >
+            <Trophy size={18} style={{ color: '#fbbf24' }} /> ইভেন্টসমূহ (Events)
+          </button>
+
+          <button 
             onClick={() => { setActiveTab('coupons'); setSelectedOrder(null); setIsMobileDrawerOpen(false); }}
             style={{ width: '100%', padding: '12px 16px', background: activeTab === 'coupons' ? 'var(--sf-bg-light)' : 'none', color: activeTab === 'coupons' ? 'var(--sf-accent)' : 'var(--sf-text-secondary)', border: 'none', borderRadius: '8px', textAlign: 'left', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
           >
@@ -815,6 +823,9 @@ export default function CustomerAccount() {
         {/* Tab Contents */}
         <div className="account-content-card">
           
+          {/* EVENTS TAB */}
+          {activeTab === 'events' && <CustomerEventsTab />}
+
           {/* MY COUPONS TAB */}
           {activeTab === 'coupons' && <CustomerCouponsTab email={customer.email} />}
 
