@@ -106,12 +106,16 @@ export const getMyOrders = (req: Request, res: Response) => {
     return res.status(400).json({ status: 'error', message: 'Email or phone parameter is required' });
   }
 
+  const phoneSuffix = phone.length >= 10 ? phone.slice(-10) : phone;
+
   db.all(
     `SELECT * FROM orders 
      WHERE (LOWER(email) = ? AND ? != '') 
-        OR (REPLACE(REPLACE(phone, '-', ''), ' ', '') LIKE ? AND ? != '')
+        OR (LOWER(phone) = ? AND ? != '')
+        OR (REPLACE(REPLACE(REPLACE(phone, '-', ''), ' ', ''), '+88', '') LIKE ? AND ? != '')
+        OR (REPLACE(REPLACE(REPLACE(email, '-', ''), ' ', ''), '+88', '') LIKE ? AND ? != '')
      ORDER BY created_at DESC`,
-    [email, email, `%${phone}%`, phone],
+    [email, email, email, email, `%${phoneSuffix}%`, phoneSuffix, `%${phoneSuffix}%`, phoneSuffix],
     (err, orderRows: any[]) => {
       if (err) {
         console.error('Error fetching customer orders:', err);

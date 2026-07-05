@@ -5,7 +5,7 @@ import {
   User, Mail, Phone, Calendar, ShoppingBag, MessageSquare, LogOut, 
   Lock, ArrowRight, ShieldCheck, MapPin, Truck, CheckCircle2, 
   Clock, AlertCircle, HelpCircle, Send, Plus, ArrowLeft, RefreshCw,
-  Trash2, Edit, X, Heart, ShoppingCart, Ticket, Menu
+  Trash2, Edit, X, Heart, ShoppingCart, Ticket, Menu, RotateCcw
 } from 'lucide-react';
 import { fetchOrdersFromBackend, fetchCustomerOrdersFromBackend, fetchChatHistory } from '../services/api';
 import { generateOrders as getOrders } from '../mock/data';
@@ -22,6 +22,7 @@ interface OrderItem {
   status: string;
   items: number;
   date: string;
+  created_at?: string;
   paymentMethod: string;
   courier?: string;
   city?: string;
@@ -251,44 +252,85 @@ export default function CustomerAccount() {
     if (!customer) return;
     setLoadingOrders(true);
     try {
-      // 1. Load local persistent cache first
-      const cacheKey = `customer_orders_${customer.email.toLowerCase()}`;
-      let cachedOrders: any[] = [];
-      const storedCache = localStorage.getItem(cacheKey);
-      if (storedCache) {
-        try { cachedOrders = JSON.parse(storedCache); } catch (e) {}
-      }
+      const custEmail = (customer.email || '').toLowerCase().trim();
+      const custPhone = (customer.phone || '').replace(/[^0-9]/g, '');
+      const cacheKey = `customer_orders_${custEmail || custPhone}`;
 
-      // 2. Fetch directly from customer backend route (Public / Customer query)
+      // 1. Fetch directly from customer backend route & general orders
       const backendCustomerOrders = await fetchCustomerOrdersFromBackend(customer.email, customer.phone);
-      
-      // 3. Fallback to general orders query if available
       const generalOrders = await fetchOrdersFromBackend();
+      
+      // 2. Fetch local storage orders (Admin local edits & offline fallback)
+      let localOrderList: any[] = [];
+      try {
+        const storedOrderList = localStorage.getItem('orderList');
+        if (storedOrderList) localOrderList = JSON.parse(storedOrderList);
+      } catch (e) {}
+
+      let cachedOrders: any[] = [];
+      try {
+        const storedCache = localStorage.getItem(cacheKey);
+        if (storedCache) cachedOrders = JSON.parse(storedCache);
+      } catch (e) {}
+
       const mockFallback = getOrders() || [];
 
-      // Combine all sources
-      const rawCombined = [
-        ...(backendCustomerOrders || []),
-        ...cachedOrders,
-        ...(generalOrders || []),
-        ...mockFallback
-      ];
+      // Helper matcher function
+      const isOrderForCustomer = (o: any) => {
+        if (!o) return false;
+        const oEmail = (o.email || '').toLowerCase().trim();
+        const oPhone = (o.phone || '').replace(/[^0-9]/g, '');
 
-      // Filter matching this customer's email or phone
-      const matchedMap = new Map();
-      rawCombined.forEach((o: any) => {
-        if (!o || !o.id) return;
-        const matchesEmail = o.email && o.email.toLowerCase() === customer.email.toLowerCase();
-        const matchesPhone = o.phone && customer.phone && o.phone.replace(/[^0-9]/g, '') === customer.phone.replace(/[^0-9]/g, '');
-        if (matchesEmail || matchesPhone) {
-          if (!matchedMap.has(o.id)) {
-            matchedMap.set(o.id, o);
-          }
+        const emailMatch = Boolean(custEmail && (oEmail === custEmail || oPhone === custEmail));
+        const phoneMatch = Boolean(custPhone && custPhone.length >= 6 && (
+          oPhone === custPhone || 
+          oEmail === custPhone || 
+          (oPhone.length >= 10 && custPhone.endsWith(oPhone.slice(-10))) ||
+          (custPhone.length >= 10 && oPhone.endsWith(custPhone.slice(-10)))
+        ));
+
+        return emailMatch || phoneMatch;
+      };
+
+      const matchedMap = new Map<string, any>();
+
+      // Base layer: mock & old local cache
+      [...mockFallback, ...cachedOrders].forEach((o: any) => {
+        if (o && o.id && isOrderForCustomer(o)) {
+          matchedMap.set(String(o.id), o);
         }
       });
 
-      const finalOrders = Array.from(matchedMap.values());
-      
+      // Layer 2: Admin local edits from orderList
+      localOrderList.forEach((o: any) => {
+        if (o && o.id && isOrderForCustomer(o)) {
+          const existing = matchedMap.get(String(o.id)) || {};
+          matchedMap.set(String(o.id), {
+            ...existing,
+            ...o
+          });
+        }
+      });
+
+      // Layer 3: Direct Backend DB Orders (HIGHEST PRIORITY - Overwrites status & courier with live database values)
+      [...(generalOrders || []), ...(backendCustomerOrders || [])].forEach((o: any) => {
+        if (o && o.id && isOrderForCustomer(o)) {
+          const existing = matchedMap.get(String(o.id)) || {};
+          matchedMap.set(String(o.id), {
+            ...existing,
+            ...o,
+            status: o.status || existing.status || 'processing',
+            courier: o.courier || existing.courier || 'Pathao Courier'
+          });
+        }
+      });
+
+      const finalOrders = Array.from(matchedMap.values()).sort((a: any, b: any) => {
+        const dateA = new Date(a.date || a.created_at || 0).getTime();
+        const dateB = new Date(b.date || b.created_at || 0).getTime();
+        return dateB - dateA;
+      });
+
       // Save updated persistent cache
       localStorage.setItem(cacheKey, JSON.stringify(finalOrders));
       setOrders(finalOrders as any[]);
@@ -538,13 +580,14 @@ export default function CustomerAccount() {
       { key: 'delivered', label: 'ডেলিভার্ড', desc: 'অর্ডারটি আপনার কাছে পৌঁছে গেছে', icon: CheckCircle2 }
     ];
 
-    const lowerStatus = status.toLowerCase();
+    const lowerStatus = (status || '').toLowerCase().trim();
     let activeIndex = 0;
     if (lowerStatus === 'processing') activeIndex = 1;
     else if (lowerStatus === 'shipped' || lowerStatus === 'shipping') activeIndex = 2;
     else if (lowerStatus === 'delivered' || lowerStatus === 'completed') activeIndex = 3;
+    else if (lowerStatus === 'cancelled' || lowerStatus === 'returned') activeIndex = -1;
 
-    return { steps, activeIndex };
+    return { steps, activeIndex, isCancelled: lowerStatus === 'cancelled', isReturned: lowerStatus === 'returned' };
   };
 
   if (!customer) {
@@ -1135,117 +1178,163 @@ export default function CustomerAccount() {
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {orders.map((order, idx) => (
-                        <div key={idx} style={{ border: '1px solid var(--sf-border)', borderRadius: '12px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', transition: 'box-shadow 0.2s' }} onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--sf-shadow-sm)'} onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
-                          <div>
-                            <div style={{ fontWeight: 700, color: 'var(--sf-text-primary)', fontSize: '0.95rem' }}>অর্ডার নং: #{order.id}</div>
-                            <div style={{ fontSize: '0.78rem', color: 'var(--sf-text-tertiary)', marginTop: '2px' }}>তারিখ: {new Date(order.date).toLocaleDateString()}</div>
-                            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--sf-text-secondary)', marginTop: '6px' }}>মূল্য: ৳{order.amount} ({order.items} টি প্রোডাক্ট)</div>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <span style={{ 
-                              padding: '6px 12px', 
-                              borderRadius: '20px', 
-                              fontSize: '0.78rem', 
-                              fontWeight: 700,
-                              background: order.status === 'Delivered' || order.status === 'Completed' ? '#d1fae5' : order.status === 'Shipped' || order.status === 'Shipping' ? '#dbeafe' : '#fef3c7',
-                              color: order.status === 'Delivered' || order.status === 'Completed' ? '#065f46' : order.status === 'Shipped' || order.status === 'Shipping' ? '#1e40af' : '#92400e'
-                            }}>
-                              {order.status === 'Delivered' || order.status === 'Completed' ? 'ডেলিভার্ড' : order.status === 'Shipped' || order.status === 'Shipping' ? 'কুরিয়ারে পাঠানো হয়েছে' : order.status === 'Processing' ? 'প্রসেসিং' : 'অপেক্ষমান'}
-                            </span>
-                            <button onClick={() => setSelectedOrder(order)} className="store-btn" style={{ height: '36px', background: 'var(--sf-text-primary)', color: 'white', border: 'none', borderRadius: '8px', padding: '0 12px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
-                              অর্ডার ট্র্যাক করুন
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                /* ORDER TIMELINE DETAILS */
-                <div>
-                  <button onClick={() => setSelectedOrder(null)} style={{ background: 'none', border: 'none', color: 'var(--sf-text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', marginBottom: '20px', padding: 0 }}>
-                    <ArrowLeft size={16} /> অর্ডারের তালিকায় ফিরে যান
-                  </button>
+                      {orders.map((order, idx) => {
+                        const lowerSt = (order.status || '').toLowerCase().trim();
+                        let badgeBg = '#fef3c7';
+                        let badgeColor = '#92400e';
+                        let badgeText = 'অপেক্ষমান';
 
-                  <div style={{ border: '1px solid var(--sf-border)', borderRadius: '16px', padding: '24px', background: 'var(--sf-bg-light)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', borderBottom: '1px solid var(--sf-border)', paddingBottom: '16px', marginBottom: '24px' }}>
-                      <div>
-                        <h4 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>অর্ডার ট্র্যাকিং বিবরণী</h4>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--sf-text-tertiary)', marginTop: '4px' }}>অর্ডার নং: <strong>#{selectedOrder.id}</strong> | তারিখ: {new Date(selectedOrder.date).toLocaleString()}</div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--sf-text-tertiary)' }}>মোট মূল্য</div>
-                        <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--sf-text-primary)', marginTop: '2px' }}>৳{selectedOrder.amount}</div>
-                      </div>
-                    </div>
+                        if (lowerSt === 'delivered' || lowerSt === 'completed') {
+                          badgeBg = '#d1fae5';
+                          badgeColor = '#065f46';
+                          badgeText = 'ডেলিভার্ড';
+                        } else if (lowerSt === 'shipped' || lowerSt === 'shipping') {
+                          badgeBg = '#dbeafe';
+                          badgeColor = '#1e40af';
+                          badgeText = 'কুরিয়ারে পাঠানো হয়েছে';
+                        } else if (lowerSt === 'processing') {
+                          badgeBg = '#e0f2fe';
+                          badgeColor = '#0369a1';
+                          badgeText = 'প্রসেসিং';
+                        } else if (lowerSt === 'cancelled') {
+                          badgeBg = '#fee2e2';
+                          badgeColor = '#991b1b';
+                          badgeText = 'বাতিল করা হয়েছে';
+                        } else if (lowerSt === 'returned') {
+                          badgeBg = '#f3e8ff';
+                          badgeColor = '#6b21a8';
+                          badgeText = 'রিটার্ন করা হয়েছে';
+                        }
 
-                    {/* Timeline Graph */}
-                    <div style={{ position: 'relative', padding: '10px 0 20px 20px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                      
-                      {/* Timeline Vertical Progress bar background line */}
-                      <div style={{ position: 'absolute', left: '30px', top: '15px', bottom: '45px', width: '3px', background: 'var(--sf-border)', zIndex: 1 }} />
-                      
-                      {/* Timeline Vertical Active bar line */}
-                      <div style={{ 
-                        position: 'absolute', 
-                        left: '30px', 
-                        top: '15px', 
-                        height: `${(getTrackingSteps(selectedOrder.status).activeIndex / 3) * 100}%`,
-                        maxHeight: 'calc(100% - 60px)',
-                        width: '3px', 
-                        background: 'linear-gradient(to bottom, var(--sf-accent), var(--sf-success))', 
-                        zIndex: 2,
-                        transition: 'height 0.5s ease'
-                      }} />
-
-                      {getTrackingSteps(selectedOrder.status).steps.map((step, idx) => {
-                        const activeIndex = getTrackingSteps(selectedOrder.status).activeIndex;
-                        const isDone = idx <= activeIndex;
-                        const StepIcon = step.icon;
                         return (
-                          <div key={idx} style={{ display: 'flex', gap: '20px', position: 'relative', zIndex: 5 }}>
-                            <div style={{ 
-                              width: '24px', 
-                              height: '24px', 
-                              borderRadius: '50%', 
-                              background: isDone ? 'var(--sf-success)' : 'white', 
-                              border: `2px solid ${isDone ? 'var(--sf-success)' : 'var(--sf-border)'}`,
-                              color: isDone ? 'white' : 'var(--sf-text-tertiary)',
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              justifyContent: 'center',
-                              boxShadow: '0 0 0 4px white',
-                              transition: 'all 0.3s'
-                            }}>
-                              {isDone ? <CheckCircle2 size={14} /> : <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--sf-text-tertiary)' }} />}
-                            </div>
+                          <div key={idx} style={{ border: '1px solid var(--sf-border)', borderRadius: '12px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', transition: 'box-shadow 0.2s' }} onMouseEnter={e => e.currentTarget.style.boxShadow = 'var(--sf-shadow-sm)'} onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
                             <div>
-                              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: isDone ? 'var(--sf-text-primary)' : 'var(--sf-text-tertiary)' }}>{step.label}</div>
-                              <div style={{ fontSize: '0.8rem', color: 'var(--sf-text-tertiary)', marginTop: '2px' }}>{step.desc}</div>
+                              <div style={{ fontWeight: 700, color: 'var(--sf-text-primary)', fontSize: '0.95rem' }}>অর্ডার নং: #{order.id}</div>
+                              <div style={{ fontSize: '0.78rem', color: 'var(--sf-text-tertiary)', marginTop: '2px' }}>তারিখ: {new Date(order.date || order.created_at || Date.now()).toLocaleDateString()}</div>
+                              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--sf-text-secondary)', marginTop: '6px' }}>মূল্য: ৳{order.amount} ({order.items} টি প্রোডাক্ট)</div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <span style={{ 
+                                padding: '6px 12px', 
+                                borderRadius: '20px', 
+                                fontSize: '0.78rem', 
+                                fontWeight: 700,
+                                background: badgeBg,
+                                color: badgeColor
+                              }}>
+                                {badgeText}
+                              </span>
+                              <button onClick={() => setSelectedOrder(order)} className="store-btn" style={{ height: '36px', background: 'var(--sf-text-primary)', color: 'white', border: 'none', borderRadius: '8px', padding: '0 12px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
+                                অর্ডার ট্র্যাক করুন
+                              </button>
                             </div>
                           </div>
                         );
                       })}
                     </div>
+                  )}
+                </>
+              ) : (
+                /* ORDER TIMELINE DETAILS */
+                (() => {
+                  const currentActiveOrder = orders.find(o => String(o.id) === String(selectedOrder.id)) || selectedOrder;
+                  const trackingData = getTrackingSteps(currentActiveOrder.status);
+                  
+                  return (
+                    <div>
+                      <button onClick={() => setSelectedOrder(null)} style={{ background: 'none', border: 'none', color: 'var(--sf-text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer', marginBottom: '20px', padding: 0 }}>
+                        <ArrowLeft size={16} /> অর্ডারের তালিকায় ফিরে যান
+                      </button>
 
-                    <div style={{ borderTop: '1px solid var(--sf-border)', paddingTop: '20px', marginTop: '10px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-                      <div>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--sf-text-tertiary)' }}>কুরিয়ার সার্ভিস</div>
-                        <div style={{ fontWeight: 700, fontSize: '0.9rem', marginTop: '2px', color: 'var(--sf-text-primary)' }}>
-                          {selectedOrder.courier || 'Pathao Courier'}
+                      <div style={{ border: '1px solid var(--sf-border)', borderRadius: '16px', padding: '24px', background: 'var(--sf-bg-light)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', borderBottom: '1px solid var(--sf-border)', paddingBottom: '16px', marginBottom: '24px' }}>
+                          <div>
+                            <h4 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0 }}>অর্ডার ট্র্যাকিং বিবরণী</h4>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--sf-text-tertiary)', marginTop: '4px' }}>অর্ডার নং: <strong>#{currentActiveOrder.id}</strong> | তারিখ: {new Date(currentActiveOrder.date || currentActiveOrder.created_at || Date.now()).toLocaleString()}</div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--sf-text-tertiary)' }}>মোট মূল্য</div>
+                            <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--sf-text-primary)', marginTop: '2px' }}>৳{currentActiveOrder.amount}</div>
+                          </div>
                         </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--sf-text-tertiary)' }}>ডেলিভারি ঠিকানা</div>
-                        <div style={{ fontWeight: 700, fontSize: '0.9rem', marginTop: '2px', color: 'var(--sf-text-primary)' }}>
-                          {selectedOrder.address || 'Dhaka, Bangladesh'}
+
+                        {/* Special alert banner for Cancelled / Returned orders */}
+                        {trackingData.isCancelled && (
+                          <div style={{ background: '#fee2e2', color: '#991b1b', padding: '12px 16px', borderRadius: '8px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <AlertCircle size={20} /> এই অর্ডারটি বাতিল (Cancelled) করা হয়েছে।
+                          </div>
+                        )}
+                        {trackingData.isReturned && (
+                          <div style={{ background: '#f3e8ff', color: '#6b21a8', padding: '12px 16px', borderRadius: '8px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <RotateCcw size={20} /> এই অর্ডারটি রিটার্ন (Returned) করা হয়েছে।
+                          </div>
+                        )}
+
+                        {/* Timeline Graph */}
+                        <div style={{ position: 'relative', padding: '10px 0 20px 20px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                          
+                          {/* Timeline Vertical Progress bar background line */}
+                          <div style={{ position: 'absolute', left: '30px', top: '15px', bottom: '45px', width: '3px', background: 'var(--sf-border)', zIndex: 1 }} />
+                          
+                          {/* Timeline Vertical Active bar line */}
+                          <div style={{ 
+                            position: 'absolute', 
+                            left: '30px', 
+                            top: '15px', 
+                            height: `${(Math.max(0, trackingData.activeIndex) / 3) * 100}%`,
+                            maxHeight: 'calc(100% - 60px)',
+                            width: '3px', 
+                            background: 'linear-gradient(to bottom, var(--sf-accent), var(--sf-success))', 
+                            zIndex: 2,
+                            transition: 'height 0.5s ease'
+                          }} />
+
+                          {trackingData.steps.map((step, idx) => {
+                            const isDone = trackingData.activeIndex >= 0 && idx <= trackingData.activeIndex;
+                            return (
+                              <div key={idx} style={{ display: 'flex', gap: '20px', position: 'relative', zIndex: 5 }}>
+                                <div style={{ 
+                                  width: '24px', 
+                                  height: '24px', 
+                                  borderRadius: '50%', 
+                                  background: isDone ? 'var(--sf-success)' : 'white', 
+                                  border: `2px solid ${isDone ? 'var(--sf-success)' : 'var(--sf-border)'}`,
+                                  color: isDone ? 'white' : 'var(--sf-text-tertiary)',
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center',
+                                  boxShadow: '0 0 0 4px white',
+                                  transition: 'all 0.3s'
+                                }}>
+                                  {isDone ? <CheckCircle2 size={14} /> : <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--sf-text-tertiary)' }} />}
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: isDone ? 'var(--sf-text-primary)' : 'var(--sf-text-tertiary)' }}>{step.label}</div>
+                                  <div style={{ fontSize: '0.8rem', color: 'var(--sf-text-tertiary)', marginTop: '2px' }}>{step.desc}</div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div style={{ borderTop: '1px solid var(--sf-border)', paddingTop: '20px', marginTop: '10px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                          <div>
+                            <div style={{ fontSize: '0.78rem', color: 'var(--sf-text-tertiary)' }}>কুরিয়ার সার্ভিস</div>
+                            <div style={{ fontWeight: 700, fontSize: '0.95rem', marginTop: '2px', color: 'var(--sf-text-primary)' }}>
+                              {currentActiveOrder.courier || 'Pathao Courier'}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.78rem', color: 'var(--sf-text-tertiary)' }}>ডেলিভারি ঠিকানা</div>
+                            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginTop: '2px', color: 'var(--sf-text-primary)' }}>
+                              {currentActiveOrder.address || 'Dhaka, Bangladesh'}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  );
+                })()
               )}
             </div>
           )}
