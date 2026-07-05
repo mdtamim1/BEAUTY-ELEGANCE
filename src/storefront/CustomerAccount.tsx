@@ -664,7 +664,7 @@ export default function CustomerAccount() {
           className="account-drawer-toggle-btn"
         >
           <Menu size={18} />
-          <span>☰ একাউন্ট মেনু (Account Menu)</span>
+          <span>একাউন্ট মেনু (Account Menu)</span>
         </button>
 
         <button 
