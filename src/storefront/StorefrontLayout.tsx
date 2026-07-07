@@ -342,7 +342,7 @@ export default function StorefrontLayout() {
             /* Full Width Search Bar Row (covers header logo & menu items completely) */
             <div className="store-header-search-bar-row">
               <form className="store-search-full" onSubmit={handleSearch}>
-                <Search size={18} className="store-search-icon" />
+                <Search size={18} className="store-search-full-icon" />
                 <input
                   ref={searchInputRef}
                   type="text"
