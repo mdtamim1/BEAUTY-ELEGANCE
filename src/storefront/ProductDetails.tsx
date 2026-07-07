@@ -544,19 +544,70 @@ export default function ProductDetails() {
     let active = true;
     const loadProduct = async () => {
       if (!id) return;
-      setLoading(true);
+      
+      // Try to find the product in local config first for instant loading
+      const localProduct = config.products.find(p => String(p.id) === String(id));
+      if (localProduct) {
+        let reviewsList = localProduct.customerReviews || [];
+        
+        // Local storage reviews
+        try {
+          const storedReviews = localStorage.getItem(`product_reviews_${id}`);
+          if (storedReviews) {
+            const parsed = JSON.parse(storedReviews);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              const merged = [...parsed];
+              reviewsList.forEach((r: any) => {
+                if (!merged.some(m => m.id === r.id)) merged.push(r);
+              });
+              reviewsList = merged;
+            }
+          }
+        } catch (e) {}
+
+        // Fallback sample reviews if empty so customer reviews section is never blank
+        if (reviewsList.length === 0) {
+          reviewsList = [
+            {
+              id: 101,
+              user: 'ফারহানা শারমিন',
+              rating: 5,
+              date: new Date(Date.now() - 3 * 86400000).toISOString(),
+              comment: 'প্রোডাক্টটি অসাধারণ! ছবি ও ডেসক্রিপশনের সাথে ১০০% হুবহু মিল পেয়েছি। প্যাকেজিংও খুব সুন্দর ছিল।',
+              helpful: 0
+            },
+            {
+              id: 102,
+              user: 'তানজিনা আক্তার',
+              rating: 5,
+              date: new Date(Date.now() - 7 * 86400000).toISOString(),
+              comment: 'খুবই প্রিমিয়াম কোয়ালিটি। ১ দিনের মধ্যেই ডেলিভারি পেয়েছি। ধন্যবাদ বিউটি অ্যান্ড এলিগেন্স!',
+              helpful: 0
+            }
+          ];
+        }
+
+        const finalProduct = {
+          ...localProduct,
+          customerReviews: reviewsList,
+          reviews: reviewsList.length
+        };
+
+        setProduct(finalProduct);
+        setActiveImage(finalProduct.gallery?.[0] || finalProduct.image);
+        setLoading(false);
+      } else {
+        // If not found in local cache, show skeleton loader
+        setLoading(true);
+      }
+
       window.scrollTo(0, 0);
       
       const dbProduct = await fetchProductByIdFromBackend(id);
       if (!active) return;
 
-      let resolvedProduct = dbProduct;
-      if (!resolvedProduct) {
-        resolvedProduct = config.products.find(p => String(p.id) === String(id));
-      }
-
-      if (resolvedProduct) {
-        let reviewsList = resolvedProduct.customerReviews || [];
+      if (dbProduct) {
+        let reviewsList = dbProduct.customerReviews || [];
         if (reviewsList.length === 0) {
           const configFound = config.products.find(p => String(p.id) === String(id));
           if (configFound && configFound.customerReviews && configFound.customerReviews.length > 0) {
@@ -587,28 +638,35 @@ export default function ProductDetails() {
               user: 'ফারহানা শারমিন',
               rating: 5,
               date: new Date(Date.now() - 3 * 86400000).toISOString(),
-              comment: 'প্রোডাক্টটি অসাধারণ! ছবি ও ডেসক্রিপশনের সাথে ১০০% হুবহু মিল পেয়েছি। প্যাকেজিংও খুব সুন্দর ছিল।'
+              comment: 'প্রোডাক্টটি অসাধারণ! ছবি ও ডেসক্রিপশনের সাথে ১০০% হুবহু মিল পেয়েছি। প্যাকেজিংও খুব সুন্দর ছিল।',
+              helpful: 0
             },
             {
               id: 102,
               user: 'তানজিনা আক্তার',
               rating: 5,
               date: new Date(Date.now() - 7 * 86400000).toISOString(),
-              comment: 'খুবই প্রিমিয়াম কোয়ালিটি। ১ দিনের মধ্যেই ডেলিভারি পেয়েছি। ধন্যবাদ বিউটি অ্যান্ড এলিগেন্স!'
+              comment: 'খুবই প্রিমিয়াম কোয়ালিটি। ১ দিনের মধ্যেই ডেলিভারি পেয়েছি। ধন্যবাদ বিউটি অ্যান্ড এলিগেন্স!',
+              helpful: 0
             }
           ];
         }
 
         const finalProduct = {
-          ...resolvedProduct,
+          ...dbProduct,
           customerReviews: reviewsList,
           reviews: reviewsList.length
         };
 
         setProduct(finalProduct);
-        setActiveImage(finalProduct.gallery?.[0] || finalProduct.image);
+        setActiveImage(prev => {
+          if (!prev || !finalProduct.gallery?.includes(prev)) {
+            return finalProduct.gallery?.[0] || finalProduct.image;
+          }
+          return prev;
+        });
         setLoading(false);
-      } else {
+      } else if (!localProduct) {
         setProduct(null);
         setLoading(false);
       }
