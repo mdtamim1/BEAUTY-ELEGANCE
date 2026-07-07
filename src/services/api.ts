@@ -305,7 +305,8 @@ const mapProductToFrontend = (p: any): any => {
     revenue: p.revenue !== undefined ? Number(p.revenue) : 0,
     customerReviews: p.customerReviews || [],
     videoUrl: p.video_url || null,
-    photoContent: p.photo_content || null
+    photoContent: p.photo_content || null,
+    sizes: Array.isArray(p.sizes) ? p.sizes : (p.sizes ? JSON.parse(p.sizes) : [])
   };
 };
 
@@ -365,7 +366,8 @@ export const createProductInBackend = async (productData: any): Promise<any> => 
       specs: productData.specs || [],
       gallery: productData.gallery || [],
       videoUrl: productData.videoUrl || null,
-      photoContent: productData.photoContent || null
+      photoContent: productData.photoContent || null,
+      sizes: productData.sizes || []
     };
 
     const response = await fetch(`${API_BASE}/products`, {
@@ -404,7 +406,8 @@ export const updateProductInBackend = async (id: string | number, productData: a
       specs: productData.specs,
       gallery: productData.gallery,
       videoUrl: productData.videoUrl || null,
-      photoContent: productData.photoContent || null
+      photoContent: productData.photoContent || null,
+      sizes: productData.sizes || []
     };
 
     const response = await fetch(`${API_BASE}/products/${backendId}`, {

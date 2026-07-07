@@ -656,6 +656,7 @@ function initializeDatabase() {
         specs TEXT,
         video_url TEXT,
         photo_content TEXT,
+        sizes TEXT DEFAULT '[]',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -666,6 +667,8 @@ function initializeDatabase() {
     db.run("ALTER TABLE products ADD COLUMN video_url TEXT DEFAULT NULL", (err) => {
     });
     db.run("ALTER TABLE products ADD COLUMN photo_content TEXT DEFAULT NULL", (err) => {
+    });
+    db.run("ALTER TABLE products ADD COLUMN sizes TEXT DEFAULT '[]'", (err) => {
     });
     db.run("ALTER TABLE customers ADD COLUMN address TEXT", (err) => {
     });
@@ -1558,6 +1561,10 @@ var cacheService = {
 };
 
 // backend/controllers/productsController.ts
+db_default.run(`ALTER TABLE products ADD COLUMN sizes TEXT DEFAULT '[]'`, (err) => {
+  if (err && !err.message.includes("duplicate column")) {
+  }
+});
 var getProducts = async (req, res) => {
   try {
     const cacheKey = "products:all";
@@ -1573,6 +1580,7 @@ var getProducts = async (req, res) => {
       const parsedRows = (rows || []).map((row) => {
         let features = [];
         let specs = [];
+        let sizes = [];
         try {
           if (row.features) features = JSON.parse(row.features);
         } catch (e) {
@@ -1583,10 +1591,16 @@ var getProducts = async (req, res) => {
         } catch (e) {
           console.error(`Error parsing specs for product ${row.id}:`, e);
         }
+        try {
+          if (row.sizes) sizes = JSON.parse(row.sizes);
+        } catch (e) {
+          console.error(`Error parsing sizes for product ${row.id}:`, e);
+        }
         return {
           ...row,
           features,
           specs,
+          sizes,
           published: row.published === 1,
           in_stock: row.in_stock === 1,
           video_url: row.video_url || null,
@@ -1621,6 +1635,7 @@ var getProductById = async (req, res) => {
         const gallery = galleryRows ? galleryRows.map((r) => r.image_url) : [];
         let features = [];
         let specs = [];
+        let sizes = [];
         try {
           if (product.features) features = JSON.parse(product.features);
         } catch (e) {
@@ -1631,10 +1646,16 @@ var getProductById = async (req, res) => {
         } catch (e) {
           console.error(`Error parsing specs for product ${product.id}:`, e);
         }
+        try {
+          if (product.sizes) sizes = JSON.parse(product.sizes);
+        } catch (e) {
+          console.error(`Error parsing sizes for product ${product.id}:`, e);
+        }
         const resultData = {
           ...product,
           features,
           specs,
+          sizes,
           published: product.published === 1,
           in_stock: product.in_stock === 1,
           gallery: gallery.length > 0 ? gallery : [product.image],
@@ -1651,7 +1672,7 @@ var getProductById = async (req, res) => {
   }
 };
 var createProduct = (req, res) => {
-  const { name, slug, sku, brand, category, price, original_price, image, description, stock, published, features, specs, gallery, videoUrl, photoContent } = req.body;
+  const { name, slug, sku, brand, category, price, original_price, image, description, stock, published, features, specs, gallery, videoUrl, photoContent, sizes } = req.body;
   const id = "PRD-" + Math.random().toString(36).substring(2, 8).toUpperCase();
   db_default.run("BEGIN TRANSACTION", (txErr) => {
     if (txErr) {
@@ -1659,8 +1680,8 @@ var createProduct = (req, res) => {
       return res.status(500).json({ status: "error", message: "Database error" });
     }
     db_default.run(
-      `INSERT INTO products (id, name, slug, sku, brand, category, price, original_price, image, description, stock, published, features, specs, video_url, photo_content)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO products (id, name, slug, sku, brand, category, price, original_price, image, description, stock, published, features, specs, video_url, photo_content, sizes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         name,
@@ -1677,7 +1698,8 @@ var createProduct = (req, res) => {
         JSON.stringify(features || []),
         JSON.stringify(specs || []),
         videoUrl || null,
-        photoContent || null
+        photoContent || null,
+        JSON.stringify(sizes || [])
       ],
       function(err) {
         if (err) {
@@ -1737,7 +1759,7 @@ var createProduct = (req, res) => {
 };
 var updateProduct = (req, res) => {
   const { id } = req.params;
-  const { name, price, original_price, stock, description, image, brand, category, published, features, specs, gallery, videoUrl, photoContent } = req.body;
+  const { name, price, original_price, stock, description, image, brand, category, published, features, specs, gallery, videoUrl, photoContent, sizes } = req.body;
   db_default.run("BEGIN TRANSACTION", (txErr) => {
     if (txErr) {
       console.error("Failed to start transaction:", txErr);
@@ -1757,7 +1779,8 @@ var updateProduct = (req, res) => {
            features = COALESCE(?, features),
            specs = COALESCE(?, specs),
            video_url = COALESCE(?, video_url),
-           photo_content = COALESCE(?, photo_content)
+           photo_content = COALESCE(?, photo_content),
+           sizes = COALESCE(?, sizes)
        WHERE id = ?`,
       [
         name,
@@ -1773,6 +1796,7 @@ var updateProduct = (req, res) => {
         specs ? JSON.stringify(specs) : null,
         videoUrl === void 0 ? null : videoUrl,
         photoContent === void 0 ? null : photoContent,
+        sizes ? JSON.stringify(sizes) : null,
         id
       ],
       function(err) {

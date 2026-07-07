@@ -463,6 +463,7 @@ function initializeDatabase() {
         specs TEXT,
         video_url TEXT,
         photo_content TEXT,
+        sizes TEXT DEFAULT '[]',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -478,6 +479,9 @@ function initializeDatabase() {
       // ignore error if column already exists
     });
     db.run("ALTER TABLE products ADD COLUMN photo_content TEXT DEFAULT NULL", (err) => {
+      // ignore error if column already exists
+    });
+    db.run("ALTER TABLE products ADD COLUMN sizes TEXT DEFAULT '[]'", (err) => {
       // ignore error if column already exists
     });
     db.run("ALTER TABLE customers ADD COLUMN address TEXT", (err) => {

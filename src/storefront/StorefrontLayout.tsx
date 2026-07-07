@@ -209,11 +209,12 @@ export default function StorefrontLayout() {
   const clearCart = () => setCart([]);
 
   const addToCart = (product: any) => {
+    const size = product.selectedSize || 'Free Size';
     setCart(prev => {
-      const existing = prev.find(item => item.product.id === product.id);
+      const existing = prev.find(item => item.product.id === product.id && (item.product.selectedSize || 'Free Size') === size);
       if (existing) {
         return prev.map(item =>
-          item.product.id === product.id
+          item.product.id === product.id && (item.product.selectedSize || 'Free Size') === size
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
@@ -223,20 +224,38 @@ export default function StorefrontLayout() {
     setCartOpen(true);
   };
 
-  const updateQuantity = (productId: number, delta: number) => {
+  const updateQuantity = (productId: number, sizeOrDelta: string | number, possibleDelta?: number) => {
+    let size = 'Free Size';
+    let delta = 0;
+    if (typeof sizeOrDelta === 'string') {
+      size = sizeOrDelta;
+      delta = possibleDelta ?? 0;
+    } else {
+      delta = sizeOrDelta;
+    }
+
     setCart(prev =>
       prev
-        .map(item =>
-          item.product.id === productId
-            ? { ...item, quantity: Math.max(0, item.quantity + delta) }
-            : item
-        )
+        .map(item => {
+          const itemSize = item.product.selectedSize || 'Free Size';
+          const matchesProduct = item.product.id === productId;
+          const matchesSize = typeof sizeOrDelta !== 'string' || itemSize === size;
+          if (matchesProduct && matchesSize) {
+            return { ...item, quantity: Math.max(0, item.quantity + delta) };
+          }
+          return item;
+        })
         .filter(item => item.quantity > 0)
     );
   };
 
-  const removeFromCart = (productId: number) => {
-    setCart(prev => prev.filter(item => item.product.id !== productId));
+  const removeFromCart = (productId: number, size?: string) => {
+    setCart(prev =>
+      prev.filter(item =>
+        item.product.id !== productId ||
+        (size !== undefined && (item.product.selectedSize || 'Free Size') !== size)
+      )
+    );
   };
 
   const toggleWishlist = (productId: number) => {
@@ -335,11 +354,66 @@ export default function StorefrontLayout() {
                 <button
                   type="button"
                   className="store-search-close-btn"
-                  onClick={() => setMobileSearchOpen(false)}
+                  onClick={() => { setMobileSearchOpen(false); setSearchQuery(''); }}
                   title="Close Search"
                 >
                   <X size={20} />
                 </button>
+
+                {/* Search Suggestions Dropdown */}
+                {searchQuery.trim().length >= 2 && (() => {
+                  const q = searchQuery.toLowerCase().trim();
+                  const suggestions = config.products
+                    .filter(p => p.published && (
+                      p.name.toLowerCase().includes(q) ||
+                      p.category.toLowerCase().includes(q) ||
+                      (p.brand && p.brand.toLowerCase().includes(q)) ||
+                      (p.sku && p.sku.toLowerCase().includes(q))
+                    ))
+                    .slice(0, 6);
+
+                  return (
+                    <div className="store-search-suggestions">
+                      {suggestions.length > 0 ? (
+                        <>
+                          <div className="store-search-suggestions-title">
+                            {suggestions.length} টি পণ্য পাওয়া গেছে
+                          </div>
+                          {suggestions.map((product) => (
+                            <div
+                              key={product.id}
+                              className="store-search-suggestion-item"
+                              onClick={() => {
+                                navigate(`/product/${product.id}`);
+                                setSearchQuery('');
+                                setMobileSearchOpen(false);
+                              }}
+                            >
+                              <img
+                                src={product.image}
+                                alt={product.name}
+                                className="store-search-suggestion-img"
+                              />
+                              <div className="store-search-suggestion-info">
+                                <div className="store-search-suggestion-name">{product.name}</div>
+                                <div className="store-search-suggestion-meta">
+                                  {product.category} {product.brand ? `• ${product.brand}` : ''}
+                                </div>
+                              </div>
+                              <div className="store-search-suggestion-price">
+                                ৳{product.price}
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      ) : (
+                        <div className="store-search-no-results">
+                          "{searchQuery}" এর কোনো পণ্য পাওয়া যায়নি
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </form>
             </div>
           )}
@@ -443,26 +517,34 @@ export default function StorefrontLayout() {
                   <p style={{ fontSize: '0.85rem', marginTop: '4px' }}>Add items to start shopping</p>
                 </div>
               ) : (
-                cart.map((item) => (
-                  <div key={item.product.id} className="cart-item">
-                    <OptimizedImage src={item.product.image} alt={item.product.name} className="cart-item-image" width={100} height={100} />
-                    <div className="cart-item-info">
-                      <div className="cart-item-name">{item.product.name}</div>
-                      <div className="cart-item-price">৳{(item.product.price * item.quantity).toFixed(2)}</div>
-                      <div className="cart-item-qty">
-                        <button onClick={() => updateQuantity(item.product.id, -1)}><Minus size={14} /></button>
-                        <span>{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.product.id, 1)}><Plus size={14} /></button>
-                        <button
-                          onClick={() => removeFromCart(item.product.id)}
-                          style={{ marginLeft: 'auto', color: 'var(--sf-danger)', border: 'none' }}
-                        >
-                          <X size={14} />
-                        </button>
+                cart.map((item) => {
+                  const size = item.product.selectedSize || 'Free Size';
+                  return (
+                    <div key={`${item.product.id}-${size}`} className="cart-item">
+                      <OptimizedImage src={item.product.image} alt={item.product.name} className="cart-item-image" width={100} height={100} />
+                      <div className="cart-item-info">
+                        <div className="cart-item-name">{item.product.name}</div>
+                        {size !== 'Free Size' && (
+                          <div style={{ fontSize: '0.8rem', color: 'var(--sf-text-secondary)', marginTop: '2px' }}>
+                            সাইজ (Size): <strong>{size}</strong>
+                          </div>
+                        )}
+                        <div className="cart-item-price">৳{(item.product.price * item.quantity).toFixed(2)}</div>
+                        <div className="cart-item-qty">
+                          <button onClick={() => updateQuantity(item.product.id, size, -1)}><Minus size={14} /></button>
+                          <span>{item.quantity}</span>
+                          <button onClick={() => updateQuantity(item.product.id, size, 1)}><Plus size={14} /></button>
+                          <button
+                            onClick={() => removeFromCart(item.product.id, size)}
+                            style={{ marginLeft: 'auto', color: 'var(--sf-danger)', border: 'none' }}
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
 

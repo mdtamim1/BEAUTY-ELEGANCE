@@ -10,10 +10,10 @@ import './storefront-checkout.css';
 import './storefront-account.css';
 
 interface StorefrontContext {
-  cart: { product: typeof storeProducts[0], quantity: number }[];
+  cart: { product: any, quantity: number }[];
   cartTotal: number;
   clearCart?: () => void;
-  updateQuantity: (productId: number, delta: number) => void;
+  updateQuantity: (productId: number, sizeOrDelta: string | number, possibleDelta?: number) => void;
 }
 
 export default function Checkout() {
@@ -22,7 +22,7 @@ export default function Checkout() {
   const [config] = useStorefrontConfig();
   const { customer, updateCustomerPhone, updateCustomerProfile, addCustomerAddress } = useCustomerAuth();
   
-  const buyNowProduct = location.state?.product as typeof storeProducts[0] | undefined;
+  const buyNowProduct = location.state?.product as any;
   const [buyNowQty, setBuyNowQty] = useState<number>(location.state?.quantity as number || 1);
   
   const { cart: contextCart, cartTotal: contextCartTotal, updateQuantity, clearCart } = useOutletContext<StorefrontContext>() || { cart: [], cartTotal: 0, updateQuantity: () => {} };
@@ -134,11 +134,11 @@ export default function Checkout() {
     setAddressEdited(true);
   };
 
-  const handleQuantityChange = (productId: number, delta: number) => {
+  const handleQuantityChange = (productId: number, size: string, delta: number) => {
     if (buyNowProduct && buyNowProduct.id === productId) {
       setBuyNowQty(prev => Math.max(1, prev + delta));
     } else {
-      updateQuantity(productId, delta);
+      updateQuantity(productId, size, delta);
     }
   };
 
@@ -205,7 +205,7 @@ export default function Checkout() {
       productsList: items.map(item => ({
         name: item.product.name,
         color: 'Default',
-        size: 'Free Size',
+        size: item.product.selectedSize || 'Free Size',
         code: item.product.sku,
         quantity: item.quantity,
         price: item.product.price,
@@ -294,15 +294,15 @@ export default function Checkout() {
                 <img src={item.product.image} alt={item.product.name} className="summary-item-image" />
                 <div className="summary-item-info">
                   <div className="summary-item-name">{item.product.name}</div>
-                  <div className="summary-item-variant">রঙ: ডিফল্ট | সাইজ: ফ্রি সাইজ</div>
+                  <div className="summary-item-variant">রঙ: ডিফল্ট | সাইজ: {item.product.selectedSize || 'ফ্রি সাইজ'}</div>
                   <div className="summary-item-price-row">
                     <div className="summary-item-price">৳{item.product.price}</div>
                     <div className="qty-control">
-                      <button type="button" className="qty-btn" onClick={() => handleQuantityChange(item.product.id, -1)}>
+                      <button type="button" className="qty-btn" onClick={() => handleQuantityChange(item.product.id, item.product.selectedSize || 'Free Size', -1)}>
                         <Minus size={12} />
                       </button>
                       <div className="qty-val">{item.quantity}</div>
-                      <button type="button" className="qty-btn" onClick={() => handleQuantityChange(item.product.id, 1)}>
+                      <button type="button" className="qty-btn" onClick={() => handleQuantityChange(item.product.id, item.product.selectedSize || 'Free Size', 1)}>
                         <Plus size={12} />
                       </button>
                     </div>

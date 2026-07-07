@@ -2,6 +2,13 @@ import { Request, Response } from 'express';
 import db from '../config/db';
 import { cacheService } from '../services/cacheService';
 
+// Auto-migrate: ensure 'sizes' column exists in products table
+db.run(`ALTER TABLE products ADD COLUMN sizes TEXT DEFAULT '[]'`, (err) => {
+  if (err && !err.message.includes('duplicate column')) {
+    // Column already exists or other error, silently ignore
+  }
+});
+
 export const getProducts = async (req: Request, res: Response) => {
   try {
     const cacheKey = 'products:all';
@@ -18,6 +25,7 @@ export const getProducts = async (req: Request, res: Response) => {
       const parsedRows = (rows || []).map((row: any) => {
         let features = [];
         let specs = [];
+        let sizes = [];
         try {
           if (row.features) features = JSON.parse(row.features);
         } catch (e) {
@@ -28,10 +36,16 @@ export const getProducts = async (req: Request, res: Response) => {
         } catch (e) {
           console.error(`Error parsing specs for product ${row.id}:`, e);
         }
+        try {
+          if (row.sizes) sizes = JSON.parse(row.sizes);
+        } catch (e) {
+          console.error(`Error parsing sizes for product ${row.id}:`, e);
+        }
         return {
           ...row,
           features,
           specs,
+          sizes,
           published: row.published === 1,
           in_stock: row.in_stock === 1,
           video_url: row.video_url || null,
@@ -71,6 +85,7 @@ export const getProductById = async (req: Request, res: Response) => {
         
         let features = [];
         let specs = [];
+        let sizes = [];
         try {
           if (product.features) features = JSON.parse(product.features);
         } catch (e) {
@@ -81,11 +96,17 @@ export const getProductById = async (req: Request, res: Response) => {
         } catch (e) {
           console.error(`Error parsing specs for product ${product.id}:`, e);
         }
+        try {
+          if (product.sizes) sizes = JSON.parse(product.sizes);
+        } catch (e) {
+          console.error(`Error parsing sizes for product ${product.id}:`, e);
+        }
 
         const resultData = {
           ...product,
           features,
           specs,
+          sizes,
           published: product.published === 1,
           in_stock: product.in_stock === 1,
           gallery: gallery.length > 0 ? gallery : [product.image],
@@ -104,7 +125,7 @@ export const getProductById = async (req: Request, res: Response) => {
 };
 
 export const createProduct = (req: Request, res: Response) => {
-  const { name, slug, sku, brand, category, price, original_price, image, description, stock, published, features, specs, gallery, videoUrl, photoContent } = req.body;
+  const { name, slug, sku, brand, category, price, original_price, image, description, stock, published, features, specs, gallery, videoUrl, photoContent, sizes } = req.body;
   const id = 'PRD-' + Math.random().toString(36).substring(2, 8).toUpperCase();
 
   db.run('BEGIN TRANSACTION', (txErr) => {
@@ -114,12 +135,12 @@ export const createProduct = (req: Request, res: Response) => {
     }
 
     db.run(
-      `INSERT INTO products (id, name, slug, sku, brand, category, price, original_price, image, description, stock, published, features, specs, video_url, photo_content)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO products (id, name, slug, sku, brand, category, price, original_price, image, description, stock, published, features, specs, video_url, photo_content, sizes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, name, slug, sku, brand, category, price, original_price, image, description, stock || 0,
         published ? 1 : 0, JSON.stringify(features || []), JSON.stringify(specs || []),
-        videoUrl || null, photoContent || null
+        videoUrl || null, photoContent || null, JSON.stringify(sizes || [])
       ],
       function (err) {
         if (err) {
@@ -185,7 +206,7 @@ export const createProduct = (req: Request, res: Response) => {
 
 export const updateProduct = (req: Request, res: Response) => {
   const { id } = req.params;
-  const { name, price, original_price, stock, description, image, brand, category, published, features, specs, gallery, videoUrl, photoContent } = req.body;
+  const { name, price, original_price, stock, description, image, brand, category, published, features, specs, gallery, videoUrl, photoContent, sizes } = req.body;
 
   db.run('BEGIN TRANSACTION', (txErr) => {
     if (txErr) {
@@ -207,7 +228,8 @@ export const updateProduct = (req: Request, res: Response) => {
            features = COALESCE(?, features),
            specs = COALESCE(?, specs),
            video_url = COALESCE(?, video_url),
-           photo_content = COALESCE(?, photo_content)
+           photo_content = COALESCE(?, photo_content),
+           sizes = COALESCE(?, sizes)
        WHERE id = ?`,
       [
         name, price, original_price, stock, description, image, brand, category, 
@@ -216,6 +238,7 @@ export const updateProduct = (req: Request, res: Response) => {
         specs ? JSON.stringify(specs) : null,
         videoUrl === undefined ? null : videoUrl,
         photoContent === undefined ? null : photoContent,
+        sizes ? JSON.stringify(sizes) : null,
         id
       ],
       function (err) {

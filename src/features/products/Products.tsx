@@ -162,6 +162,14 @@ export default function Products() {
       stock: 10,
       sold: 0,
       revenue: 0,
+      sizes: [
+        { label: 'S', enabled: false },
+        { label: 'M', enabled: false },
+        { label: 'L', enabled: false },
+        { label: 'XL', enabled: false },
+        { label: 'XXL', enabled: false },
+        { label: '3XL', enabled: false },
+      ],
     });
     setIsAdding(true);
     setEditorTab('basic');
@@ -573,6 +581,65 @@ export default function Products() {
                 {/* 4. FEATURES & SPECS TAB */}
                 {editorTab === 'features' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    {/* Size Options Toggle */}
+                    <div className="form-group">
+                      <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>📏 Available Sizes (সাইজ সিলেক্ট করুন)</label>
+                      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: '12px', marginTop: '2px' }}>এখানে যে সাইজগুলো Enable করবেন, Customer শুধু সেই সাইজগুলোই দেখতে পাবে এবং সেখান থেকে সিলেক্ট করে অর্ডার করতে পারবে।</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                        {(tempProduct.sizes && tempProduct.sizes.length > 0 ? tempProduct.sizes : [
+                          { label: 'S', enabled: false },
+                          { label: 'M', enabled: false },
+                          { label: 'L', enabled: false },
+                          { label: 'XL', enabled: false },
+                          { label: 'XXL', enabled: false },
+                          { label: '3XL', enabled: false },
+                        ]).map((size, idx) => (
+                          <div 
+                            key={idx} 
+                            onClick={() => {
+                              const currentSizes = tempProduct.sizes && tempProduct.sizes.length > 0 ? [...tempProduct.sizes] : [
+                                { label: 'S', enabled: false },
+                                { label: 'M', enabled: false },
+                                { label: 'L', enabled: false },
+                                { label: 'XL', enabled: false },
+                                { label: 'XXL', enabled: false },
+                                { label: '3XL', enabled: false },
+                              ];
+                              currentSizes[idx] = { ...currentSizes[idx], enabled: !currentSizes[idx].enabled };
+                              setTempProduct({ ...tempProduct, sizes: currentSizes });
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: '60px',
+                              height: '40px',
+                              borderRadius: 'var(--radius-md)',
+                              border: size.enabled ? '2px solid var(--accent-primary)' : '1.5px solid var(--border-primary)',
+                              background: size.enabled ? 'rgba(99, 102, 241, 0.1)' : 'var(--bg-primary)',
+                              color: size.enabled ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+                              fontWeight: 700,
+                              fontSize: 'var(--text-sm)',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                              userSelect: 'none',
+                            }}
+                          >
+                            {size.label}
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ marginTop: '8px', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                        {(() => {
+                          const enabledSizes = (tempProduct.sizes || []).filter(s => s.enabled);
+                          if (enabledSizes.length === 0) return '⚠️ কোনো সাইজ সিলেক্ট করা হয়নি — Customer "Free Size" দেখবে।';
+                          return `✅ সক্রিয় সাইজ: ${enabledSizes.map(s => s.label).join(', ')}`;
+                        })()}
+                      </div>
+                    </div>
+
+                    <div style={{ borderTop: '1px solid var(--border-secondary)', paddingTop: '20px' }}></div>
+
                     <div className="form-group">
                       <label className="form-label">Key Highlights / Features</label>
                       <div className="sfm-list-editor">

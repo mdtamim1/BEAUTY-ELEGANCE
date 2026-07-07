@@ -76,11 +76,11 @@ export default function BlogList() {
       {loading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '30px' }}>
           {[1, 2, 3].map(i => (
-            <div key={i} className="skeleton-card" style={{ height: '400px', background: 'var(--bg-secondary)', borderRadius: '16px' }} />
+            <div key={i} className="skeleton-card" style={{ height: '400px', background: 'var(--sf-bg-light, #f6f6f6)', borderRadius: '16px' }} />
           ))}
         </div>
       ) : blogs.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '80px 20px', background: 'var(--bg-secondary)', borderRadius: '16px' }}>
+        <div style={{ textAlign: 'center', padding: '80px 20px', background: 'var(--sf-bg-light, #f6f6f6)', borderRadius: '16px' }}>
           <h3 style={{ color: 'var(--sf-text-secondary)' }}>কোনো ব্লগপোস্ট খুঁজে পাওয়া যায়নি।</h3>
           <Link to="/" className="store-btn store-btn-primary" style={{ marginTop: '20px' }}>স্টোরে ফিরে যান</Link>
         </div>
@@ -98,10 +98,10 @@ export default function BlogList() {
               style={{ 
                 display: 'flex', 
                 flexDirection: 'column', 
-                background: 'var(--bg-secondary)',
-                borderRadius: '16px',
+                background: 'var(--sf-bg-white, #ffffff)',
+                borderRadius: 'var(--sf-radius-xl, 12px)',
                 overflow: 'hidden',
-                border: '1px solid var(--border-secondary)',
+                border: '1px solid var(--sf-border, #e5e5e5)',
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 height: '100%'
               }}

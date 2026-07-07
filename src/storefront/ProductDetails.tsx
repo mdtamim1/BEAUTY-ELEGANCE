@@ -49,6 +49,7 @@ export default function ProductDetails() {
   const [shippingLocation, setShippingLocation] = useState<'dhaka' | 'outside'>('dhaka');
   const [buyNowQty, setBuyNowQty] = useState<number>(1);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+  const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
 
   const [nameEdited, setNameEdited] = useState(false);
@@ -468,7 +469,7 @@ export default function ProductDetails() {
       productsList: [{
         name: product.name,
         color: 'Default',
-        size: 'Free Size',
+        size: selectedSize || 'Free Size',
         code: product.sku,
         quantity: buyNowQty,
         price: product.price,
@@ -495,6 +496,7 @@ export default function ProductDetails() {
     setSenderNumber('');
     setTrxId('');
     setBuyNowQty(1);
+    setSelectedSize('');
     setSelectedAddressId('');
     setNameEdited(false);
     setPhoneEdited(false);
@@ -704,17 +706,71 @@ export default function ProductDetails() {
           </div>
 
 
+          {/* Size Selector - only show if product has enabled sizes */}
+          {product.sizes && product.sizes.filter((s: any) => s.enabled).length > 0 && (
+            <div className="pdp-size-selector" style={{ margin: '8px 0 4px 0' }}>
+              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--sf-text-primary)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                📏 সাইজ সিলেক্ট করুন (Select Size)
+                {selectedSize && <span style={{ fontSize: '0.78rem', color: 'var(--sf-accent)', fontWeight: 800 }}>— {selectedSize}</span>}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {product.sizes.filter((s: any) => s.enabled).map((size: any, idx: number) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setSelectedSize(size.label)}
+                    style={{
+                      minWidth: '52px',
+                      height: '42px',
+                      padding: '0 16px',
+                      borderRadius: '10px',
+                      border: selectedSize === size.label ? '2px solid var(--sf-accent)' : '1.5px solid var(--sf-border)',
+                      background: selectedSize === size.label ? 'rgba(225, 29, 72, 0.08)' : 'var(--sf-bg-light, #f8f9fa)',
+                      color: selectedSize === size.label ? 'var(--sf-accent)' : 'var(--sf-text-primary)',
+                      fontWeight: 700,
+                      fontSize: '0.9rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {size.label}
+                  </button>
+                ))}
+              </div>
+              {!selectedSize && (
+                <div style={{ fontSize: '0.78rem', color: '#ef4444', marginTop: '8px', fontWeight: 600 }}>
+                  ⚠️ অর্ডার করতে দয়া করে আপনার সাইজ সিলেক্ট করুন।
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="pdp-stock-status">
             <CheckCircle size={20} color="var(--sf-success)" />
             <span>In Stock and ready to ship</span>
           </div>
 
           <div className="pdp-actions">
-            <button className="store-btn store-btn-primary pdp-add-to-cart" onClick={() => addToCart(product)}>
+            <button className="store-btn store-btn-primary pdp-add-to-cart" onClick={() => {
+              const hasSizes = product.sizes && product.sizes.filter((s: any) => s.enabled).length > 0;
+              if (hasSizes && !selectedSize) {
+                alert('দয়া করে প্রথমে সাইজ সিলেক্ট করুন!');
+                return;
+              }
+              addToCart({ ...product, selectedSize: selectedSize || 'Free Size' });
+            }}>
               <ShoppingCart size={20} /> Add to Cart
             </button>
             <button 
               onClick={() => {
+                const hasSizes = product.sizes && product.sizes.filter((s: any) => s.enabled).length > 0;
+                if (hasSizes && !selectedSize) {
+                  alert('দয়া করে প্রথমে সাইজ সিলেক্ট করুন!');
+                  return;
+                }
                 setBuyNowQty(1);
                 setIsCheckoutOpen(true);
               }}
@@ -1119,7 +1175,7 @@ export default function ProductDetails() {
                       <img src={product.image} alt={product.name} className="pdp-checkout-item-img" />
                       <div className="pdp-checkout-item-details">
                         <div className="pdp-checkout-item-name">{product.name}</div>
-                        <div className="pdp-checkout-item-variant">রঙ: ডিফল্ট | সাইজ: ফ্রি সাইজ</div>
+                        <div className="pdp-checkout-item-variant">রঙ: ডিফল্ট | সাইজ: {selectedSize || 'ফ্রি সাইজ'}</div>
                         <div className="pdp-checkout-item-row">
                           <div className="pdp-checkout-item-price">৳{product.price}</div>
                           <div className="qty-control">

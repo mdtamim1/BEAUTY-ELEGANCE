@@ -124,6 +124,7 @@ export interface ProductConfig {
   revenue?: number;
   videoUrl?: string;
   photoContent?: string;
+  sizes?: { label: string; enabled: boolean }[];
 }
 
 export interface StorefrontConfig {
