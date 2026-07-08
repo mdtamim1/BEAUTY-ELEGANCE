@@ -298,7 +298,7 @@ export default function StorefrontLayout() {
               {/* Center: Logo */}
               <div className="store-header-center">
                 <Link to="/" className="store-logo">
-                  <img src="/logo.png" alt="Tamim Global" style={{ height: '56px', objectFit: 'contain' }} />
+                  <img src="/logo.png" alt="Tamim Global" style={{ height: '72px', objectFit: 'contain' }} />
                 </Link>
               </div>
 
@@ -431,7 +431,7 @@ export default function StorefrontLayout() {
           <div className="store-footer-inner">
             <div>
               <div className="store-logo" style={{ marginBottom: '16px' }}>
-                <img src="/logo.png" alt="Tamim Global" style={{ height: '48px', objectFit: 'contain' }} />
+                <img src="/logo.png" alt="Tamim Global" style={{ height: '64px', objectFit: 'contain' }} />
               </div>
               <p>{branding.footerDescription}</p>
               <div className="store-footer-socials">
@@ -626,7 +626,7 @@ export default function StorefrontLayout() {
           <div className="mobile-menu-drawer">
             <div className="mobile-menu-header">
               <div className="store-logo">
-                <img src="/logo.png" alt="Tamim Global" style={{ height: '48px', objectFit: 'contain' }} />
+                <img src="/logo.png" alt="Tamim Global" style={{ height: '60px', objectFit: 'contain' }} />
               </div>
               <button className="store-header-btn" onClick={() => setMobileMenuOpen(false)} title="Close Menu">
                 <X size={24} />
