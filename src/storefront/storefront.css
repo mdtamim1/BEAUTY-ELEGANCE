@@ -146,13 +146,6 @@
   flex-shrink: 0;
 }
 
-.store-header-logo-img {
-  height: 110px;
-  object-fit: contain;
-  margin-top: -15px;
-  margin-bottom: -15px;
-  transition: all 0.3s ease;
-}
 
 .store-logo-icon {
   width: 40px;
@@ -331,7 +324,7 @@
 
 @media (max-width: 768px) {
   .fullscreen-slide-inner {
-    padding: 95px 16px 0 !important;
+    padding: 60px 16px 0 !important;
   }
 }
 
@@ -516,7 +509,6 @@
     gap: 24px;
     height: 100%;
     justify-content: center;
-    padding: 105px 24px 0 !important;
   }
   .slide-content-left {
     align-items: center;
@@ -598,9 +590,7 @@
 }
 
 @media (max-width: 480px) {
-  .fullscreen-slide-inner {
-    padding: 90px 12px 0 !important;
-  }
+
   .hero-carousel-fullscreen {
     height: 260px !important;
   }
