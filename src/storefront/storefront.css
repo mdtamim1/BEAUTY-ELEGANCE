@@ -331,7 +331,7 @@
 
 @media (max-width: 768px) {
   .fullscreen-slide-inner {
-    padding: 92px 16px 0 !important;
+    padding: 74px 16px 0 !important;
   }
 }
 
@@ -599,7 +599,7 @@
 
 @media (max-width: 480px) {
   .fullscreen-slide-inner {
-    padding: 90px 12px 0 !important;
+    padding: 72px 12px 0 !important;
   }
   .hero-carousel-fullscreen {
     height: 260px !important;
@@ -2542,12 +2542,12 @@
 
 @media (max-width: 768px) {
   .store-header {
-    height: 90px !important;
+    height: 72px !important;
     padding: 0 !important;
   }
   
   .store-header-logo-img {
-    height: 75px !important;
+    height: 56px !important;
   }
   
   .newsletter {
