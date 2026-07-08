@@ -28,7 +28,7 @@ export const getOptimizedImageUrl = (src: string, width?: number, height?: numbe
   const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   const backendBase = isLocalDev
     ? `${window.location.protocol}//${window.location.hostname}:5000`
-    : 'https://beauty-elegance-admin.onrender.com';
+    : 'https://api.tamimglobal.com';
   
   const cdnUrl = IMAGE_CDN_ENDPOINT;
   if (!cdnUrl) {

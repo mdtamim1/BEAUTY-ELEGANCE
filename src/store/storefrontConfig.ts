@@ -545,7 +545,7 @@ const isLocalDev = window.location.hostname === 'localhost' || window.location.h
 
 const API_BASE = isLocalDev
   ? `${window.location.protocol}//${window.location.hostname}:5000/api/v1`
-  : 'https://beauty-elegance-admin.onrender.com/api/v1';
+  : 'https://api.tamimglobal.com/api/v1';
 
 const getAuthHeaders = (): Record<string, string> => {
   const token = localStorage.getItem('admin_token');

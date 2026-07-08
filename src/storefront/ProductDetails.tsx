@@ -223,7 +223,7 @@ export default function ProductDetails() {
 
         const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const wsHost = isLocalDev ? 'localhost:5000' : 'beauty-elegance-admin.onrender.com';
+        const wsHost = isLocalDev ? 'localhost:5000' : 'api.tamimglobal.com';
         const wsUrl = `${wsProto}//${wsHost}/ws/chat`;
 
         try {

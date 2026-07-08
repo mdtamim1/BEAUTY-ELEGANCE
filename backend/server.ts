@@ -95,7 +95,8 @@ app.use(cors({
       /^http:\/\/localhost(:\d+)?$/.test(origin) || 
       origin.includes('beauty-elegance-ec88f') ||
       origin.includes('web.app') ||
-      origin.includes('firebaseapp.com')
+      origin.includes('firebaseapp.com') ||
+      origin.includes('tamimglobal.com')
     ) {
       callback(null, true);
     } else {
@@ -112,6 +113,9 @@ app.use(helmet({
       connectSrc: [
         "'self'",
         "https://beauty-elegance-admin.onrender.com",
+        "https://api.tamimglobal.com",
+        "https://tamimglobal.com",
+        "https://admin.tamimglobal.com",
         "http://localhost:5000",
         "ws:",
         "wss:",

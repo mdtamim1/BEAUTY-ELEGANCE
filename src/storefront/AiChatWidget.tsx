@@ -12,7 +12,7 @@ import './ai-chat.css';
 const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const API_BASE = isLocalDev
   ? `${window.location.protocol}//${window.location.hostname}:5000/api/v1`
-  : 'https://beauty-elegance-admin.onrender.com/api/v1';
+  : 'https://api.tamimglobal.com/api/v1';
 
 interface ChatMsg {
   role: 'user' | 'model';
