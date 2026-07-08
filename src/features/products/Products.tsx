@@ -586,48 +586,44 @@ export default function Products() {
                       <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>📏 Available Sizes (সাইজ সিলেক্ট করুন)</label>
                       <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: '12px', marginTop: '2px' }}>এখানে যে সাইজগুলো Enable করবেন, Customer শুধু সেই সাইজগুলোই দেখতে পাবে এবং সেখান থেকে সিলেক্ট করে অর্ডার করতে পারবে।</p>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                        {(tempProduct.sizes && tempProduct.sizes.length > 0 ? tempProduct.sizes : [
-                          { label: 'S', enabled: false },
-                          { label: 'M', enabled: false },
-                          { label: 'L', enabled: false },
-                          { label: 'XL', enabled: false },
-                          { label: 'XXL', enabled: false },
-                          { label: '3XL', enabled: false },
-                        ]).map((size, idx) => (
-                          <div 
-                            key={idx} 
-                            onClick={() => {
-                              const currentSizes = tempProduct.sizes && tempProduct.sizes.length > 0 ? [...tempProduct.sizes] : [
-                                { label: 'S', enabled: false },
-                                { label: 'M', enabled: false },
-                                { label: 'L', enabled: false },
-                                { label: 'XL', enabled: false },
-                                { label: 'XXL', enabled: false },
-                                { label: '3XL', enabled: false },
-                              ];
-                              currentSizes[idx] = { ...currentSizes[idx], enabled: !currentSizes[idx].enabled };
-                              setTempProduct({ ...tempProduct, sizes: currentSizes });
-                            }}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              width: '60px',
-                              height: '40px',
-                              borderRadius: 'var(--radius-md)',
-                              border: size.enabled ? '2px solid var(--accent-primary)' : '1.5px solid var(--border-primary)',
-                              background: size.enabled ? 'rgba(99, 102, 241, 0.1)' : 'var(--bg-primary)',
-                              color: size.enabled ? 'var(--accent-primary)' : 'var(--text-tertiary)',
-                              fontWeight: 700,
-                              fontSize: 'var(--text-sm)',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease',
-                              userSelect: 'none',
-                            }}
-                          >
-                            {size.label}
-                          </div>
-                        ))}
+                        {['S', 'M', 'L', 'XL', 'XXL', '3XL'].map((label) => {
+                          const isEnabled = tempProduct.sizes ? tempProduct.sizes.some(s => s.label === label && s.enabled) : false;
+                          return (
+                            <div 
+                              key={label} 
+                              onClick={() => {
+                                const standardLabels = ['S', 'M', 'L', 'XL', 'XXL', '3XL'];
+                                const newSizes = standardLabels.map(l => {
+                                  const existing = tempProduct.sizes?.find(s => s.label === l);
+                                  let enabled = existing ? existing.enabled : false;
+                                  if (l === label) {
+                                    enabled = !enabled;
+                                  }
+                                  return { label: l, enabled };
+                                });
+                                setTempProduct({ ...tempProduct, sizes: newSizes });
+                              }}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '60px',
+                                height: '40px',
+                                borderRadius: 'var(--radius-md)',
+                                border: isEnabled ? '2px solid var(--accent-primary)' : '1.5px solid var(--border-primary)',
+                                background: isEnabled ? 'rgba(99, 102, 241, 0.1)' : 'var(--bg-primary)',
+                                color: isEnabled ? 'var(--accent-primary)' : 'var(--text-tertiary)',
+                                fontWeight: 700,
+                                fontSize: 'var(--text-sm)',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                                userSelect: 'none',
+                              }}
+                            >
+                              {label}
+                            </div>
+                          );
+                        })}
                       </div>
                       <div style={{ marginTop: '8px', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
                         {(() => {
