@@ -324,7 +324,7 @@
 
 @media (max-width: 768px) {
   .fullscreen-slide-inner {
-    padding: 60px 16px 0 !important;
+    padding: 92px 16px 0 !important;
   }
 }
 
@@ -509,6 +509,7 @@
     gap: 24px;
     height: 100%;
     justify-content: center;
+    padding: 100px 24px 0 !important;
   }
   .slide-content-left {
     align-items: center;
@@ -590,7 +591,9 @@
 }
 
 @media (max-width: 480px) {
-
+  .fullscreen-slide-inner {
+    padding: 85px 12px 0 !important;
+  }
   .hero-carousel-fullscreen {
     height: 260px !important;
   }
@@ -598,13 +601,7 @@
     font-size: 1.4rem !important;
   }
   .slide-content-left p {
-    font-size: 0.75rem !important;
-    display: -webkit-box !important;
-    -webkit-line-clamp: 2 !important;
-    line-clamp: 2 !important;
-    -webkit-box-orient: vertical !important;
-    overflow: hidden !important;
-    margin-bottom: 8px !important;
+    display: none !important;
   }
 }
 
