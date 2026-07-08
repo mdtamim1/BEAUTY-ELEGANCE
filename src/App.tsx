@@ -140,6 +140,32 @@ export default function App() {
     loadProducts();
   }, []);
 
+  const isSubdomainAdmin = window.location.hostname === 'admin.tamimglobal.com' || window.location.hostname.startsWith('admin.');
+
+  if (isSubdomainAdmin) {
+    return (
+      <AuthProvider>
+        <Routes>
+          {/* Login Portal */}
+          <Route path="/login" element={<Login />} />
+
+          {/* Employee Registration */}
+          <Route path="/register-employee" element={<RegisterEmployee />} />
+
+          {/* Admin Panel */}
+          <Route path="/admin/*" element={
+            <ProtectedRoute>
+              <AdminLayout />
+            </ProtectedRoute>
+          } />
+
+          {/* Catch-all redirect to Admin dashboard */}
+          <Route path="*" element={<Navigate to="/admin" replace />} />
+        </Routes>
+      </AuthProvider>
+    );
+  }
+
   return (
     <AuthProvider>
       <CustomerAuthProvider>
