@@ -146,6 +146,14 @@
   flex-shrink: 0;
 }
 
+.store-header-logo-img {
+  height: 115px !important;
+  object-fit: contain !important;
+  margin-top: -18px !important;
+  margin-bottom: -18px !important;
+  transition: all 0.3s ease;
+}
+
 
 .store-logo-icon {
   width: 40px;

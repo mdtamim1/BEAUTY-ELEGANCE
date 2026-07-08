@@ -298,7 +298,7 @@ export default function StorefrontLayout() {
               {/* Center: Logo */}
               <div className="store-header-center">
                 <Link to="/" className="store-logo">
-                  <img src="/logo.png" alt="Tamim Global" style={{ height: '84px', objectFit: 'contain' }} />
+                  <img src="/logo.png" alt="Tamim Global" className="store-header-logo-img" />
                 </Link>
               </div>
 
