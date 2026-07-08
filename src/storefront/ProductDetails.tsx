@@ -33,7 +33,7 @@ export default function ProductDetails() {
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState('');
-  const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'reviews' | 'media'>('description');
+  const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'reviews'>('description');
   
   const { customer, login, register, loginWithGmail, updateCustomerProfile } = useCustomerAuth();
   
@@ -893,7 +893,6 @@ export default function ProductDetails() {
           <button className={`pdp-tab ${activeTab === 'description' ? 'active' : ''}`} onClick={() => setActiveTab('description')}>Description</button>
           <button className={`pdp-tab ${activeTab === 'specs' ? 'active' : ''}`} onClick={() => setActiveTab('specs')}>Specifications</button>
           <button className={`pdp-tab ${activeTab === 'reviews' ? 'active' : ''}`} onClick={() => setActiveTab('reviews')}>Reviews ({product.customerReviews?.length || 0})</button>
-          <button className={`pdp-tab ${activeTab === 'media' ? 'active' : ''}`} onClick={() => setActiveTab('media')}>Video & Photo</button>
         </div>
         
         <div className="pdp-tab-content">
@@ -923,69 +922,7 @@ export default function ProductDetails() {
             </div>
           )}
 
-          {activeTab === 'media' && (
-            <div className="pdp-media-tab" style={{ display: 'flex', flexDirection: 'column', gap: '24px', padding: '10px 0' }}>
-              {(product.videoUrl || product.video_url || product.photoContent || product.photo_content) ? (
-                <>
-                  {(product.videoUrl || product.video_url) && (
-                    <div style={{ background: 'var(--sf-bg-light)', padding: '20px', borderRadius: '12px', border: '1px solid var(--sf-border)' }}>
-                      <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--sf-text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--sf-accent)' }} />
-                        ভিডিও ও কনটেন্ট রিভিউ (Product Video Content)
-                      </h3>
-                      {((product.videoUrl || product.video_url).includes('youtube.com') || (product.videoUrl || product.video_url).includes('youtu.be') || (product.videoUrl || product.video_url).includes('shorts')) ? (
-                        <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '12px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }}>
-                          <iframe
-                            src={getEmbedUrl(product.videoUrl || product.video_url)}
-                            title="Product Video"
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: '12px' }}
-                          />
-                        </div>
-                      ) : (
-                        <video controls src={product.videoUrl || product.video_url} style={{ width: '100%', borderRadius: '12px', maxHeight: '480px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }} />
-                      )}
-                    </div>
-                  )}
-                  {(product.photoContent || product.photo_content) && (
-                    <div style={{ background: 'var(--sf-bg-light)', padding: '20px', borderRadius: '12px', border: '1px solid var(--sf-border)' }}>
-                      <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--sf-text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--sf-accent)' }} />
-                        ছবি রিভিউ কনটেন্ট (Additional Photo Review)
-                      </h3>
-                      <div style={{ display: 'flex', justifyContent: 'center', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }}>
-                        <img 
-                          src={product.photoContent || product.photo_content} 
-                          alt="Product Photo Content" 
-                          onClick={() => setLightboxImage(product.photoContent || product.photo_content)}
-                          style={{ maxWidth: '100%', height: 'auto', borderRadius: '12px', maxHeight: '600px', objectFit: 'contain', cursor: 'pointer' }} 
-                        />
-                      </div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div style={{ background: 'var(--sf-bg-light)', padding: '36px 20px', borderRadius: '16px', border: '1px dashed var(--sf-border)', textAlign: 'center' }}>
-                  <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(225, 29, 72, 0.1)', color: 'var(--sf-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
-                    <MessageCircle size={28} />
-                  </div>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--sf-text-primary)', marginBottom: '8px' }}>ভিডিও ও ছবি রিভিউ (Video & Photo Reviews)</h3>
-                  <p style={{ fontSize: '0.9rem', color: 'var(--sf-text-secondary)', maxWidth: '480px', margin: '0 auto 20px auto', lineHeight: 1.6 }}>
-                    এই প্রোডাক্টটির রিয়েল ফটো বা লাইভ আনবক্সিং ভিডিও ডেমো দেখতে সরাসরি আমাদের সাপোর্ট টিমের চ্যাটে মেসেজ পাঠান।
-                  </p>
-                  <button 
-                    onClick={() => setIsChatDrawerOpen(true)} 
-                    className="store-btn store-btn-primary" 
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 24px', borderRadius: '24px', fontWeight: 700, cursor: 'pointer' }}
-                  >
-                    <MessageCircle size={18} /> লাইভ চ্যাটে ভিডিও রিভিউ চান
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+
 
           {activeTab === 'reviews' && (
             <div className="pdp-reviews-tab">
@@ -1141,6 +1078,76 @@ export default function ProductDetails() {
                 </form>
               </div>
 
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Video & Photo Reviews Section */}
+      <div className="pdp-tabs-container pdp-media-section" style={{ padding: '30px', background: 'white', marginTop: '40px' }}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--sf-text-primary)', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <MessageCircle size={22} color="var(--sf-accent)" />
+          ভিডিও ও ছবি রিভিউ (Video & Photo Reviews)
+        </h3>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {(product.videoUrl || product.video_url || product.photoContent || product.photo_content) ? (
+            <div className="pdp-media-grid">
+              {(product.videoUrl || product.video_url) && (
+                <div style={{ background: 'var(--sf-bg-light)', padding: '20px', borderRadius: '12px', border: '1px solid var(--sf-border)' }}>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--sf-text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--sf-accent)' }} />
+                    ভিডিও রিভিউ (Product Video Content)
+                  </h4>
+                  {((product.videoUrl || product.video_url).includes('youtube.com') || (product.videoUrl || product.video_url).includes('youtu.be') || (product.videoUrl || product.video_url).includes('shorts')) ? (
+                    <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: '12px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
+                      <iframe
+                        src={getEmbedUrl(product.videoUrl || product.video_url)}
+                        title="Product Video"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: '12px' }}
+                      />
+                    </div>
+                  ) : (
+                    <video controls src={product.videoUrl || product.video_url} style={{ width: '100%', borderRadius: '12px', maxHeight: '400px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }} />
+                  )}
+                </div>
+              )}
+              {(product.photoContent || product.photo_content) && (
+                <div style={{ background: 'var(--sf-bg-light)', padding: '20px', borderRadius: '12px', border: '1px solid var(--sf-border)', display: 'flex', flexDirection: 'column' }}>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--sf-text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--sf-accent)' }} />
+                    ছবি রিভিউ কনটেন্ট (Additional Photo Review)
+                  </h4>
+                  <div style={{ display: 'flex', justifyContent: 'center', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', flexGrow: 1, alignItems: 'center', background: 'var(--sf-bg-main)' }}>
+                    <img 
+                      src={product.photoContent || product.photo_content} 
+                      alt="Product Photo Content" 
+                      onClick={() => setLightboxImage(product.photoContent || product.photo_content)}
+                      style={{ maxWidth: '100%', height: 'auto', borderRadius: '12px', maxHeight: '350px', objectFit: 'contain', cursor: 'pointer' }} 
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ background: 'var(--sf-bg-light)', padding: '36px 20px', borderRadius: '16px', border: '1px dashed var(--sf-border)', textAlign: 'center' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(225, 29, 72, 0.1)', color: 'var(--sf-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
+                <MessageCircle size={28} />
+              </div>
+              <h4 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--sf-text-primary)', marginBottom: '8px' }}>ভিডিও ও ছবি রিভিউ দেখতে চান?</h4>
+              <p style={{ fontSize: '0.9rem', color: 'var(--sf-text-secondary)', maxWidth: '480px', margin: '0 auto 20px auto', lineHeight: 1.6 }}>
+                এই প্রোডাক্টটির রিয়েল ফটো বা লাইভ আনবক্সিং ভিডিও ডেমো দেখতে সরাসরি আমাদের সাপোর্ট টিমের চ্যাটে মেসেজ পাঠান।
+              </p>
+              <button 
+                onClick={() => setIsChatDrawerOpen(true)} 
+                className="store-btn store-btn-primary" 
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 24px', borderRadius: '24px', fontWeight: 700, cursor: 'pointer', border: 'none' }}
+              >
+                <MessageCircle size={18} /> লাইভ চ্যাটে ভিডিও রিভিউ চান
+              </button>
             </div>
           )}
         </div>

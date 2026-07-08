@@ -1311,3 +1311,18 @@
     display: none !important;
   }
 }
+
+/* Video & Photo Reviews Grid */
+.pdp-media-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+  .pdp-media-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
