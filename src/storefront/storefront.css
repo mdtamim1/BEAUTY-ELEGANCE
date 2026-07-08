@@ -1022,7 +1022,7 @@
 /* ---- Newsletter ---- */
 .newsletter {
   background: #000000;
-  padding: 60px 24px;
+  padding: 40px 24px;
   text-align: center;
   color: white;
 }
@@ -1087,7 +1087,7 @@
 .store-footer {
   background: var(--sf-bg-dark);
   color: #94a3b8;
-  padding: 60px 24px 32px;
+  padding: 40px 24px 24px;
 }
 
 .store-footer-inner {
@@ -1096,7 +1096,7 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 40px;
-  margin-bottom: 40px;
+  margin-bottom: 24px;
 }
 
 .store-footer h4 {
@@ -2539,6 +2539,23 @@
     padding: 8px 0 !important;
   }
   
+  .newsletter {
+    padding: 24px 16px !important;
+  }
+  .newsletter h2 {
+    font-size: 1.5rem !important;
+  }
+  .newsletter p {
+    font-size: 0.85rem !important;
+    margin-bottom: 16px !important;
+  }
+  .store-footer {
+    padding: 24px 16px 16px !important;
+  }
+  .store-footer-inner {
+    gap: 20px !important;
+    margin-bottom: 20px !important;
+  }
   .store-header-inner {
     display: flex !important;
     flex-wrap: wrap !important;
