@@ -110,7 +110,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     <aside className="sidebar">
       <div className="sidebar-header">
         <div className="sidebar-logo">
-          <img src="/favicon.png" alt="TG" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }} />
+          <img src="/favicon.png" alt="TG" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }} />
         </div>
         {!collapsed && (
           <div className="sidebar-brand">

@@ -339,16 +339,10 @@ input, textarea, select {
 .sidebar-logo {
   width: 36px;
   height: 36px;
-  background: var(--gradient-primary);
-  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
-  font-size: var(--text-lg);
-  color: white;
   flex-shrink: 0;
-  box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
 }
 
 .sidebar-brand {

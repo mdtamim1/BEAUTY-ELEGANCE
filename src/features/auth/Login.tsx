@@ -41,7 +41,7 @@ export default function Login() {
         <div className="login-card">
           <div className="login-card-header">
             <div className="login-logo">
-              <img src="/favicon.png" alt="TG" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }} />
+              <img src="/favicon.png" alt="TG" style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover' }} />
             </div>
             <h1 className="login-title">Tamim Global</h1>
             <p className="login-subtitle">Control Center Portal</p>

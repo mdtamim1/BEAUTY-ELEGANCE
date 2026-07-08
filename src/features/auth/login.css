@@ -80,13 +80,10 @@
 .login-logo {
   width: 60px;
   height: 60px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, var(--accent-primary, #6366f1) 0%, var(--accent-secondary, #8b5cf6) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 16px;
-  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
   animation: logo-float 4s infinite alternate ease-in-out;
 }
 
