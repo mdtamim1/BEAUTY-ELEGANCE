@@ -147,10 +147,9 @@
 }
 
 .store-header-logo-img {
-  height: 115px !important;
+  height: 84px !important;
   object-fit: contain !important;
-  margin-top: -18px !important;
-  margin-bottom: -18px !important;
+  margin: 0 !important;
   transition: all 0.3s ease;
 }
 
@@ -600,7 +599,7 @@
 
 @media (max-width: 480px) {
   .fullscreen-slide-inner {
-    padding: 85px 12px 0 !important;
+    padding: 90px 12px 0 !important;
   }
   .hero-carousel-fullscreen {
     height: 260px !important;
@@ -2543,8 +2542,12 @@
 
 @media (max-width: 768px) {
   .store-header {
-    height: auto !important;
-    padding: 8px 0 !important;
+    height: 90px !important;
+    padding: 0 !important;
+  }
+  
+  .store-header-logo-img {
+    height: 75px !important;
   }
   
   .newsletter {
