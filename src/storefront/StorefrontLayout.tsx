@@ -641,7 +641,7 @@ export default function StorefrontLayout() {
           <div className="mobile-menu-drawer">
             <div className="mobile-menu-header">
               <div className="store-logo">
-                <img src="/logo.png" alt="Tamim Global" style={{ height: '70px', objectFit: 'contain' }} />
+                <img src="/logo.png" alt="Tamim Global" style={{ height: '110px', objectFit: 'contain' }} />
               </div>
               <button className="store-header-btn" onClick={() => setMobileMenuOpen(false)} title="Close Menu">
                 <X size={24} />
