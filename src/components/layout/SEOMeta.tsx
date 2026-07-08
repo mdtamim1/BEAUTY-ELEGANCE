@@ -10,13 +10,13 @@ interface SEOMetaProps {
 
 export const SEOMeta: React.FC<SEOMetaProps> = ({
   title,
-  description = 'Premium Beauty & Elegance Commerce - Your Ultimate Grooming & Fashion Store.',
+  description = 'Tamim Global - Premium Sports, Fitness & Lifestyle Products Store.',
   image = 'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=800&q=80',
   slug = ''
 }) => {
   const domain = 'https://beauty-elegance-ec88f.web.app';
   const url = slug ? `${domain}/${slug}` : domain;
-  const fullTitle = `${title} | Beauty & Elegance`;
+  const fullTitle = `${title} | Tamim Global`;
 
   return (
     <Helmet>

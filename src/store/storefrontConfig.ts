@@ -234,11 +234,11 @@ const DEFAULT_CONTACT_INFO: ContactInfo = {
 };
 
 const DEFAULT_BRANDING: StoreBranding = {
-  storeName: 'SportScoreX',
-  logoTextPrimary: 'Sport',
-  logoTextSecondary: 'ScoreX',
-  footerDescription: 'Sports Core X মানেই শক্তি, খেলা আর আনন্দ আমাদের কাছে পাবেন Gym Equipment, Sports Item ও Kids Sports Products —পুরো পরিবারের জন্য।',
-  copyrightText: '© 2026 SportScoreX. All rights reserved.',
+  storeName: 'Tamim Global',
+  logoTextPrimary: 'Tamim',
+  logoTextSecondary: 'Global',
+  footerDescription: 'Tamim Global মানেই শক্তি, খেলা আর আনন্দ আমাদের কাছে পাবেন Gym Equipment, Sports Item ও Kids Sports Products —পুরো পরিবারের জন্য।',
+  copyrightText: '© 2026 Tamim Global. All rights reserved.',
   paymentMethodsText: 'Cash on Delivery • BKash • Rocket • Visa • Mastercard',
 };
 

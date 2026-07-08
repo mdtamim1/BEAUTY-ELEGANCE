@@ -110,11 +110,11 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     <aside className="sidebar">
       <div className="sidebar-header">
         <div className="sidebar-logo">
-          <Zap size={20} />
+          <img src="/favicon.png" alt="TG" style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }} />
         </div>
         {!collapsed && (
           <div className="sidebar-brand">
-            <span className="sidebar-brand-name">VIP Commerce</span>
+            <span className="sidebar-brand-name">Tamim Global</span>
             <span className="sidebar-brand-tag">{user?.role || 'Super Admin'}</span>
           </div>
         )}

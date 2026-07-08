@@ -448,7 +448,7 @@ export default function ProductDetails() {
       amount: total,
       items: buyNowQty,
       paymentMethod: paymentMethod === 'bkash' ? 'bKash (Send Money)' : paymentMethod === 'nagad' ? 'Nagad (Send Money)' : 'Cash on Delivery',
-      storeName: config.branding.storeName || 'VIPCommerce',
+      storeName: config.branding.storeName || 'Tamim Global',
       phone: customerPhone,
       address: customerAddress,
       courier: shippingLocation === 'dhaka' ? 'Pathao (Dhaka)' : 'Pathao (Outside Dhaka)',

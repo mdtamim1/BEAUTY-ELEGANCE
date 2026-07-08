@@ -169,7 +169,7 @@ export default function Dashboard() {
     const csvLines = [];
 
     // Title
-    csvLines.push(`"VIP Commerce - Dashboard Summary Report"`);
+    csvLines.push(`"Tamim Global - Dashboard Summary Report"`);
     csvLines.push(`"Generated on:","${reportDate}"`);
     csvLines.push(``);
 

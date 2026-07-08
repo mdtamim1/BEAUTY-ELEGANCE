@@ -144,7 +144,7 @@ export default function Finance() {
     const csvLines = [];
     const reportDate = new Date().toLocaleString();
     
-    csvLines.push(`"VIP Commerce - Financial Report Summary"`);
+    csvLines.push(`"Tamim Global - Financial Report Summary"`);
     csvLines.push(`"Generated on:","${reportDate}"`);
     csvLines.push(``);
     
@@ -195,7 +195,7 @@ export default function Finance() {
     const csvLines = [];
     const reportDate = new Date().toLocaleString();
     
-    csvLines.push(`"VIP Commerce - Profit & Loss (P&L) Statement"`);
+    csvLines.push(`"Tamim Global - Profit & Loss (P&L) Statement"`);
     csvLines.push(`"Generated on:","${reportDate}"`);
     csvLines.push(``);
     
@@ -533,7 +533,7 @@ export default function Finance() {
             <div className="modal-body" style={{ background: '#ffffff', color: '#334155', padding: '24px', borderRadius: 'var(--radius-md)' }}>
               {/* Receipt Template */}
               <div style={{ textAlign: 'center', borderBottom: '2px dashed #cbd5e1', paddingBottom: '16px', marginBottom: '16px' }}>
-                <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>VIP COMMERCE LTD.</h3>
+                <h3 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>TAMIM GLOBAL</h3>
                 <span style={{ fontSize: '11px', color: '#64748b' }}>Super Admin Financial Payout Receipt</span>
               </div>
 
