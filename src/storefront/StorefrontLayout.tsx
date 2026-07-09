@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, ShoppingCart, Heart, User, Zap, X, Minus, Plus, Phone, Mail, Menu, Home, MoreVertical } from 'lucide-react';
+import { Search, ShoppingCart, Heart, User, Zap, X, Minus, Plus, Phone, Mail, Menu, Home, MoreVertical, ArrowRight, Shield, Truck, RotateCcw } from 'lucide-react';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import './storefront.css';
 import { replaceContactInfo } from '../utils/storefrontUtils';
@@ -505,7 +505,11 @@ export default function StorefrontLayout() {
           </div>
           <div className="store-footer-bottom">
             <span>{branding.copyrightText}</span>
-            <span>{branding.paymentMethodsText}</span>
+            <span>
+              {(branding.paymentMethodsText || '').split('•').map((method, i) => (
+                <span key={i} className="footer-payment-badge">{method.trim()}</span>
+              ))}
+            </span>
           </div>
         </footer>
       </div>
@@ -563,13 +567,41 @@ export default function StorefrontLayout() {
 
             {cart.length > 0 && (
               <div className="cart-footer">
+                {/* Free Shipping Progress */}
+                <div className="cart-shipping-progress">
+                  {cartTotal >= 3000 ? (
+                    <div className="cart-shipping-msg cart-shipping-free">
+                      <Truck size={16} /> <span>🎉 You've unlocked <strong>Free Shipping!</strong></span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="cart-shipping-msg">
+                        <Truck size={16} /> <span>Add <strong>৳{(3000 - cartTotal).toFixed(0)}</strong> more for free shipping</span>
+                      </div>
+                      <div className="cart-shipping-bar">
+                        <div className="cart-shipping-bar-fill" style={{ width: `${Math.min((cartTotal / 3000) * 100, 100)}%` }} />
+                      </div>
+                    </>
+                  )}
+                </div>
+
                 <div className="cart-total">
                   <span>Subtotal</span>
                   <span>৳{cartTotal.toFixed(2)}</span>
                 </div>
-                <Link to="/checkout" className="cart-checkout-btn" onClick={() => setCartOpen(false)} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  Proceed to Checkout — ৳{cartTotal.toFixed(2)}
+                <Link 
+                  to="/checkout" 
+                  className="cart-checkout-btn" 
+                  onClick={() => setCartOpen(false)} 
+                  style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                >
+                  Proceed to Checkout <ArrowRight size={18} />
                 </Link>
+                <div className="cart-trust-badges">
+                  <span><Shield size={13} /> Secure</span>
+                  <span><Truck size={13} /> Fast Delivery</span>
+                  <span><RotateCcw size={13} /> Easy Return</span>
+                </div>
               </div>
             )}
           </div>

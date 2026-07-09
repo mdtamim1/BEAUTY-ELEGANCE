@@ -1584,7 +1584,14 @@ export default function ProductDetails() {
           <button 
             type="button" 
             className="sticky-bar-btn add-to-cart" 
-            onClick={() => addToCart(product)}
+            onClick={() => {
+              const hasSizes = product.sizes && product.sizes.filter((s: any) => s.enabled).length > 0;
+              if (hasSizes && !selectedSize) {
+                alert('দয়া করে প্রথমে সাইজ সিলেক্ট করুন!');
+                return;
+              }
+              addToCart({ ...product, selectedSize: selectedSize || 'Free Size' });
+            }}
           >
             Add to Cart
           </button>

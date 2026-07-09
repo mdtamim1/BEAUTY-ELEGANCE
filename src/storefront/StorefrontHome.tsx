@@ -551,56 +551,66 @@ export default function StorefrontHome() {
                       </div>
                     </div>
                   </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="collection-empty" style={{ padding: '80px 24px' }}>
-                <ShoppingCart size={48} style={{ opacity: 0.2, marginBottom: 16 }} />
-                <h3>No products found</h3>
-                <p>No products match the selected category.</p>
-              </div>
-            )}
+              ))}
+            </div>
+          ) : (
+            <div className="collection-empty" style={{ padding: '80px 24px' }}>
+              <ShoppingCart size={48} style={{ opacity: 0.2, marginBottom: 16 }} />
+              <h3>No products found</h3>
+              <p>No products match the selected category.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+
+    {/* ---- Newsletter Section (Compact 3D Glass) ---- */}
+    <section className="newsletter-glass-strip">
+      <div className="newsletter-glass-inner">
+        <div className="newsletter-glass-text">
+          <span className="newsletter-glass-icon">✉️</span>
+          <div>
+            <p className="newsletter-glass-title">অফার ও নতুন পণ্যের আপডেট পান</p>
+            <p className="newsletter-glass-sub">সাবস্ক্রাইব করুন — একদম ফ্রি!</p>
           </div>
         </div>
-      </section>
 
-      {/* ---- Newsletter Section ---- */}
-      <section className="store-section newsletter-section" style={{ background: '#000000', color: '#ffffff', padding: '24px 16px', borderRadius: '12px', marginTop: '24px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: '-50%', left: '-20%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%)', pointerEvents: 'none' }} />
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '4px', color: '#ffffff' }}>অফার ও কুপন আপডেট পেতে সাবস্ক্রাইব করুন</h2>
-        <p style={{ color: '#9ca3af', marginBottom: '16px', fontSize: '0.85rem' }}>আমাদের নিউজলেটারে জয়েন করুন এবং নতুন স্পোর্টস কালেকশন ও ডিসকাউন্ট ড্রপ সবার আগে পান।</p>
-        
-        {subMsg && (
-          <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#34d399', padding: '8px 12px', borderRadius: '6px', fontSize: '0.8rem', maxWidth: '440px', margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-            <CheckCircle size={14} /> {subMsg}
-          </div>
-        )}
-
-        {subError && (
-          <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#f87171', padding: '8px 12px', borderRadius: '6px', fontSize: '0.8rem', maxWidth: '440px', margin: '0 auto 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-            <AlertCircle size={14} /> {subError}
-          </div>
-        )}
-
-        <form onSubmit={handleSubscribe} style={{ display: 'flex', gap: '8px', maxWidth: '440px', margin: '0 auto', flexWrap: 'wrap' }}>
-          <input 
-            type="email" 
-            placeholder="আপনার ইমেইল এড্রেস লিখুন" 
-            required 
-            value={emailInput}
-            onChange={(e) => setEmailInput(e.target.value)}
-            style={{ flex: 1, padding: '0 12px', height: '38px', fontSize: '0.85rem', border: '1px solid #374151', borderRadius: '6px', background: '#111827', color: '#ffffff', outline: 'none', minWidth: '200px', boxSizing: 'border-box' }}
-          />
-          <button 
-            type="submit" 
-            disabled={isSubmitting}
-            style={{ height: '38px', padding: '0 16px', fontSize: '0.85rem', background: '#ffffff', color: '#000000', border: 'none', borderRadius: '6px', fontWeight: 700, cursor: isSubmitting ? 'not-allowed' : 'pointer', minWidth: '100px' }}
-          >
-            {isSubmitting ? 'প্রসেস হচ্ছে...' : 'সাবস্ক্রাইব'}
-          </button>
+        <form onSubmit={handleSubscribe} className="newsletter-glass-form">
+          {subMsg && (
+            <span className="newsletter-glass-success">
+              <CheckCircle size={13} /> {subMsg}
+            </span>
+          )}
+          {subError && (
+            <span className="newsletter-glass-error">
+              <AlertCircle size={13} /> {subError}
+            </span>
+          )}
+          {!subMsg && (
+            <>
+              <input
+                type="email"
+                placeholder="আপনার Gmail লিখুন"
+                required
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                className="newsletter-glass-input"
+              />
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="newsletter-glass-btn"
+              >
+                {isSubmitting ? '...' : 'সাবস্ক্রাইব'}
+              </button>
+            </>
+          )}
         </form>
-      </section>
+      </div>
+    </section>
 
-    </>
+  </>
   );
 }
+
+

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import db from '../config/db';
+import { sendWelcomeEmail } from '../services/emailService';
 
 // Get all coupons
 export const getCoupons = (req: Request, res: Response) => {
@@ -178,6 +179,9 @@ export const subscribeEmail = (req: Request, res: Response) => {
         console.error('Failed to subscribe email:', err);
         return res.status(500).json({ status: 'error', message: 'Database error' });
       }
+
+      // Send welcome email asynchronously (don't block response)
+      sendWelcomeEmail(cleanEmail).catch(console.error);
 
       res.json({ status: 'success', message: 'নিউজলেটার সাবস্ক্রিপশন সফল হয়েছে! ধন্যবাদ।' });
     }
