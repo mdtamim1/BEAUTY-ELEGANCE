@@ -402,111 +402,126 @@ function getDefaultConfig(): StorefrontConfig {
   };
 }
 
+// ============================================================
+// CONFIG MIGRATION HELPER
+// ============================================================
+function migrateConfig(parsed: any): any {
+  if (!parsed) return parsed;
+  const defaults = getDefaultConfig();
+  
+  // Auto-migrate navigation links in local storage
+  if (parsed.navLinks && Array.isArray(parsed.navLinks)) {
+    let migrated = false;
+    
+    parsed.navLinks = parsed.navLinks
+      .map((link: any) => {
+        const labelLower = (link.label || '').toLowerCase();
+        // Rename old labels
+        if (labelLower === 'deals' || labelLower === 'deal') {
+          migrated = true;
+          link = { ...link, label: 'Offers', url: '/collection/offers' };
+        }
+        if (labelLower === 'brands' || labelLower === 'brand' || labelLower === 'popular') {
+          migrated = true;
+          link = { ...link, label: 'Popular Order', url: '/collection/popular-order' };
+        }
+        // Ensure New Arrivals has correct URL
+        if (labelLower === 'new arrivals' || labelLower === 'new arrival') {
+          if (link.url !== '/collection/new-arrivals') {
+            migrated = true;
+            link = { ...link, url: '/collection/new-arrivals' };
+          }
+          if (!link.productIds || link.productIds.length === 0) {
+            migrated = true;
+            link = { ...link, productIds: [6, 7] };
+          }
+        }
+        // Ensure Popular Order has correct URL
+        if (labelLower === 'popular order' || labelLower === 'popular') {
+          if (link.url !== '/collection/popular-order') {
+            migrated = true;
+            link = { ...link, url: '/collection/popular-order' };
+          }
+          if (!link.productIds || link.productIds.length === 0) {
+            migrated = true;
+            link = { ...link, productIds: [2, 5] };
+          }
+        }
+        // Ensure Offers has correct URL and products
+        if (labelLower === 'offers' || labelLower === 'offer') {
+          if (link.url !== '/collection/offers') {
+            migrated = true;
+            link = { ...link, url: '/collection/offers' };
+          }
+          if (!link.productIds || link.productIds.length === 0) {
+            migrated = true;
+            link = { ...link, productIds: [1, 3] };
+          }
+        }
+        // Strip '/store' from any other URL
+        let url = link.url || '';
+        if (url.startsWith('/store/')) {
+          migrated = true;
+          link = { ...link, url: url.replace('/store/', '/') };
+        } else if (url === '/store') {
+          migrated = true;
+          link = { ...link, url: '/' };
+        }
+        // Migrate hash-based URLs to route-based collection pages
+        if (url.includes('/store#') && link.productIds && link.productIds.length > 0) {
+          const hash = url.split('#')[1];
+          if (hash) {
+            migrated = true;
+            link = { ...link, url: `/collection/${hash}` };
+          }
+        }
+        return link;
+      })
+      .filter((link: any) => {
+        const labelLower = (link.label || '').toLowerCase();
+        const keep = labelLower !== 'shop' && labelLower !== 'shop all';
+        if (!keep) migrated = true;
+        return keep;
+      });
+
+    // Ensure Blogs link exists
+    const hasBlogs = parsed.navLinks.some((link: any) => {
+      const url = (link.url || '').toLowerCase();
+      const label = (link.label || '').toLowerCase();
+      return url.includes('/blogs') || label.includes('blog');
+    });
+    if (!hasBlogs) {
+      parsed.navLinks.push({ id: 15, label: 'Blogs', url: '/blogs', enabled: true });
+      migrated = true;
+    }
+  }
+
+  // Auto-migrate footer columns to contain default page content
+  if (parsed.footerColumns && Array.isArray(parsed.footerColumns)) {
+    parsed.footerColumns = parsed.footerColumns.map((col: any) => ({
+      ...col,
+      links: (col.links || []).map((link: any) => {
+        const defaultCol = defaults.footerColumns.find(c => c.title === col.title);
+        const defaultLink = defaultCol?.links.find(l => l.id === link.id);
+        if (defaultLink && link.customPageContent === undefined) {
+          return { ...link, customPageContent: defaultLink.customPageContent };
+        }
+        return link;
+      })
+    }));
+  }
+
+  return parsed;
+}
+
 function loadConfig(): StorefrontConfig {
   if (_config) return _config;
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      const parsed = JSON.parse(stored);
-      
-      // Auto-migrate navigation links in local storage
-      if (parsed.navLinks && Array.isArray(parsed.navLinks)) {
-        let migrated = false;
-        
-        parsed.navLinks = parsed.navLinks
-          .map((link: any) => {
-            const labelLower = (link.label || '').toLowerCase();
-            // Rename old labels
-            if (labelLower === 'deals' || labelLower === 'deal') {
-              migrated = true;
-              link = { ...link, label: 'Offers', url: '/collection/offers' };
-            }
-            if (labelLower === 'brands' || labelLower === 'brand' || labelLower === 'popular') {
-              migrated = true;
-              link = { ...link, label: 'Popular Order', url: '/collection/popular-order' };
-            }
-            // Ensure New Arrivals has correct URL
-            if (labelLower === 'new arrivals' || labelLower === 'new arrival') {
-              if (link.url !== '/collection/new-arrivals') {
-                migrated = true;
-                link = { ...link, url: '/collection/new-arrivals' };
-              }
-              if (!link.productIds || link.productIds.length === 0) {
-                migrated = true;
-                link = { ...link, productIds: [6, 7] };
-              }
-            }
-            // Ensure Popular Order has correct URL
-            if (labelLower === 'popular order' || labelLower === 'popular') {
-              if (link.url !== '/collection/popular-order') {
-                migrated = true;
-                link = { ...link, url: '/collection/popular-order' };
-              }
-              if (!link.productIds || link.productIds.length === 0) {
-                migrated = true;
-                link = { ...link, productIds: [2, 5] };
-              }
-            }
-            // Ensure Offers has correct URL and products
-            if (labelLower === 'offers' || labelLower === 'offer') {
-              if (link.url !== '/collection/offers') {
-                migrated = true;
-                link = { ...link, url: '/collection/offers' };
-              }
-              if (!link.productIds || link.productIds.length === 0) {
-                migrated = true;
-                link = { ...link, productIds: [1, 3] };
-              }
-            }
-            // Strip '/store' from any other URL
-            let url = link.url || '';
-            if (url.startsWith('/store/')) {
-              migrated = true;
-              link = { ...link, url: url.replace('/store/', '/') };
-            } else if (url === '/store') {
-              migrated = true;
-              link = { ...link, url: '/' };
-            }
-            // Migrate hash-based URLs to route-based collection pages
-            if (url.includes('/store#') && link.productIds && link.productIds.length > 0) {
-              const hash = url.split('#')[1];
-              if (hash) {
-                migrated = true;
-                link = { ...link, url: `/collection/${hash}` };
-              }
-            }
-            return link;
-          })
-          .filter((link: any) => {
-            const labelLower = (link.label || '').toLowerCase();
-            const keep = labelLower !== 'shop' && labelLower !== 'shop all';
-            if (!keep) migrated = true;
-            return keep;
-          });
-          
-        if (migrated) {
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-          } catch (e) {}
-        }
-      }
-
+      let parsed = JSON.parse(stored);
+      parsed = migrateConfig(parsed);
       const defaults = getDefaultConfig();
-
-      // Auto-migrate footer columns to contain default page content
-      if (parsed.footerColumns && Array.isArray(parsed.footerColumns)) {
-        parsed.footerColumns = parsed.footerColumns.map((col: any) => ({
-          ...col,
-          links: (col.links || []).map((link: any) => {
-            const defaultCol = defaults.footerColumns.find(c => c.title === col.title);
-            const defaultLink = defaultCol?.links.find(l => l.id === link.id);
-            if (defaultLink && link.customPageContent === undefined) {
-              return { ...link, customPageContent: defaultLink.customPageContent };
-            }
-            return link;
-          })
-        }));
-      }
 
       // Merge with defaults to handle new fields added in updates
       _config = {
@@ -558,7 +573,8 @@ async function syncWithBackend() {
     if (response.ok) {
       const res = await response.json();
       if (res.status === 'success' && res.data) {
-        const serverConfig = res.data;
+        let serverConfig = res.data;
+        serverConfig = migrateConfig(serverConfig);
         
         // Preserve products from currently loaded memory config or localStorage
         const currentProducts = _config?.products || [];
