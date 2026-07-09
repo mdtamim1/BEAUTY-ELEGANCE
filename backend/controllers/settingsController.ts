@@ -107,37 +107,62 @@ export const getSettings = (req: Request, res: Response) => {
 
 export const updateSettings = (req: Request, res: Response) => {
   const settingsData = req.body;
+  const keys = Object.keys(settingsData).filter(k => keyMapToSnake[k]);
 
-  db.run('BEGIN TRANSACTION', (txErr) => {
+  if (keys.length === 0) {
+    return res.json({ status: 'success', message: 'System settings updated successfully (no changes)' });
+  }
+
+  const dbType = process.env.DB_TYPE || 'sqlite';
+  const isSqlite = dbType === 'sqlite';
+
+  const startTx = (cb: (err: any) => void) => {
+    if (isSqlite) {
+      db.run('BEGIN TRANSACTION', cb);
+    } else {
+      cb(null);
+    }
+  };
+
+  const commitTx = (cb: (err: any) => void) => {
+    if (isSqlite) {
+      db.run('COMMIT', cb);
+    } else {
+      cb(null);
+    }
+  };
+
+  const rollbackTx = (cb: () => void) => {
+    if (isSqlite) {
+      db.run('ROLLBACK', () => cb());
+    } else {
+      cb();
+    }
+  };
+
+  startTx((txErr) => {
     if (txErr) {
       console.error('Failed to start transaction:', txErr);
       return res.status(500).json({ status: 'error', message: 'Database error' });
     }
 
-    const stmt = db.prepare(`
-      INSERT OR REPLACE INTO system_settings (setting_key, setting_value)
-      VALUES (?, ?)
-    `);
+    let index = 0;
+    const updateNext = () => {
+      if (index === keys.length) {
+        commitTx((commitErr) => {
+          if (commitErr) {
+            console.error('Failed to commit transaction:', commitErr);
+            rollbackTx(() => {
+              res.status(500).json({ status: 'error', message: 'Failed to commit system settings' });
+            });
+            return;
+          }
+          res.json({ status: 'success', message: 'System settings updated successfully' });
+        });
+        return;
+      }
 
-    const keys = Object.keys(settingsData).filter(k => keyMapToSnake[k]);
-    if (keys.length === 0) {
-      db.run('COMMIT', (commitErr) => {
-        if (commitErr) {
-          console.error('Error committing transaction:', commitErr);
-          db.run('ROLLBACK', (rbErr) => {
-            if (rbErr) console.error('Error rolling back transaction:', rbErr);
-          });
-          return res.status(500).json({ status: 'error', message: 'Database error' });
-        }
-        res.json({ status: 'success', message: 'System settings updated successfully (no changes)' });
-      });
-      return;
-    }
-
-    let completed = 0;
-    let hasError = false;
-
-    keys.forEach(camelKey => {
+      const camelKey = keys[index];
       const snakeKey = keyMapToSnake[camelKey];
       let val = settingsData[camelKey];
       if (typeof val === 'boolean') {
@@ -146,35 +171,24 @@ export const updateSettings = (req: Request, res: Response) => {
         val = String(val);
       }
 
-      stmt.run([snakeKey, val], (err: any) => {
-        if (err) {
-          console.error(`Failed to update setting key ${snakeKey}:`, err);
-          hasError = true;
-        }
-        completed++;
-        if (completed === keys.length) {
-          stmt.finalize((finalErr: any) => {
-            if (finalErr || hasError) {
-              db.run('ROLLBACK', (rbErr) => {
-                if (rbErr) console.error('Error rolling back transaction:', rbErr);
-              });
-              return res.status(500).json({ status: 'error', message: 'Failed to update system settings' });
-            }
-
-            db.run('COMMIT', (commitErr) => {
-              if (commitErr) {
-                console.error('Error committing transaction:', commitErr);
-                db.run('ROLLBACK', (rbErr) => {
-                  if (rbErr) console.error('Error rolling back transaction:', rbErr);
-                });
-                return res.status(500).json({ status: 'error', message: 'Failed to commit settings update' });
-              }
-              res.json({ status: 'success', message: 'System settings updated successfully' });
+      db.run(
+        `INSERT OR REPLACE INTO system_settings (setting_key, setting_value) VALUES (?, ?)`,
+        [snakeKey, val],
+        (err) => {
+          if (err) {
+            console.error(`Failed to update setting key ${snakeKey}:`, err);
+            rollbackTx(() => {
+              res.status(500).json({ status: 'error', message: 'Failed to update system settings' });
             });
-          });
+            return;
+          }
+          index++;
+          updateNext();
         }
-      });
-    });
+      );
+    };
+
+    updateNext();
   });
 };
 

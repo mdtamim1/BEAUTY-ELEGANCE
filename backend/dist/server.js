@@ -320,21 +320,25 @@ function translateSqlForPostgres(sql, params = []) {
   translatedSql = translatedSql.replace(/strftime\('%Y',\s*'now',\s*'localtime'\)/gi, "TO_CHAR(CURRENT_DATE, 'YYYY')");
   translatedSql = translatedSql.replace(/strftime\('%H',\s*created_at,\s*'localtime'\)/gi, "TO_CHAR(created_at, 'HH24')");
   if (translatedSql.toUpperCase().includes("INSERT OR REPLACE INTO SYSTEM_SETTINGS")) {
-    if (translatedSql.includes("group_name") && translatedSql.includes("is_public")) {
-      translatedSql = `
-        INSERT INTO system_settings (setting_key, setting_value, group_name, is_public)
-        VALUES ($1, $2, $3, $4)
+    translatedSql = translatedSql.replace(/INSERT OR REPLACE INTO/gi, "INSERT INTO");
+    if (translatedSql.toLowerCase().includes("group_name") && translatedSql.toLowerCase().includes("is_public")) {
+      translatedSql += `
         ON CONFLICT (setting_key) 
         DO UPDATE SET setting_value = EXCLUDED.setting_value, group_name = EXCLUDED.group_name, is_public = EXCLUDED.is_public
       `;
     } else {
-      translatedSql = `
-        INSERT INTO system_settings (setting_key, setting_value)
-        VALUES ($1, $2)
+      translatedSql += `
         ON CONFLICT (setting_key) 
         DO UPDATE SET setting_value = EXCLUDED.setting_value
       `;
     }
+  }
+  if (translatedSql.toUpperCase().includes("INSERT OR REPLACE INTO COUPONS")) {
+    translatedSql = translatedSql.replace(/INSERT OR REPLACE INTO/gi, "INSERT INTO");
+    translatedSql += `
+      ON CONFLICT (code) 
+      DO UPDATE SET type = EXCLUDED.type, value = EXCLUDED.value, expiry = EXCLUDED.expiry, status = EXCLUDED.status
+    `;
   }
   if (translatedSql.toUpperCase().includes("INSERT OR IGNORE INTO PRODUCT_GALLERY")) {
     translatedSql = translatedSql.replace(/INSERT OR IGNORE INTO/gi, "INSERT INTO") + " ON CONFLICT DO NOTHING";
@@ -3407,32 +3411,54 @@ var getSettings = (req, res) => {
 };
 var updateSettings = (req, res) => {
   const settingsData = req.body;
-  db_default.run("BEGIN TRANSACTION", (txErr) => {
+  const keys = Object.keys(settingsData).filter((k) => keyMapToSnake[k]);
+  if (keys.length === 0) {
+    return res.json({ status: "success", message: "System settings updated successfully (no changes)" });
+  }
+  const dbType = process.env.DB_TYPE || "sqlite";
+  const isSqlite = dbType === "sqlite";
+  const startTx = (cb) => {
+    if (isSqlite) {
+      db_default.run("BEGIN TRANSACTION", cb);
+    } else {
+      cb(null);
+    }
+  };
+  const commitTx = (cb) => {
+    if (isSqlite) {
+      db_default.run("COMMIT", cb);
+    } else {
+      cb(null);
+    }
+  };
+  const rollbackTx = (cb) => {
+    if (isSqlite) {
+      db_default.run("ROLLBACK", () => cb());
+    } else {
+      cb();
+    }
+  };
+  startTx((txErr) => {
     if (txErr) {
       console.error("Failed to start transaction:", txErr);
       return res.status(500).json({ status: "error", message: "Database error" });
     }
-    const stmt = db_default.prepare(`
-      INSERT OR REPLACE INTO system_settings (setting_key, setting_value)
-      VALUES (?, ?)
-    `);
-    const keys = Object.keys(settingsData).filter((k) => keyMapToSnake[k]);
-    if (keys.length === 0) {
-      db_default.run("COMMIT", (commitErr) => {
-        if (commitErr) {
-          console.error("Error committing transaction:", commitErr);
-          db_default.run("ROLLBACK", (rbErr) => {
-            if (rbErr) console.error("Error rolling back transaction:", rbErr);
-          });
-          return res.status(500).json({ status: "error", message: "Database error" });
-        }
-        res.json({ status: "success", message: "System settings updated successfully (no changes)" });
-      });
-      return;
-    }
-    let completed = 0;
-    let hasError = false;
-    keys.forEach((camelKey) => {
+    let index = 0;
+    const updateNext = () => {
+      if (index === keys.length) {
+        commitTx((commitErr) => {
+          if (commitErr) {
+            console.error("Failed to commit transaction:", commitErr);
+            rollbackTx(() => {
+              res.status(500).json({ status: "error", message: "Failed to commit system settings" });
+            });
+            return;
+          }
+          res.json({ status: "success", message: "System settings updated successfully" });
+        });
+        return;
+      }
+      const camelKey = keys[index];
       const snakeKey = keyMapToSnake[camelKey];
       let val = settingsData[camelKey];
       if (typeof val === "boolean") {
@@ -3440,34 +3466,23 @@ var updateSettings = (req, res) => {
       } else {
         val = String(val);
       }
-      stmt.run([snakeKey, val], (err) => {
-        if (err) {
-          console.error(`Failed to update setting key ${snakeKey}:`, err);
-          hasError = true;
-        }
-        completed++;
-        if (completed === keys.length) {
-          stmt.finalize((finalErr) => {
-            if (finalErr || hasError) {
-              db_default.run("ROLLBACK", (rbErr) => {
-                if (rbErr) console.error("Error rolling back transaction:", rbErr);
-              });
-              return res.status(500).json({ status: "error", message: "Failed to update system settings" });
-            }
-            db_default.run("COMMIT", (commitErr) => {
-              if (commitErr) {
-                console.error("Error committing transaction:", commitErr);
-                db_default.run("ROLLBACK", (rbErr) => {
-                  if (rbErr) console.error("Error rolling back transaction:", rbErr);
-                });
-                return res.status(500).json({ status: "error", message: "Failed to commit settings update" });
-              }
-              res.json({ status: "success", message: "System settings updated successfully" });
+      db_default.run(
+        `INSERT OR REPLACE INTO system_settings (setting_key, setting_value) VALUES (?, ?)`,
+        [snakeKey, val],
+        (err) => {
+          if (err) {
+            console.error(`Failed to update setting key ${snakeKey}:`, err);
+            rollbackTx(() => {
+              res.status(500).json({ status: "error", message: "Failed to update system settings" });
             });
-          });
+            return;
+          }
+          index++;
+          updateNext();
         }
-      });
-    });
+      );
+    };
+    updateNext();
   });
 };
 var getStorefrontSettings = (req, res) => {

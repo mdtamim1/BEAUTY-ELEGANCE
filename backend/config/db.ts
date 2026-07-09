@@ -97,21 +97,26 @@ function translateSqlForPostgres(sql: string, params: any[] = []): { sql: string
 
   // Replace SQLite upserts
   if (translatedSql.toUpperCase().includes('INSERT OR REPLACE INTO SYSTEM_SETTINGS')) {
-    if (translatedSql.includes('group_name') && translatedSql.includes('is_public')) {
-      translatedSql = `
-        INSERT INTO system_settings (setting_key, setting_value, group_name, is_public)
-        VALUES ($1, $2, $3, $4)
+    translatedSql = translatedSql.replace(/INSERT OR REPLACE INTO/gi, 'INSERT INTO');
+    if (translatedSql.toLowerCase().includes('group_name') && translatedSql.toLowerCase().includes('is_public')) {
+      translatedSql += `
         ON CONFLICT (setting_key) 
         DO UPDATE SET setting_value = EXCLUDED.setting_value, group_name = EXCLUDED.group_name, is_public = EXCLUDED.is_public
       `;
     } else {
-      translatedSql = `
-        INSERT INTO system_settings (setting_key, setting_value)
-        VALUES ($1, $2)
+      translatedSql += `
         ON CONFLICT (setting_key) 
         DO UPDATE SET setting_value = EXCLUDED.setting_value
       `;
     }
+  }
+
+  if (translatedSql.toUpperCase().includes('INSERT OR REPLACE INTO COUPONS')) {
+    translatedSql = translatedSql.replace(/INSERT OR REPLACE INTO/gi, 'INSERT INTO');
+    translatedSql += `
+      ON CONFLICT (code) 
+      DO UPDATE SET type = EXCLUDED.type, value = EXCLUDED.value, expiry = EXCLUDED.expiry, status = EXCLUDED.status
+    `;
   }
 
   if (translatedSql.toUpperCase().includes('INSERT OR IGNORE INTO PRODUCT_GALLERY')) {
