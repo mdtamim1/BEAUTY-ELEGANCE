@@ -463,13 +463,13 @@ function generateLocalAIResponse(message: string, products: any[]): string {
   // Smart Synonyms & Category queries
   let targetCategoryName: string | null = null;
   
-  if (query.includes('fitness') || query.includes('ফিটনেস') || query.includes('gym') || query.includes('gym') || query.includes('জিম') || query.includes('ব্যায়াম') || query.includes('ব্যায়াম') || query.includes('workout') || query.includes('exercise') || query.includes('dumbbell') || query.includes('ডাম্বেল') || query.includes('রোলার') || query.includes('roller')) {
+  if (query.includes('fitness') || query.includes('ফিটনেস') || query.includes('gym') || query.includes('jim') || query.includes('jym') || query.includes('জিম') || query.includes('ব্যায়াম') || query.includes('ব্যায়াম') || query.includes('bayem') || query.includes('baem') || query.includes('workout') || query.includes('exercise') || query.includes('dumbbell') || query.includes('ডাম্বেল') || query.includes('dambel') || query.includes('রোলার') || query.includes('roller')) {
     targetCategoryName = 'Fitness Item';
-  } else if (query.includes('game') || query.includes('sports') || query.includes('খেলা') || query.includes('খেলার') || query.includes('ফুটবল') || query.includes('football') || query.includes('ক্রিকেট') || query.includes('ball') || query.includes('বল') || query.includes('বাস্কেটবল') || query.includes('basketball') || query.includes('badminton') || query.includes('ব্যাটমিন্টন')) {
+  } else if (query.includes('game') || query.includes('sports') || query.includes('খেলা') || query.includes('খেলার') || query.includes('khela') || query.includes('ফুটবল') || query.includes('football') || query.includes('ক্রিকেট') || query.includes('cricket') || query.includes('ball') || query.includes('বল') || query.includes('bol') || query.includes('বাস্কেটবল') || query.includes('basketball') || query.includes('badminton') || query.includes('ব্যাটমিন্টন') || query.includes('র্যাকেট')) {
     targetCategoryName = 'Sports Game';
-  } else if (query.includes('shoes') || query.includes('জুতা') || query.includes('জুতো') || query.includes('স্নিকার') || query.includes('sneakers') || query.includes('shoe')) {
+  } else if (query.includes('shoes') || query.includes('shoe') || query.includes('juta') || query.includes('juto') || query.includes('জুতা') || query.includes('জুতো') || query.includes('স্নিকার') || query.includes('sneakers') || query.includes('snikar')) {
     targetCategoryName = 'Sports Shoes';
-  } else if (query.includes('wear') || query.includes('jersey') || query.includes('জার্সি') || query.includes('tshirt') || query.includes('t-shirt') || query.includes('টি-শার্ট') || query.includes('পোশাক') || query.includes('cloth') || query.includes('কাপড়') || query.includes('polo') || query.includes('পোলো')) {
+  } else if (query.includes('wear') || query.includes('jersey') || query.includes('জার্সি') || query.includes('tshirt') || query.includes('t-shirt') || query.includes('t shirt') || query.includes('টি-শার্ট') || query.includes('পোশাক') || query.includes('cloth') || query.includes('কাপড়') || query.includes('polo') || query.includes('পোলো') || query.includes('panjabi') || query.includes('punjabi') || query.includes('পাঞ্জাবি') || query.includes('পাঞ্জাবী')) {
     targetCategoryName = 'Sports wear';
   }
   
