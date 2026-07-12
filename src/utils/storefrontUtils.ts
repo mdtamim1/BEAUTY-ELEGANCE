@@ -34,3 +34,44 @@ export function replaceContactInfo(text: string, contactInfo: { phoneNumber: str
   
   return result;
 }
+
+export function formatPageContent(text: string): string {
+  if (!text) return '';
+  
+  // Normalize line endings
+  const normalized = text.replace(/\r\n/g, '\n');
+  
+  // Check if there is any HTML tag
+  const hasHtml = /<[a-z/][^>]*>/i.test(normalized);
+  if (!hasHtml) {
+    // Convert double newlines to paragraphs, and single newlines to <br/>
+    return normalized
+      .split(/\n\n+/)
+      .map(para => {
+        const cleaned = para.trim().replace(/\n/g, '<br />');
+        return cleaned ? `<p>${cleaned}</p>` : '';
+      })
+      .filter(p => p !== '')
+      .join('');
+  }
+  
+  // If it has HTML, safely convert newlines in text nodes to <br />
+  const parts = normalized.split(/(<[^>]+>)/g);
+  const formattedParts = parts.map(part => {
+    if (part.startsWith('<') && part.endsWith('>')) {
+      // This is an HTML tag, don't modify newlines inside it
+      return part;
+    } else {
+      // This is a text node. If it consists purely of whitespace/newlines,
+      // leave it unchanged to prevent extra space between tags like <ul> and <li>.
+      if (part.trim() === '') {
+        return part;
+      }
+      // Otherwise, convert newlines to <br />
+      return part.replace(/\n/g, '<br />');
+    }
+  });
+  
+  return formattedParts.join('');
+}
+

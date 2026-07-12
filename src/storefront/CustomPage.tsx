@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
 import { useStorefrontConfig } from '../store/storefrontConfig';
-import { replaceContactInfo } from '../utils/storefrontUtils';
+import { replaceContactInfo, formatPageContent } from '../utils/storefrontUtils';
 
 export default function CustomPage() {
   const { id } = useParams<{ id: string }>();
@@ -46,7 +46,7 @@ export default function CustomPage() {
         <div className="custom-page-content-card">
           <div 
             className="custom-page-rich-content"
-            dangerouslySetInnerHTML={{ __html: replaceContactInfo(activeLink.customPageContent, config.contactInfo) }} 
+            dangerouslySetInnerHTML={{ __html: formatPageContent(replaceContactInfo(activeLink.customPageContent, config.contactInfo)) }} 
           />
         </div>
 

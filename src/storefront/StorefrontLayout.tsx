@@ -57,6 +57,12 @@ export default function StorefrontLayout() {
     ...col,
     links: col.links.filter(l => l.enabled).map(link => {
       if (link.customPageContent) {
+        const labelLower = (link.label || '').toLowerCase();
+        if (labelLower === 'privacy policy') {
+          return { ...link, url: '/privacy-policy' };
+        } else if (labelLower === 'terms of service' || labelLower === 'terms and service') {
+          return { ...link, url: '/terms-of-service' };
+        }
         return { ...link, url: `/page/${link.id}` };
       }
       let url = link.url;

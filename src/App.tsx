@@ -31,6 +31,8 @@ import CollectionPage from './storefront/CollectionPage';
 import CustomPage from './storefront/CustomPage';
 import CustomerAccount from './storefront/CustomerAccount';
 import CampaignPage from './storefront/CampaignPage';
+import PrivacyPolicy from './storefront/PrivacyPolicy';
+import TermsOfService from './storefront/TermsOfService';
 import Inbox from './features/chats/Inbox';
 import { CustomerAuthProvider } from './context/CustomerAuthContext';
 import { useStorefrontConfig, setStorefrontConfigLocally, getStorefrontConfig } from './store/storefrontConfig';
@@ -187,6 +189,8 @@ export default function App() {
             <Route path="account" element={<CustomerAccount />} />
             <Route path="blogs" element={<BlogList />} />
             <Route path="blog/:slug" element={<BlogDetails />} />
+            <Route path="privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="terms-of-service" element={<TermsOfService />} />
           </Route>
           
           {/* Admin Panel (all other routes protected under /admin) */}
