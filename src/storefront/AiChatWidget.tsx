@@ -137,30 +137,7 @@ export default function AiChatWidget() {
           aria-label="Open AI Shopping Assistant"
           id="ai-chat-button"
         >
-          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className="ai-rocket-svg">
-            <defs>
-              <linearGradient id="rocketGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#06b6d4" />
-                <stop offset="50%" stopColor="#d946ef" />
-                <stop offset="100%" stopColor="#ec4899" />
-              </linearGradient>
-              <filter id="rocketGlow">
-                <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
-                <feMerge>
-                  <feMergeNode in="coloredBlur"/>
-                  <feMergeNode in="SourceGraphic"/>
-                </feMerge>
-              </filter>
-            </defs>
-            {/* Center flame/flares */}
-            <path d="M32 46v6M28 48v3M36 48v3" stroke="url(#rocketGrad)" strokeWidth="2.5" strokeLinecap="round" filter="url(#rocketGlow)"/>
-            {/* Rocket wings/fins */}
-            <path d="M25 30c-2.5 4-5 8-7 12h7v-12zM39 30c2.5 4 5 8 7 12h-7v-12z" stroke="url(#rocketGrad)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" filter="url(#rocketGlow)"/>
-            {/* Rocket main body */}
-            <path d="M32 14c-5.5 7-7 16-7 26h14c0-10-1.5-19-7-26z" stroke="url(#rocketGrad)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" filter="url(#rocketGlow)"/>
-            {/* Rocket window */}
-            <circle cx="32" cy="27" r="4.5" stroke="url(#rocketGrad)" strokeWidth="2.5" filter="url(#rocketGlow)"/>
-          </svg>
+          <Sparkles size={25} />
           {hasNewReply && <span className="ai-fab-badge">!</span>}
         </button>
       )}
