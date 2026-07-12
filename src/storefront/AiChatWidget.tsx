@@ -89,7 +89,19 @@ export default function AiChatWidget() {
       const data = await response.json();
 
       if (data.status === 'success' && data.data?.reply) {
-        const aiMsg: ChatMsg = { role: 'model', text: data.data.reply };
+        let reply = data.data.reply;
+        
+        // Fail-safe: If backend returned local fallback text, check if we have a smarter client-side match
+        const isBackendFallback = reply.includes('আমি আপনার প্রশ্নটি বুঝতে পেরেছি') || reply.includes('পণ্যটির নাম লিখে প্রশ্ন করতে পারেন');
+        if (isBackendFallback) {
+          const clientFallback = generateClientFallbackResponse(text.trim(), config.products || [], lastMatchedProduct, setLastMatchedProduct);
+          const isClientFallbackGeneric = clientFallback.includes('আমি আপনার প্রশ্নটি সরাসরি বুঝতে পারিনি') || clientFallback.includes('আমি আপনার প্রশ্নটি বুঝতে পেরেছি');
+          if (!isClientFallbackGeneric) {
+            reply = clientFallback;
+          }
+        }
+
+        const aiMsg: ChatMsg = { role: 'model', text: reply };
         setMessages(prev => [...prev, aiMsg]);
         if (!open) setHasNewReply(true);
       } else {
