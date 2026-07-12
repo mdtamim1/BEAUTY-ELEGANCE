@@ -62,6 +62,8 @@ export default function StorefrontLayout() {
           return { ...link, url: '/privacy-policy' };
         } else if (labelLower === 'terms of service' || labelLower === 'terms and service') {
           return { ...link, url: '/terms-of-service' };
+        } else if (labelLower === 'about us' || labelLower === 'about') {
+          return { ...link, url: '/about-us' };
         }
         return { ...link, url: `/page/${link.id}` };
       }
