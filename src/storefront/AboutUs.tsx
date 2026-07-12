@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, ArrowLeft, Target, ShieldCheck, HeartHandshake, Award } from 'lucide-react';
 import { useStorefrontConfig } from '../store/storefrontConfig';
@@ -5,6 +6,14 @@ import { replaceContactInfo, formatPageContent } from '../utils/storefrontUtils'
 
 export default function AboutUs() {
   const [config] = useStorefrontConfig();
+
+  useEffect(() => {
+    const container = document.querySelector('.storefront-scroll-container');
+    if (container) {
+      container.scrollTop = 0;
+    }
+    window.scrollTo(0, 0);
+  }, []);
 
   // Find the about us link from all footer columns or navLinks
   const allLinks = [

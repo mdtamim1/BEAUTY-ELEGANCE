@@ -165,6 +165,13 @@ export default function CollectionPage() {
     // Reset filters when collection changes
     setSelectedCategory('All');
     setSortBy('default');
+    
+    // Explicitly reset storefront scroll container to top
+    const container = document.querySelector('.storefront-scroll-container');
+    if (container) {
+      container.scrollTop = 0;
+    }
+    window.scrollTo(0, 0);
   }, [slug]);
 
   if (!navLink) {

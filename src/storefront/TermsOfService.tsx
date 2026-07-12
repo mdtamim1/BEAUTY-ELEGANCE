@@ -66,39 +66,55 @@ export default function TermsOfService() {
     }
   }, [baseHtml]);
 
+  // Scroll to top on mount
+  useEffect(() => {
+    const container = document.querySelector('.storefront-scroll-container');
+    if (container) {
+      container.scrollTop = 0;
+    }
+    window.scrollTo(0, 0);
+  }, []);
+
   // Set up scroll listener to highlight active section in TOC
   useEffect(() => {
     if (headings.length === 0) return;
 
+    const container = document.querySelector('.storefront-scroll-container');
+    if (!container) return;
+
     const handleScroll = () => {
-      const scrollPosition = window.scrollY + 150; // Offset for threshold
+      const scrollPosition = container.scrollTop + 180; // Offset for threshold
       
       // Find current section
       let currentSection = headings[0].id;
       for (const heading of headings) {
         const el = document.getElementById(heading.id);
-        if (el && el.offsetTop <= scrollPosition) {
-          currentSection = heading.id;
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
+          const offsetTop = rect.top - containerRect.top + container.scrollTop;
+          if (offsetTop <= scrollPosition) {
+            currentSection = heading.id;
+          }
         }
       }
       setActiveSection(currentSection);
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
   }, [headings]);
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
-    if (el) {
-      const offset = 100; // Header offset
-      const bodyRect = document.body.getBoundingClientRect().top;
-      const elementRect = el.getBoundingClientRect().top;
-      const elementPosition = elementRect - bodyRect;
-      const offsetPosition = elementPosition - offset;
+    const container = document.querySelector('.storefront-scroll-container');
+    if (el && container) {
+      const rect = el.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      const offsetTop = rect.top - containerRect.top + container.scrollTop - 40; // offset
 
-      window.scrollTo({
-        top: offsetPosition,
+      container.scrollTo({
+        top: offsetTop,
         behavior: 'smooth'
       });
       setActiveSection(id);

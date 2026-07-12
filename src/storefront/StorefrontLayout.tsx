@@ -161,8 +161,26 @@ export default function StorefrontLayout() {
     if (container) {
       container.scrollTop = 0;
     }
+    window.scrollTo(0, 0);
+
+    // Timed fallbacks to handle lazy layout rendering and image size shifts
+    const t1 = setTimeout(() => {
+      if (container) container.scrollTop = 0;
+      window.scrollTo(0, 0);
+    }, 50);
+
+    const t2 = setTimeout(() => {
+      if (container) container.scrollTop = 0;
+      window.scrollTo(0, 0);
+    }, 150);
+
     setBottomNavVisible(true);
-  }, [location.pathname]);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     if (mobileSearchOpen && searchInputRef.current) {
