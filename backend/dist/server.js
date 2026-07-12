@@ -4010,14 +4010,42 @@ ${listStr}`;
 
 ${listStr}`;
   }
-  const categoryMatched = products.filter((p) => p.category && query.includes(p.category.toLowerCase()));
+  let targetCategoryName = null;
+  if (query.includes("fitness") || query.includes("\u09AB\u09BF\u099F\u09A8\u09C7\u09B8") || query.includes("gym") || query.includes("gym") || query.includes("\u099C\u09BF\u09AE") || query.includes("\u09AC\u09CD\u09AF\u09BE\u09AF\u09BC\u09BE\u09AE") || query.includes("\u09AC\u09CD\u09AF\u09BE\u09DF\u09BE\u09AE") || query.includes("workout") || query.includes("exercise") || query.includes("dumbbell") || query.includes("\u09A1\u09BE\u09AE\u09CD\u09AC\u09C7\u09B2") || query.includes("\u09B0\u09CB\u09B2\u09BE\u09B0") || query.includes("roller")) {
+    targetCategoryName = "Fitness Item";
+  } else if (query.includes("game") || query.includes("sports") || query.includes("\u0996\u09C7\u09B2\u09BE") || query.includes("\u0996\u09C7\u09B2\u09BE\u09B0") || query.includes("\u09AB\u09C1\u099F\u09AC\u09B2") || query.includes("football") || query.includes("\u0995\u09CD\u09B0\u09BF\u0995\u09C7\u099F") || query.includes("ball") || query.includes("\u09AC\u09B2") || query.includes("\u09AC\u09BE\u09B8\u09CD\u0995\u09C7\u099F\u09AC\u09B2") || query.includes("basketball") || query.includes("badminton") || query.includes("\u09AC\u09CD\u09AF\u09BE\u099F\u09AE\u09BF\u09A8\u09CD\u099F\u09A8")) {
+    targetCategoryName = "Sports Game";
+  } else if (query.includes("shoes") || query.includes("\u099C\u09C1\u09A4\u09BE") || query.includes("\u099C\u09C1\u09A4\u09CB") || query.includes("\u09B8\u09CD\u09A8\u09BF\u0995\u09BE\u09B0") || query.includes("sneakers") || query.includes("shoe")) {
+    targetCategoryName = "Sports Shoes";
+  } else if (query.includes("wear") || query.includes("jersey") || query.includes("\u099C\u09BE\u09B0\u09CD\u09B8\u09BF") || query.includes("tshirt") || query.includes("t-shirt") || query.includes("\u099F\u09BF-\u09B6\u09BE\u09B0\u09CD\u099F") || query.includes("\u09AA\u09CB\u09B6\u09BE\u0995") || query.includes("cloth") || query.includes("\u0995\u09BE\u09AA\u09A1\u09BC") || query.includes("polo") || query.includes("\u09AA\u09CB\u09B2\u09CB")) {
+    targetCategoryName = "Sports wear";
+  }
+  let categoryMatched = products;
+  if (targetCategoryName) {
+    categoryMatched = products.filter((p) => p.category && p.category.toLowerCase().includes(targetCategoryName.toLowerCase()));
+  } else {
+    categoryMatched = products.filter((p) => p.category && query.includes(p.category.toLowerCase()));
+  }
   if (categoryMatched.length > 0) {
     const listStr = categoryMatched.slice(0, 5).map((p) => `- **${p.name}** (\u09F3${p.price})`).join("\n");
-    return `\u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u0995\u09BE\u099B\u09C7 **${categoryMatched[0].category}** \u0995\u09CD\u09AF\u09BE\u099F\u09BE\u0997\u09B0\u09BF\u09B0 \u09A8\u09BF\u099A\u09C7\u09B0 \u09AA\u09A3\u09CD\u09AF\u0997\u09C1\u09B2\u09CB \u09B0\u09DF\u09C7\u099B\u09C7:
+    return `\u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u0995\u09BE\u099B\u09C7 **${categoryMatched[0].category || targetCategoryName}** \u09B8\u0982\u0995\u09CD\u09B0\u09BE\u09A8\u09CD\u09A4 \u09A8\u09BF\u099A\u09C7\u09B0 \u09AA\u09A3\u09CD\u09AF\u0997\u09C1\u09B2\u09CB \u09B0\u09DF\u09C7\u099B\u09C7:
 
-${listStr}`;
+${listStr}
+
+\u09AA\u09A3\u09CD\u09AF\u09C7\u09B0 \u09AC\u09BF\u09AC\u09B0\u09A3, \u09A6\u09BE\u09AE \u09AC\u09BE \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE \u099C\u09BE\u09A8\u09A4\u09C7 \u09AA\u09A3\u09CD\u09AF\u099F\u09BF\u09B0 \u09A8\u09BE\u09AE \u09B2\u09BF\u0996\u09C7 \u09AA\u09CD\u09B0\u09B6\u09CD\u09A8 \u0995\u09B0\u09A4\u09C7 \u09AA\u09BE\u09B0\u09C7\u09A8!`;
   }
-  return "\u0986\u09AE\u09BF \u0986\u09AA\u09A8\u09BE\u09B0 \u09AA\u09CD\u09B0\u09B6\u09CD\u09A8\u099F\u09BF \u09AC\u09C1\u099D\u09A4\u09C7 \u09AA\u09C7\u09B0\u09C7\u099B\u09BF\u0964 \u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u09B8\u09CD\u099F\u09CB\u09B0\u09C7 \u09A5\u09BE\u0995\u09BE \u09AA\u09A3\u09CD\u09AF\u0997\u09C1\u09B2\u09CB\u09B0 \u09A6\u09BE\u09AE, \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE, \u0985\u09A5\u09AC\u09BE \u0995\u09CB\u09A8\u09CB \u09AA\u09B0\u09BE\u09AE\u09B0\u09CD\u09B6 \u09B8\u09AE\u09CD\u09AA\u09B0\u09CD\u0995\u09C7 \u099C\u09BE\u09A8\u09A4\u09C7 \u09AA\u09A3\u09CD\u09AF\u099F\u09BF\u09B0 \u09A8\u09BE\u09AE \u09B2\u09BF\u0996\u09C7 \u09AA\u09CD\u09B0\u09B6\u09CD\u09A8 \u0995\u09B0\u09A4\u09C7 \u09AA\u09BE\u09B0\u09C7\u09A8\u0964 \u0986\u09AE\u09BF \u0986\u09AA\u09A8\u09BE\u0995\u09C7 \u09B8\u09A0\u09BF\u0995 \u09A4\u09A5\u09CD\u09AF \u0993 \u09AA\u09B0\u09BE\u09AE\u09B0\u09CD\u09B6 \u09A6\u09C7\u0993\u09DF\u09BE\u09B0 \u099A\u09C7\u09B7\u09CD\u099F\u09BE \u0995\u09B0\u09AC!";
+  const categoryNames = Array.from(new Set(products.map((p) => p.category).filter(Boolean)));
+  const categoryListStr = categoryNames.length > 0 ? `
+
+\u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u09B8\u09CD\u099F\u09CB\u09B0\u09C7\u09B0 \u09AA\u09CD\u09B0\u09A7\u09BE\u09A8 \u0995\u09CD\u09AF\u09BE\u099F\u09BE\u0997\u09B0\u09BF\u0997\u09C1\u09B2\u09CB \u09B9\u09B2\u09CB:
+` + categoryNames.map((c) => `- **${c}**`).join("\n") : "";
+  const popularListStr = products.length > 0 ? `
+
+\u099C\u09A8\u09AA\u09CD\u09B0\u09BF\u09DF \u0995\u09BF\u099B\u09C1 \u09AA\u09A3\u09CD\u09AF:
+` + products.slice(0, 3).map((p) => `- **${p.name}** (\u09F3${p.price})`).join("\n") : "";
+  return `\u0986\u09AE\u09BF \u0986\u09AA\u09A8\u09BE\u09B0 \u09AA\u09CD\u09B0\u09B6\u09CD\u09A8\u099F\u09BF \u09B8\u09B0\u09BE\u09B8\u09B0\u09BF \u09AC\u09C1\u099D\u09A4\u09C7 \u09AA\u09BE\u09B0\u09BF\u09A8\u09BF\u0964 \u0986\u09AE\u09BF \u0986\u09AA\u09A8\u09BE\u0995\u09C7 \u09AA\u09A3\u09CD\u09AF \u0996\u09C1\u0981\u099C\u09C7 \u09AA\u09C7\u09A4\u09C7, \u09A6\u09BE\u09AE \u099C\u09BE\u09A8\u09A4\u09C7 \u0985\u09A5\u09AC\u09BE \u09AA\u09B0\u09BE\u09AE\u09B0\u09CD\u09B6 \u09A6\u09BF\u09A4\u09C7 \u09B8\u09BE\u09B9\u09BE\u09AF\u09CD\u09AF \u0995\u09B0\u09A4\u09C7 \u09AA\u09BE\u09B0\u09BF\u0964${categoryListStr}${popularListStr}
+
+\u0985\u09A8\u09C1\u0997\u09CD\u09B0\u09B9 \u0995\u09B0\u09C7 \u0995\u09CB\u09A8\u09CB \u09AA\u09A3\u09CD\u09AF\u09C7\u09B0 \u09A8\u09BE\u09AE \u09AC\u09BE \u0986\u09AA\u09A8\u09BE\u09B0 \u09AA\u099B\u09A8\u09CD\u09A6\u09C7\u09B0 \u0995\u09CD\u09AF\u09BE\u099F\u09BE\u0997\u09B0\u09BF \u09B2\u09BF\u0996\u09C7 \u09AA\u09CD\u09B0\u09B6\u09CD\u09A8 \u0995\u09B0\u09C1\u09A8!`;
 }
 
 // backend/routes/ai.ts

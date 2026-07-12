@@ -460,12 +460,40 @@ function generateLocalAIResponse(message: string, products: any[]): string {
     return `আমাদের আকর্ষণীয় অফার ও ডিসকাউন্টযুক্ত পণ্যসমূহ:\n\n${listStr}`;
   }
 
-  // Category queries
-  const categoryMatched = products.filter(p => p.category && query.includes(p.category.toLowerCase()));
-  if (categoryMatched.length > 0) {
-    const listStr = categoryMatched.slice(0, 5).map(p => `- **${p.name}** (৳${p.price})`).join('\n');
-    return `আমাদের কাছে **${categoryMatched[0].category}** ক্যাটাগরির নিচের পণ্যগুলো রয়েছে:\n\n${listStr}`;
+  // Smart Synonyms & Category queries
+  let targetCategoryName: string | null = null;
+  
+  if (query.includes('fitness') || query.includes('ফিটনেস') || query.includes('gym') || query.includes('gym') || query.includes('জিম') || query.includes('ব্যায়াম') || query.includes('ব্যায়াম') || query.includes('workout') || query.includes('exercise') || query.includes('dumbbell') || query.includes('ডাম্বেল') || query.includes('রোলার') || query.includes('roller')) {
+    targetCategoryName = 'Fitness Item';
+  } else if (query.includes('game') || query.includes('sports') || query.includes('খেলা') || query.includes('খেলার') || query.includes('ফুটবল') || query.includes('football') || query.includes('ক্রিকেট') || query.includes('ball') || query.includes('বল') || query.includes('বাস্কেটবল') || query.includes('basketball') || query.includes('badminton') || query.includes('ব্যাটমিন্টন')) {
+    targetCategoryName = 'Sports Game';
+  } else if (query.includes('shoes') || query.includes('জুতা') || query.includes('জুতো') || query.includes('স্নিকার') || query.includes('sneakers') || query.includes('shoe')) {
+    targetCategoryName = 'Sports Shoes';
+  } else if (query.includes('wear') || query.includes('jersey') || query.includes('জার্সি') || query.includes('tshirt') || query.includes('t-shirt') || query.includes('টি-শার্ট') || query.includes('পোশাক') || query.includes('cloth') || query.includes('কাপড়') || query.includes('polo') || query.includes('পোলো')) {
+    targetCategoryName = 'Sports wear';
+  }
+  
+  let categoryMatched = products;
+  if (targetCategoryName) {
+    categoryMatched = products.filter(p => p.category && p.category.toLowerCase().includes(targetCategoryName!.toLowerCase()));
+  } else {
+    categoryMatched = products.filter(p => p.category && query.includes(p.category.toLowerCase()));
   }
 
-  return 'আমি আপনার প্রশ্নটি বুঝতে পেরেছি। আমাদের স্টোরে থাকা পণ্যগুলোর দাম, ব্যবহারের নিয়ম, অথবা কোনো পরামর্শ সম্পর্কে জানতে পণ্যটির নাম লিখে প্রশ্ন করতে পারেন। আমি আপনাকে সঠিক তথ্য ও পরামর্শ দেওয়ার চেষ্টা করব!';
+  if (categoryMatched.length > 0) {
+    const listStr = categoryMatched.slice(0, 5).map(p => `- **${p.name}** (৳${p.price})`).join('\n');
+    return `আমাদের কাছে **${categoryMatched[0].category || targetCategoryName}** সংক্রান্ত নিচের পণ্যগুলো রয়েছে:\n\n${listStr}\n\nপণ্যের বিবরণ, দাম বা ব্যবহারের নিয়ম জানতে পণ্যটির নাম লিখে প্রশ্ন করতে পারেন!`;
+  }
+
+  // Default fallback with categories and products listing
+  const categoryNames = Array.from(new Set(products.map(p => p.category).filter(Boolean)));
+  const categoryListStr = categoryNames.length > 0 
+    ? `\n\nআমাদের স্টোরের প্রধান ক্যাটাগরিগুলো হলো:\n` + categoryNames.map(c => `- **${c}**`).join('\n')
+    : '';
+    
+  const popularListStr = products.length > 0
+    ? `\n\nজনপ্রিয় কিছু পণ্য:\n` + products.slice(0, 3).map(p => `- **${p.name}** (৳${p.price})`).join('\n')
+    : '';
+
+  return `আমি আপনার প্রশ্নটি সরাসরি বুঝতে পারিনি। আমি আপনাকে পণ্য খুঁজে পেতে, দাম জানতে অথবা পরামর্শ দিতে সাহায্য করতে পারি।${categoryListStr}${popularListStr}\n\nঅনুগ্রহ করে কোনো পণ্যের নাম বা আপনার পছন্দের ক্যাটাগরি লিখে প্রশ্ন করুন!`;
 }
