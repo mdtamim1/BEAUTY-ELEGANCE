@@ -260,6 +260,17 @@ export default function Checkout() {
       clearCart();
     }
     
+    // Track Purchase in Facebook Meta Pixel
+    if (typeof window !== 'undefined' && (window as any).fbq) {
+      (window as any).fbq('track', 'Purchase', {
+        value: total,
+        currency: 'BDT',
+        content_ids: items.map(item => String(item.product.id)),
+        content_type: 'product',
+        num_items: items.reduce((sum, item) => sum + item.quantity, 0)
+      });
+    }
+    
     setIsSuccess(true);
   };
 
