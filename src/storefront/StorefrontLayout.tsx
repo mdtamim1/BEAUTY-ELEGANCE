@@ -52,10 +52,12 @@ export default function StorefrontLayout() {
   // Branding
   const branding = config.branding;
 
-  // Footer columns (with normalized links)
-  const footerColumns = config.footerColumns.map(col => ({
-    ...col,
-    links: col.links.filter(l => l.enabled).map(link => {
+  // Footer columns (with normalized links, excluding Quick Links)
+  const footerColumns = config.footerColumns
+    .filter(col => col.title !== 'Quick Links')
+    .map(col => ({
+      ...col,
+      links: col.links.filter(l => l.enabled).map(link => {
       if (link.customPageContent) {
         const labelLower = (link.label || '').toLowerCase();
         if (labelLower === 'privacy policy') {
@@ -523,7 +525,20 @@ export default function StorefrontLayout() {
                 <h4>{col.title}</h4>
                 <ul className="store-footer-links">
                   {col.links.map(link => (
-                    <li key={link.id}><Link to={link.url}>{link.label}</Link></li>
+                    <li key={link.id}>
+                      <Link 
+                        to={link.url}
+                        onClick={() => {
+                          const container = containerRef.current;
+                          if (container) {
+                            container.scrollTop = 0;
+                          }
+                          window.scrollTo(0, 0);
+                        }}
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
                   ))}
                 </ul>
               </div>
