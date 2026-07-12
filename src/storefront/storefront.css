@@ -663,48 +663,60 @@
 .categories-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 12px;
+  gap: 16px;
 }
 
 .category-card {
-  background: var(--sf-bg-light);
-  border: none;
-  border-radius: var(--sf-radius-md);
+  position: relative;
+  border-radius: 12px;
   overflow: hidden;
-  text-align: center;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), 
+              box-shadow 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
   text-decoration: none;
-  color: var(--sf-text-primary);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 0 0 16px 0;
+  aspect-ratio: 3 / 4;
+  background: #0f172a;
 }
 
 .category-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+  transform: translateY(-6px);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3);
 }
 
 .category-image-container {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  aspect-ratio: 1 / 1;
+  height: 100%;
+  margin: 0;
   overflow: hidden;
-  position: relative;
-  background: var(--sf-bg-light);
-  margin-bottom: 12px;
+}
+
+.category-image-container::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,0.85) 100%);
+  z-index: 2;
+  transition: background 0.3s ease;
+}
+
+.category-card:hover .category-image-container::after {
+  background: linear-gradient(180deg, rgba(0,0,0,0.1) 30%, rgba(0,0,0,0.95) 100%);
 }
 
 .category-card-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+  z-index: 1;
 }
 
 .category-card:hover .category-card-image {
-  transform: scale(1.08);
+  transform: scale(1.1);
 }
 
 .category-icon-fallback {
@@ -713,26 +725,40 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--sf-bg-light);
-  color: var(--sf-text-tertiary);
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  color: #64748b;
+  z-index: 1;
 }
 
 .category-card-info {
+  position: absolute;
+  bottom: 18px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  z-index: 3;
   padding: 0 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 .category-name {
-  font-size: 0.85rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  line-height: 1.2;
+  color: #ffffff;
+  font-size: 1.05rem;
+  font-weight: 800;
+  text-shadow: 0 2px 5px rgba(0,0,0,0.7);
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  text-transform: capitalize;
 }
 
 .category-count {
-  font-size: 0.7rem;
-  color: var(--sf-text-tertiary);
-  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
 }
 
 /* ---- Product Cards ---- */
@@ -1568,31 +1594,40 @@
     gap: 16px;
   }
   .categories-grid {
-    display: flex !important;
-    flex-direction: row !important;
-    overflow-x: auto !important;
-    gap: 10px !important;
-    padding-bottom: 8px !important;
-    scrollbar-width: none !important;
-    -webkit-overflow-scrolling: touch !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 12px !important;
+    padding-bottom: 0 !important;
+    overflow-x: visible !important;
   }
   .categories-grid::-webkit-scrollbar {
     display: none !important;
   }
   .category-card {
-    flex-shrink: 0 !important;
-    width: 96px !important;
-    padding: 0 0 10px 0 !important;
+    width: 100% !important;
+    aspect-ratio: 3 / 4 !important;
     border-radius: var(--sf-radius-md) !important;
   }
   .category-image-container {
-    margin-bottom: 6px !important;
+    position: absolute !important;
+    inset: 0 !important;
+    margin: 0 !important;
+  }
+  .category-card-info {
+    position: absolute !important;
+    bottom: 12px !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 3 !important;
   }
   .category-name {
-    font-size: 0.72rem !important;
+    font-size: 0.82rem !important;
+    color: #ffffff !important;
+    text-shadow: 0 1.5px 3px rgba(0,0,0,0.8) !important;
   }
   .category-count {
-    font-size: 0.58rem !important;
+    font-size: 0.64rem !important;
+    color: rgba(255,255,255,0.75) !important;
   }
   .features-grid { grid-template-columns: repeat(2, 1fr); }
   .store-nav { display: none; }

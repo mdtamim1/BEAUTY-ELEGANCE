@@ -282,10 +282,9 @@ export default function StorefrontHome() {
 
       {/* ---- Categories ---- */}
       <section className="store-section" id="categories" style={{ paddingTop: 0, paddingBottom: '24px' }}>
-        <div className="store-section-header">
+        <div className="store-section-header" style={{ justifyContent: 'center', textAlign: 'center', marginBottom: '24px' }}>
           <div>
-            <h2 className="store-section-title">Shop by Category</h2>
-            <p className="store-section-subtitle">Browse our curated collections</p>
+            <h2 className="store-section-title" style={{ fontSize: '1.4rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>— FEATURED CATEGORIES —</h2>
           </div>
         </div>
         <div className="categories-grid">
