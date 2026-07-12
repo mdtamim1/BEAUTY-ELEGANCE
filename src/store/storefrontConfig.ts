@@ -139,6 +139,8 @@ export interface StorefrontConfig {
   delivery: DeliveryConfig;
   newsletter: NewsletterConfig;
   products: ProductConfig[];
+  mostSellingProductIds?: number[];
+  trendingProductIds?: number[];
 }
 
 // ============================================================
@@ -399,6 +401,8 @@ function getDefaultConfig(): StorefrontConfig {
     delivery: { ...DEFAULT_DELIVERY },
     newsletter: { ...DEFAULT_NEWSLETTER },
     products: DEFAULT_PRODUCTS,
+    mostSellingProductIds: [1, 2, 3],
+    trendingProductIds: [4, 5, 6],
   };
 }
 
@@ -531,6 +535,8 @@ function loadConfig(): StorefrontConfig {
         branding: { ...defaults.branding, ...parsed.branding },
         delivery: { ...defaults.delivery, ...parsed.delivery },
         newsletter: { ...defaults.newsletter, ...parsed.newsletter },
+        mostSellingProductIds: parsed.mostSellingProductIds !== undefined ? parsed.mostSellingProductIds : defaults.mostSellingProductIds,
+        trendingProductIds: parsed.trendingProductIds !== undefined ? parsed.trendingProductIds : defaults.trendingProductIds,
       };
       return _config as StorefrontConfig;
     }

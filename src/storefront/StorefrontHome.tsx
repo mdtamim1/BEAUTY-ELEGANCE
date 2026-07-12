@@ -323,6 +323,41 @@ export default function StorefrontHome() {
         </div>
       </section>
 
+      {/* ---- Most Selling & Trending 3D Banners ---- */}
+      <section className="homepage-3d-banners-section">
+        <Link to="/collection/most-selling" className="banner-3d-card banner-3d-most-selling" style={{ textDecoration: 'none' }}>
+          <div className="banner-3d-card-inner">
+            <span className="banner-3d-badge">
+              <Zap size={13} /> Hot Deals
+            </span>
+            <div className="banner-3d-title-group">
+              <h2 className="banner-3d-title">Most Selling</h2>
+              <p className="banner-3d-subtitle">আমাদের সবচেয়ে বেশি বিক্রি হওয়া পণ্যসমূহ</p>
+            </div>
+            <span className="banner-3d-btn">
+              Explore Collection &rarr;
+            </span>
+            <div className="banner-3d-shape" />
+          </div>
+        </Link>
+
+        <Link to="/collection/trending" className="banner-3d-card banner-3d-trending" style={{ textDecoration: 'none' }}>
+          <div className="banner-3d-card-inner">
+            <span className="banner-3d-badge">
+              <Sparkles size={13} /> Popular
+            </span>
+            <div className="banner-3d-title-group">
+              <h2 className="banner-3d-title">Trending</h2>
+              <p className="banner-3d-subtitle">বর্তমান সময়ের সেরা ট্রেন্ডিং কালেকশন</p>
+            </div>
+            <span className="banner-3d-btn">
+              Explore Collection &rarr;
+            </span>
+            <div className="banner-3d-shape" />
+          </div>
+        </Link>
+      </section>
+
 
 
       {/* ---- All Campaigns Trigger Button ---- */}

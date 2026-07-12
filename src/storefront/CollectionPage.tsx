@@ -146,6 +146,21 @@ export default function CollectionPage() {
     };
   }
 
+  if (!navLink && (slug === 'most-selling' || slug === 'trending')) {
+    const isMostSelling = slug === 'most-selling';
+    const ids = isMostSelling 
+      ? (config.mostSellingProductIds || []) 
+      : (config.trendingProductIds || []);
+    
+    navLink = {
+      id: isMostSelling ? 8888 : 9999,
+      label: isMostSelling ? 'Most Selling' : 'Trending',
+      url: `/collection/${slug}`,
+      enabled: true,
+      productIds: ids
+    };
+  }
+
   useEffect(() => {
     // Reset filters when collection changes
     setSelectedCategory('All');
