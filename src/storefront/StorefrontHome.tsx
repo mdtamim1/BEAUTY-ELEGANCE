@@ -3,13 +3,16 @@ import { useOutletContext, Link, useLocation } from 'react-router-dom';
 import { Truck, Shield, RotateCcw, Headphones, Star, Heart, ShoppingCart, Zap,
   Smartphone, Shirt, Home as HomeIcon, Dumbbell, Sparkles, BookOpen,
   Monitor, Camera, Watch, Car, Baby, Flower, Palette, Music, Gamepad, Gift,
-  Grid3X3, ArrowRight, CheckCircle, AlertCircle, X
+  Grid3X3, ArrowRight, CheckCircle, AlertCircle, X, Maximize2
 } from 'lucide-react';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import { CountdownTimer } from './CollectionPage';
 import { subscribeToNewsletter, fetchCampaignsFromBackend } from '../services/api';
 import { OptimizedImage } from '../components/layout/OptimizedImage';
 import { SEOMeta } from '../components/layout/SEOMeta';
+import { resolveProductWithCampaign } from '../utils/productCampaignResolver';
+import { getEventsFromStore, saveCustomerAchievement, type EventItem } from '../store/eventStore';
+import { Gamepad2, Trophy, HelpCircle, Check, Copy, Flame, Clock } from 'lucide-react';
 
 interface StorefrontContext {
   addToCart: (product: any) => void;
@@ -25,6 +28,66 @@ const ICON_MAP: Record<string, any> = {
   Grid3X3, Truck, Shield, RotateCcw, Zap, Star,
 };
 
+const CATEGORY_IMAGE_MAP: Record<string, string> = {
+  'watch': 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80',
+  'glasses': 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=600&q=80',
+  'sunglasses': 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=600&q=80',
+  'women dress': 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=600&q=80',
+  'panjabi': 'https://images.unsplash.com/photo-1617137984095-74e4e5e3613f?auto=format&fit=crop&w=600&q=80',
+  't-shirts': 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80',
+  'polo': 'https://images.unsplash.com/photo-1625910513413-562624f38eec?auto=format&fit=crop&w=600&q=80',
+  'shirts': 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=600&q=80',
+  'pants': 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=600&q=80',
+  'sneakers': 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80',
+  'w. bags': 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=600&q=80',
+  'fitness item': 'https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?auto=format&fit=crop&w=600&q=80',
+};
+
+const TOP_BRANDS_LIST = [
+  {
+    id: 1,
+    brandName: "NIKE",
+    categoryName: "Sports Shoes & Footwear",
+    img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80",
+    link: "/collection/sports-shoes"
+  },
+  {
+    id: 2,
+    brandName: "FITMAX",
+    categoryName: "Gym & Core Fitness",
+    img: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=600&q=80",
+    link: "/collection/fitness-item"
+  },
+  {
+    id: 3,
+    brandName: "PUMA",
+    categoryName: "Activewear & Sports Apparels",
+    img: "https://images.unsplash.com/photo-1519415943484-9fa1873496d4?auto=format&fit=crop&w=600&q=80",
+    link: "/collection/sports-wear"
+  },
+  {
+    id: 4,
+    brandName: "YONEX",
+    categoryName: "Sports Games & Racquets",
+    img: "https://images.unsplash.com/photo-1687360441372-757f8b2b6835?auto=format&fit=crop&w=600&q=80",
+    link: "/collection/sports-game"
+  },
+  {
+    id: 5,
+    brandName: "THE ORDINARY",
+    categoryName: "Skincare & Clinical Wellness",
+    img: "https://images.unsplash.com/photo-1608248597369-234667e4526d?auto=format&fit=crop&w=600&q=80",
+    link: "/collection/skincare"
+  },
+  {
+    id: 6,
+    brandName: "AEROSTEP",
+    categoryName: "Sneakers & Streetwear",
+    img: "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?auto=format&fit=crop&w=600&q=80",
+    link: "/collection/sneakers"
+  }
+];
+
 const StarRating = ({ rating }: { rating: number }) => (
   <div className="product-card-stars">
     {[1, 2, 3, 4, 5].map(i => (
@@ -38,6 +101,7 @@ export default function StorefrontHome() {
   const [config] = useStorefrontConfig();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [activeNpTab, setActiveNpTab] = useState('ALL');
   const [showCampaignsModal, setShowCampaignsModal] = useState(false);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchEndX, setTouchEndX] = useState<number | null>(null);
@@ -48,6 +112,107 @@ export default function StorefrontHome() {
   const [subMsg, setSubMsg] = useState('');
   const [subError, setSubError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Event & Game States
+  const [eventsList, setEventsList] = useState<EventItem[]>([]);
+  const [eventTab, setEventTab] = useState<'running' | 'upcoming'>('running');
+  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
+
+  // Game Play State
+  const [quizIndex, setQuizIndex] = useState(0);
+  const [quizAnswers, setQuizAnswers] = useState<number[]>([]);
+  const [gameResult, setGameResult] = useState<'idle' | 'playing' | 'won' | 'lost'>('idle');
+  const [wonCoupon, setWonCoupon] = useState<string | null>(null);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  useEffect(() => {
+    setEventsList(getEventsFromStore());
+  }, []);
+
+  const handleOpenEventModal = (event: EventItem) => {
+    setSelectedEvent(event);
+    setQuizIndex(0);
+    setQuizAnswers([]);
+    setGameResult('playing');
+    setWonCoupon(null);
+    setIsSpinning(false);
+    setCopiedCode(false);
+  };
+
+  const handleQuizAnswer = (optionIndex: number) => {
+    if (!selectedEvent) return;
+    const newAnswers = [...quizAnswers, optionIndex];
+    setQuizAnswers(newAnswers);
+
+    const questions = selectedEvent.quizQuestions || [];
+    if (quizIndex < questions.length - 1) {
+      setQuizIndex(prev => prev + 1);
+    } else {
+      let correctCount = 0;
+      questions.forEach((q, idx) => {
+        if (newAnswers[idx] === q.correctIndex) correctCount++;
+      });
+
+      const randomRoll = Math.random() * 100;
+      const winChance = selectedEvent.winProbability || 80;
+      
+      if (correctCount >= 2 && randomRoll <= winChance) {
+        setGameResult('won');
+        const code = selectedEvent.rewardCoupon?.code || 'WINNER20';
+        setWonCoupon(code);
+        saveCustomerAchievement({
+          eventId: selectedEvent.id,
+          eventTitle: selectedEvent.title,
+          gameType: selectedEvent.type,
+          couponCode: code,
+          discountText: selectedEvent.rewardCoupon?.type === 'percentage' 
+            ? `${selectedEvent.rewardCoupon.value}% OFF` 
+            : `৳${selectedEvent.rewardCoupon?.value} OFF`,
+          earnedAt: new Date().toISOString(),
+          used: false,
+        });
+      } else {
+        setGameResult('lost');
+      }
+    }
+  };
+
+  const handleSpinWheel = () => {
+    if (!selectedEvent || isSpinning) return;
+    setIsSpinning(true);
+
+    setTimeout(() => {
+      setIsSpinning(false);
+      const randomRoll = Math.random() * 100;
+      const winChance = selectedEvent.winProbability || 85;
+
+      if (randomRoll <= winChance) {
+        setGameResult('won');
+        const code = selectedEvent.rewardCoupon?.code || 'LUCKY500';
+        setWonCoupon(code);
+        saveCustomerAchievement({
+          eventId: selectedEvent.id,
+          eventTitle: selectedEvent.title,
+          gameType: selectedEvent.type,
+          couponCode: code,
+          discountText: selectedEvent.rewardCoupon?.type === 'percentage' 
+            ? `${selectedEvent.rewardCoupon.value}% OFF` 
+            : `৳${selectedEvent.rewardCoupon?.value} OFF`,
+          earnedAt: new Date().toISOString(),
+          used: false,
+        });
+      } else {
+        setGameResult('lost');
+      }
+    }, 1800);
+  };
+
+  const handleCopyCoupon = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 3000);
+  };
 
   // Load active campaigns from backend API
   const [activeCampaigns, setActiveCampaigns] = useState<any[]>([]);
@@ -76,6 +241,53 @@ export default function StorefrontHome() {
     loadCampaigns();
   }, []);
 
+  const dynamicTopBrands = useMemo(() => {
+    const publishedProducts = (config.products || []).filter((p: any) => p.published);
+    const brandMap = new Map<string, { brandName: string; categoryName: string; img: string; link: string }>();
+
+    const brandImages: Record<string, string> = {
+      'powergym': 'https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?auto=format&fit=crop&w=600&q=80',
+      'aerostep': 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80',
+      'adidas': 'https://images.unsplash.com/photo-1518459031867-a89b944bffe4?auto=format&fit=crop&w=600&q=80',
+      'kidsports': 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=600&q=80',
+      'flexifit': 'https://images.unsplash.com/photo-1545205597-3d9d02c29597?auto=format&fit=crop&w=600&q=80',
+      'yonex': 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?auto=format&fit=crop&w=600&q=80',
+      'fitmax': 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=600&q=80',
+      'nike': 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80',
+    };
+
+    publishedProducts.forEach((p: any) => {
+      const bName = (p.brand || '').trim();
+      if (!bName) return;
+      const key = bName.toLowerCase();
+      if (!brandMap.has(key)) {
+        const cat = p.category || 'Official Collection';
+        const img = p.image || brandImages[key] || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=600&q=80';
+        brandMap.set(key, {
+          brandName: bName,
+          categoryName: cat,
+          img: img,
+          link: `/collection/all?brand=${encodeURIComponent(bName)}`
+        });
+      }
+    });
+
+    (config.brands || []).forEach((b: any) => {
+      const key = b.name.toLowerCase();
+      if (!brandMap.has(key)) {
+        const img = brandImages[key] || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=600&q=80';
+        brandMap.set(key, {
+          brandName: b.name,
+          categoryName: b.category || 'Official Brand',
+          img: img,
+          link: `/collection/all?brand=${encodeURIComponent(b.name)}`
+        });
+      }
+    });
+
+    return Array.from(brandMap.values());
+  }, [config.products, config.brands]);
+
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubMsg('');
@@ -87,18 +299,38 @@ export default function StorefrontHome() {
     setIsSubmitting(false);
 
     if (res.status === 'success') {
-      setSubMsg(res.message || 'নিউজলেটার সাবস্ক্রিপশন সফল হয়েছে!');
+      setSubMsg(res.message || 'Newsletter subscription successful!');
       setEmailInput('');
     } else {
-      setSubError(res.message || 'সাবস্ক্রাইব করা যায়নি। আবার চেষ্টা করুন।');
+      setSubError(res.message || 'Subscription failed. Please try again.');
     }
   };
 
   // Shuffle products randomly on component mount or products update
   const shuffledProducts = useMemo(() => {
     const publishedProducts = config.products.filter(p => p.published);
-    return [...publishedProducts].sort(() => Math.random() - 0.5);
-  }, [config.products]);
+    const resolved = publishedProducts.map(p => resolveProductWithCampaign(p, activeCampaigns));
+    return [...resolved].sort(() => Math.random() - 0.5);
+  }, [config.products, activeCampaigns]);
+
+  const newPopularProducts = useMemo(() => {
+    let published = config.products.filter(p => p.published);
+    if (config.newPopularProductIds && config.newPopularProductIds.length > 0) {
+      const selectedSet = new Set(config.newPopularProductIds);
+      published = published.filter(p => selectedSet.has(p.id));
+    }
+    const resolved = published.map(p => resolveProductWithCampaign(p, activeCampaigns));
+    if (activeNpTab === 'ALL') return resolved;
+
+    const tabQuery = activeNpTab.toLowerCase();
+    const matched = resolved.filter(p => {
+      const cat = (p.category || '').toLowerCase();
+      const name = (p.name || '').toLowerCase();
+      return cat.includes(tabQuery) || name.includes(tabQuery);
+    });
+
+    return matched.length > 0 ? matched : resolved;
+  }, [config.products, config.newPopularProductIds, activeNpTab, activeCampaigns]);
 
   const filteredProducts = shuffledProducts.filter(p => {
     if (selectedCategory !== 'All' && p.category !== selectedCategory) return false;
@@ -186,8 +418,10 @@ export default function StorefrontHome() {
   return (
     <>
       <SEOMeta 
-        title="Premium Grooming & Cosmetic Store" 
-        description="Experience the ultimate beauty collection. Shop our premium face cleansers, dumbbells, smart watches, and makeup kits at unbeatable prices." 
+        title="Tamim Global | Premium Sports, Gym Equipment & Active Lifestyle Store BD" 
+        description="Discover Bangladesh's premier online destination for authentic gym equipment, dumbbells, sports shoes, activewear, and workout gear. Fast cash on delivery nationwide." 
+        keywords="Tamim Global, Sports Equipment Bangladesh, Gym Equipment BD, Buy Dumbbells Online, Sports Shoes Dhaka, Fitness Gear, Workout Accessories"
+        slug=""
       />
       {/* ---- Hero Full-Width Carousel ---- */}
       {banners.length > 0 && (
@@ -272,7 +506,7 @@ export default function StorefrontHome() {
                   className="announcement-marquee-item campaign-promo hover-accent" 
                   style={{ color: 'white', fontWeight: 'bold', textDecoration: 'none', cursor: 'pointer' }}
                 >
-                  🔥 {camp.name} ক্যাম্পেইন চলছে! এখনই দেখুন!
+                  🔥 {camp.name} Campaign is Live! Check Now!
                 </Link>
               ))}
             </div>
@@ -280,45 +514,60 @@ export default function StorefrontHome() {
         </div>
       )}
 
-      {/* ---- Categories ---- */}
-      <section className="store-section" id="categories" style={{ paddingTop: 0, paddingBottom: '24px' }}>
-        <div className="store-section-header" style={{ justifyContent: 'center', textAlign: 'center', marginBottom: '24px' }}>
-          <div>
-            <h2 className="store-section-title" style={{ fontSize: '1.4rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>— FEATURED CATEGORIES —</h2>
-          </div>
+      {/* ---- SPLAYD Replica FEATURED CATEGORIES ---- */}
+      <section className="splayd-categories-section" id="categories">
+        <div className="splayd-categories-header">
+          <div className="splayd-categories-line" />
+          <h2 className="splayd-categories-title">FEATURED CATEGORIES</h2>
+          <div className="splayd-categories-line" />
         </div>
-        <div className="categories-grid">
-          {categories.map((cat, i) => {
-            const Icon = ICON_MAP[cat.icon] || Grid3X3;
+
+        <div className="splayd-categories-grid">
+          {categories.map((cat: any, i: number) => {
             const categorySlug = cat.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
             const categoryUrl = `/collection/${categorySlug}`;
             
-            // Find all published products for this category
-            const categoryProducts = config.products.filter(p => p.published && p.category === cat.name);
-            // Get last product image
+            const categoryProducts = config.products.filter(p => p.published && (p.category || '').toLowerCase().trim() === cat.name.toLowerCase().trim());
             const lastProductImage = categoryProducts.length > 0 ? categoryProducts[categoryProducts.length - 1].image : '';
+            const fallbackImage = CATEGORY_IMAGE_MAP[cat.name.toLowerCase().trim()] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80';
+            const catImage = cat.image || lastProductImage || fallbackImage;
 
             return (
               <Link 
                 to={categoryUrl}
                 key={i} 
-                className="category-card"
-                style={{ textDecoration: 'none' }}
+                className="splayd-category-card"
               >
-                <div className="category-image-container">
-                  {lastProductImage ? (
-                    <OptimizedImage src={lastProductImage} alt={cat.name} className="category-card-image" width={300} height={300} />
-                  ) : (
-                    <div className="category-icon-fallback"><Icon size={22} /></div>
-                  )}
-                </div>
-                <div className="category-card-info">
-                  <div className="category-name">{cat.name}</div>
-                  <div className="category-count">{cat.count.toLocaleString()} products</div>
+                <img src={catImage} alt={cat.name} className="splayd-category-card-img" />
+                <div className="splayd-category-card-overlay">
+                  <h3 className="splayd-category-name">{cat.name}</h3>
                 </div>
               </Link>
             );
           })}
+        </div>
+      </section>
+
+      {/* ---- TOP BRANDS Section ---- */}
+      <section className="top-brands-section">
+        <div className="top-brands-header">
+          <div className="top-brands-line" />
+          <h2 className="top-brands-title">TOP BRANDS</h2>
+          <div className="top-brands-line" />
+        </div>
+        <div className="top-brands-grid">
+          {dynamicTopBrands.map((item, idx) => (
+            <Link to={item.link} key={idx} className="top-brand-card">
+              <div className="top-brand-card-bg">
+                <img src={item.img} alt={item.brandName} />
+              </div>
+              <div className="top-brand-card-overlay" />
+              <div className="top-brand-card-content">
+                <span className="top-brand-category-label">{item.categoryName}</span>
+                <h3 className="top-brand-name">{item.brandName}</h3>
+              </div>
+            </Link>
+          ))}
         </div>
       </section>
 
@@ -331,7 +580,7 @@ export default function StorefrontHome() {
             </span>
             <div className="banner-3d-title-group">
               <h2 className="banner-3d-title">Most Selling</h2>
-              <p className="banner-3d-subtitle">আমাদের সবচেয়ে বেশি বিক্রি হওয়া পণ্যসমূহ</p>
+              <p className="banner-3d-subtitle">Our top selling products</p>
             </div>
             <span className="banner-3d-btn">
               Explore Collection &rarr;
@@ -347,7 +596,7 @@ export default function StorefrontHome() {
             </span>
             <div className="banner-3d-title-group">
               <h2 className="banner-3d-title">Trending</h2>
-              <p className="banner-3d-subtitle">বর্তমান সময়ের সেরা ট্রেন্ডিং কালেকশন</p>
+              <p className="banner-3d-subtitle">Trending collections of the season</p>
             </div>
             <span className="banner-3d-btn">
               Explore Collection &rarr;
@@ -357,38 +606,71 @@ export default function StorefrontHome() {
         </Link>
       </section>
 
+      {/* ---- All Campaigns Compact Image Banner ---- */}
+      <div className="homepage-campaign-banner-wrap">
+        <Link to="/campaigns" className="homepage-campaign-banner-link">
+          <div className="homepage-campaign-image-banner">
+            <img 
+              src="https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1400&q=80" 
+              alt="Exclusive Campaigns & Offers" 
+              className="campaign-banner-img"
+            />
+            <div className="campaign-banner-overlay" />
+            <div className="campaign-banner-content">
+              <span className="campaign-banner-badge">
+                <Sparkles size={14} /> EXCLUSIVE CAMPAIGNS & OFFERS
+              </span>
+              <h2 className="campaign-banner-title">
+                EXPLORE ALL OUR SPECIAL CAMPAIGNS
+              </h2>
+              <p className="campaign-banner-subtitle">
+                Explore all our contemporary special offers & mega deals at a glance
+              </p>
+            </div>
+            <div className="campaign-banner-btn-box">
+              <span>VIEW ALL CAMPAIGNS</span>
+              <ArrowRight size={18} />
+            </div>
+          </div>
+        </Link>
+      </div>
 
-
-      {/* ---- All Campaigns Trigger Button ---- */}
-      {activeCampaigns.length > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'center', margin: '30px 16px' }}>
-          <button 
-            onClick={() => setShowCampaignsModal(true)} 
-            className="store-btn"
-            style={{ 
-              padding: '14px 28px', 
-              fontSize: '1rem', 
-              fontWeight: 800, 
-              borderRadius: '30px', 
-              background: 'var(--sf-accent)',
-              color: 'white',
-              border: 'none',
-              cursor: 'pointer',
-              boxShadow: '0 8px 24px var(--sf-accent-glow)',
-              transition: 'all 0.25s ease'
-            }}
-          >
-            Show Our All Campaigns
-          </button>
-        </div>
-      )}
+      {/* ---- RUNNING & UPCOMING EVENTS SECTION BANNER ---- */}
+      <div className="homepage-campaign-banner-wrap" style={{ marginTop: '24px' }}>
+        <Link to="/events" className="homepage-campaign-banner-link">
+          <div className="homepage-campaign-image-banner" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)' }}>
+            <img 
+              src="https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&w=1400&q=80" 
+              alt="Running & Upcoming Events Zone" 
+              className="campaign-banner-img"
+              style={{ opacity: 0.4 }}
+            />
+            <div className="campaign-banner-overlay" style={{ background: 'linear-gradient(90deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.6) 60%, transparent 100%)' }} />
+            <div className="campaign-banner-content">
+              <span className="campaign-banner-badge" style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.4)' }}>
+                <Flame size={14} fill="#38bdf8" /> RUNNING & UPCOMING EVENTS
+              </span>
+              <h2 className="campaign-banner-title">
+                JOIN LIVE EVENTS & PLAY TRIVIA GAMES
+              </h2>
+              <p className="campaign-banner-subtitle">
+                Join our live events, quizzes and games to win discount vouchers instantly
+              </p>
+            </div>
+            <div className="campaign-banner-btn-box" style={{ background: '#38bdf8', color: '#0f172a' }}>
+              <span>EXPLORE EVENT ZONE</span>
+              <ArrowRight size={18} />
+            </div>
+          </div>
+        </Link>
+      </div>
 
       {/* ---- Active Campaigns Modal ---- */}
       {showCampaignsModal && (
         <div className="modal-overlay" style={{ display: 'flex', zIndex: 1000, background: 'rgba(15, 23, 42, 0.65)' }}>
           <div className="modal" style={{ maxWidth: '800px', width: '90%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', background: 'white', borderRadius: '24px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', overflow: 'hidden' }}>
             <div className="modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span className="modal-title" style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a' }}>আমাদের ক্যাম্পেইনসমূহ (Active Campaigns)</span>
+              <span className="modal-title" style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a' }}>Active Campaigns</span>
               <button onClick={() => setShowCampaignsModal(false)} style={{ color: '#64748b', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '6px' }} title="Close Modal">
                 <X size={24} />
               </button>
@@ -428,7 +710,7 @@ export default function StorefrontHome() {
                           </Link>
                         </h3>
                         <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '4px 0 0 0' }}>
-                          মেয়াদ: {new Date(camp.startDate).toLocaleDateString()} থেকে {new Date(camp.endDate).toLocaleDateString()}
+                          Valid: {new Date(camp.startDate).toLocaleDateString()} to {new Date(camp.endDate).toLocaleDateString()}
                         </p>
                         <div style={{ marginTop: '8px' }}>
                           <Link 
@@ -436,7 +718,7 @@ export default function StorefrontHome() {
                             onClick={() => setShowCampaignsModal(false)}
                             style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--sf-accent)', textDecoration: 'none' }}
                           >
-                            ক্যাম্পেইন পেজে যান &rarr;
+                            Go to Campaign Page &rarr;
                           </Link>
                         </div>
                       </div>
@@ -444,7 +726,7 @@ export default function StorefrontHome() {
                         <CountdownTimer
                           startDate={camp.startDate}
                           endDate={camp.endDate}
-                          label="ক্যাম্পেইন শেষ হতে বাকি"
+                          label="Campaign ends in"
                         />
                       </div>
                     </div>
@@ -452,7 +734,7 @@ export default function StorefrontHome() {
                     {/* Associated products list */}
                     {campProducts.length > 0 ? (
                       <div style={{ marginTop: '20px' }}>
-                        <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '12px' }}>ক্যাম্পেইনের পণ্যসমূহ:</h4>
+                        <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0', marginBottom: '12px' }}>Campaign Products:</h4>
                         <div className="campaign-products-grid">
                           {campProducts.map((product) => (
                             <div 
@@ -493,7 +775,7 @@ export default function StorefrontHome() {
                         </div>
                       </div>
                     ) : (
-                      <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '16px 0 0 0', fontStyle: 'italic' }}>এই ক্যাম্পেইনের সাথে কোনো পণ্য সংযুক্ত করা নেই।</p>
+                      <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '16px 0 0 0', fontStyle: 'italic' }}>No products attached to this campaign.</p>
                     )}
                   </div>
                 );
@@ -503,145 +785,70 @@ export default function StorefrontHome() {
         </div>
       )}
 
-      {/* ---- All Products Grid (Shuffled) ---- */}
-      <section className="store-section" id="all-products" style={{ paddingTop: 0 }}>
-        <div className="store-section-header">
-          <div>
-            <h2 className="store-section-title">Discover Products</h2>
-            <p className="store-section-subtitle">Browse our complete collection of curated items randomly selected for you</p>
-          </div>
+      {/* ---- NEW AND POPULAR Section (Exact Replica of SPLAYD) ---- */}
+      <section className="new-popular-section" id="new-and-popular">
+        <div className="new-popular-header">
+          <h2 className="new-popular-title">NEW AND POPULAR</h2>
+          <div className="new-popular-underline"></div>
         </div>
-        
-        <div className="store-products-layout">
-          {/* Categories Sidebar */}
-          <aside className="store-categories-sidebar">
-            <h3 className="sidebar-title">Categories</h3>
-            <div className="sidebar-categories-list">
-              <button 
-                className={`sidebar-category-item ${selectedCategory === 'All' ? 'active' : ''}`}
-                onClick={() => setSelectedCategory('All')}
-              >
-                All Products
-              </button>
-              {categories.map((cat) => (
-                <button 
-                  key={cat.id} 
-                  className={`sidebar-category-item ${selectedCategory === cat.name ? 'active' : ''}`}
-                  onClick={() => setSelectedCategory(cat.name)}
+
+        <div className="new-popular-tabs-row">
+          {['ALL', 'SNEAKERS', 'PANJABI', 'SHIRTS', 'PERFUMES', 'PANTS'].map((tab) => (
+            <button
+              key={tab}
+              className={`new-popular-tab-btn ${activeNpTab === tab ? 'active' : ''}`}
+              onClick={() => setActiveNpTab(tab)}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        <div className="new-popular-grid">
+          {newPopularProducts.map((product: any) => (
+            <Link to={`/product/${product.id}`} key={product.id} className="new-popular-card">
+              <div className="new-popular-img-box">
+                <OptimizedImage
+                  src={product.image}
+                  alt={product.name}
+                  className="new-popular-img"
+                  width={400}
+                  height={400}
+                />
+                <button
+                  className="new-popular-expand-btn"
+                  onClick={(e) => {
+                    e.preventDefault();
+                  }}
+                  title="Quick View"
                 >
-                  {cat.name}
+                  <Maximize2 size={14} />
                 </button>
-              ))}
-            </div>
-          </aside>
-
-          {/* Products Main Container */}
-          <div className="store-products-main">
-            {filteredProducts.length > 0 ? (
-              <div className="products-grid">
-                {filteredProducts.map((product: any) => (
-                  <Link to={`/product/${product.id}`} key={product.id} className="product-card" style={{ textDecoration: 'none' }}>
-                    <div className="product-card-image-container">
-                      <OptimizedImage src={product.image} alt={product.name} className="product-card-image" width={400} height={400} />
-                      {product.badge && (
-                        <span className={`product-card-badge ${product.badge}`}>
-                          {product.badge === 'sale' ? `Sale! -${Math.round((1 - product.price / (product.originalPrice || product.price)) * 100)}%` : 'New'}
-                        </span>
-                      )}
-                      {product.originalPrice && product.originalPrice > product.price && (
-                        <span className="product-card-save-badge">
-                          Save ৳{Math.round(product.originalPrice - product.price)}
-                        </span>
-                      )}
-                      <button
-                        className="product-card-wishlist"
-                        onClick={(e) => { e.preventDefault(); toggleWishlist(product.id); }}
-                        style={{ color: wishlist.includes(product.id) ? '#ef4444' : undefined }}
-                      >
-                        <Heart size={18} fill={wishlist.includes(product.id) ? '#ef4444' : 'none'} />
-                      </button>
-                    </div>
-                    <div className="product-card-body">
-                      <div className="product-card-category">{product.category}</div>
-                      <div className="product-card-name">{product.name}</div>
-                      <div className="product-card-rating">
-                        <StarRating rating={product.rating} />
-                        <span className="product-card-reviews">({product.reviews.toLocaleString()})</span>
-                      </div>
-                      <div className="product-card-footer">
-                        <div>
-                          <span className="product-card-price">৳{product.price}</span>
-                          {product.originalPrice && (
-                            <span className="product-card-original-price">৳{product.originalPrice}</span>
-                          )}
-                        </div>
-                        <button
-                          className="product-card-cart-btn"
-                          onClick={(e) => { e.preventDefault(); addToCart(product); }}
-                          title="Add to Cart"
-                        >
-                          <ShoppingCart size={18} />
-                        </button>
-                      </div>
-                    </div>
-                  </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="collection-empty" style={{ padding: '80px 24px' }}>
-              <ShoppingCart size={48} style={{ opacity: 0.2, marginBottom: 16 }} />
-              <h3>No products found</h3>
-              <p>No products match the selected category.</p>
-            </div>
-          )}
+              </div>
+              <div className="new-popular-card-body">
+                <h3 className="new-popular-card-title">{product.name}</h3>
+                <div className="new-popular-card-footer">
+                  <span className="new-popular-card-price">
+                    Tk {Number(product.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                  <button
+                    className="new-popular-cart-icon-btn"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      addToCart(product);
+                    }}
+                    title="Add to Cart"
+                  >
+                    <ShoppingCart size={18} />
+                  </button>
+                </div>
+              </div>
+            </Link>
+          ))}
         </div>
-      </div>
-    </section>
+      </section>
 
-    {/* ---- Newsletter Section (Compact 3D Glass) ---- */}
-    <section className="newsletter-glass-strip">
-      <div className="newsletter-glass-inner">
-        <div className="newsletter-glass-text">
-          <span className="newsletter-glass-icon">✉️</span>
-          <div>
-            <p className="newsletter-glass-title">অফার ও নতুন পণ্যের আপডেট পান</p>
-            <p className="newsletter-glass-sub">সাবস্ক্রাইব করুন — একদম ফ্রি!</p>
-          </div>
-        </div>
 
-        <form onSubmit={handleSubscribe} className="newsletter-glass-form">
-          {subMsg && (
-            <span className="newsletter-glass-success">
-              <CheckCircle size={13} /> {subMsg}
-            </span>
-          )}
-          {subError && (
-            <span className="newsletter-glass-error">
-              <AlertCircle size={13} /> {subError}
-            </span>
-          )}
-          {!subMsg && (
-            <>
-              <input
-                type="email"
-                placeholder="আপনার Gmail লিখুন"
-                required
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                className="newsletter-glass-input"
-              />
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="newsletter-glass-btn"
-              >
-                {isSubmitting ? '...' : 'সাবস্ক্রাইব'}
-              </button>
-            </>
-          )}
-        </form>
-      </div>
-    </section>
 
   </>
   );

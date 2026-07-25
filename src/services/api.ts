@@ -1084,23 +1084,6 @@ export const deleteBlogFromBackend = async (id: string): Promise<any> => {
   }
 };
 
-export const fetchAIAnalytics = async (): Promise<any> => {
-  try {
-    const response = await fetch(`${API_BASE}/ai/analytics`, {
-      headers: {
-        ...getAuthHeaders(),
-      },
-    });
-    if (!response.ok) return null;
-    const result = await response.json();
-    if (result.status === 'success') return result.data;
-    return null;
-  } catch (e) {
-    console.error('Failed to fetch AI analytics:', e);
-    return null;
-  }
-};
-
 
 
 

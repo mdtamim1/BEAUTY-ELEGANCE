@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import { replaceContactInfo, formatPageContent } from '../utils/storefrontUtils';
+import { SEOMeta } from '../components/layout/SEOMeta';
 
 interface HeadingItem {
   id: string;
@@ -123,6 +124,12 @@ export default function TermsOfService() {
 
   return (
     <div className="premium-policy-page" style={{ paddingBottom: '80px' }}>
+      <SEOMeta
+        title="Terms of Service - Tamim Global"
+        description="Tamim Global terms of service, customer agreement, and online shopping terms."
+        slug="page/terms-of-service"
+        keywords="Terms of Service Tamim Global, Customer Agreement BD"
+      />
       {/* Hero Banner */}
       <div className="premium-page-hero">
         <div className="premium-page-hero-content">

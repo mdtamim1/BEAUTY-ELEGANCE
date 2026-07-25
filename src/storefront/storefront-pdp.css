@@ -1297,19 +1297,8 @@
 }
 
 /* On Desktop: keep bottom bar hidden if desired, or show it. Let's make body margin-bottom on mobile to avoid overlapping content */
-@media (max-width: 768px) {
-  .pdp-mobile-sticky-bar {
-    bottom: 0; /* Move to the absolute bottom of the screen */
-  }
-  .pdp-actions, .pdp-contact-actions {
-    display: none !important;
-  }
-}
-
-@media (min-width: 769px) {
-  .pdp-mobile-sticky-bar {
-    display: none !important;
-  }
+.pdp-mobile-sticky-bar {
+  display: none !important;
 }
 
 /* Video & Photo Reviews Grid */
@@ -1325,4 +1314,366 @@
     gap: 16px;
   }
 }
+
+/* ==========================================================================
+   SPLAYD EXACT REPLICA PDP DESIGN
+   ========================================================================== */
+.splayd-pdp-container {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 24px 20px 60px 20px;
+  font-family: inherit;
+}
+
+.splayd-pdp-breadcrumbs-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+  font-size: 0.82rem;
+  color: #71717a;
+}
+
+.splayd-pdp-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.splayd-pdp-breadcrumbs a {
+  color: #71717a;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.splayd-pdp-breadcrumbs a:hover {
+  color: #18181b;
+}
+
+.splayd-pdp-breadcrumbs span {
+  color: #18181b;
+  font-weight: 600;
+}
+
+.splayd-pdp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  margin-bottom: 48px;
+}
+
+@media (max-width: 992px) {
+  .splayd-pdp-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
+
+/* Gallery - Side Vertical Thumbnail Strip */
+.splayd-pdp-gallery-wrap {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.splayd-pdp-thumbnails-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 70px;
+  flex-shrink: 0;
+}
+
+.splayd-pdp-thumb-btn {
+  width: 70px;
+  height: 70px;
+  border-radius: 0px;
+  border: 1.5px solid #e4e4e7;
+  background: #f4f4f5;
+  cursor: pointer;
+  padding: 0;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.splayd-pdp-thumb-btn.active {
+  border-color: #18181b;
+}
+
+.splayd-pdp-thumb-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.splayd-pdp-main-img-box {
+  flex: 1;
+  background: #e9e9e9;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.splayd-pdp-main-img-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 768px) {
+  .splayd-pdp-gallery-wrap {
+    flex-direction: column-reverse;
+  }
+  .splayd-pdp-thumbnails-strip {
+    flex-direction: row;
+    width: 100%;
+    overflow-x: auto;
+  }
+}
+
+/* Info Column */
+.splayd-pdp-info-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.splayd-pdp-top-meta {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.splayd-pdp-ask-link {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #18181b;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.splayd-pdp-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #18181b;
+  margin: 0 0 10px 0;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.splayd-pdp-price {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #18181b;
+  margin-bottom: 20px;
+}
+
+.splayd-pdp-size-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #18181b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.splayd-pdp-size-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.splayd-pdp-size-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid #d4d4d8;
+  background: #ffffff;
+  color: #18181b;
+  font-weight: 800;
+  font-size: 0.88rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.splayd-pdp-size-circle.active {
+  background: #18181b;
+  color: #ffffff;
+  border-color: #18181b;
+}
+
+/* Quantity & Add to Cart Row */
+.splayd-pdp-cart-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.splayd-pdp-qty-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1.5px solid #18181b;
+  height: 46px;
+  padding: 0 8px;
+  background: #ffffff;
+}
+
+.splayd-pdp-qty-stepper button {
+  background: none;
+  border: none;
+  font-weight: 800;
+  font-size: 1rem;
+  width: 28px;
+  height: 100%;
+  cursor: pointer;
+  color: #18181b;
+}
+
+.splayd-pdp-qty-stepper span {
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 0 10px;
+  min-width: 24px;
+  text-align: center;
+}
+
+.splayd-pdp-add-btn {
+  flex: 1;
+  height: 46px;
+  background: #18181b;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.88rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.splayd-pdp-add-btn:hover {
+  background: #27272a;
+}
+
+.splayd-pdp-buy-btn {
+  width: 100%;
+  height: 46px;
+  background: #18181b;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.88rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.splayd-pdp-buy-btn:hover {
+  background: #27272a;
+}
+
+/* Scarcity Bar */
+.splayd-pdp-scarcity {
+  margin-bottom: 20px;
+}
+
+.splayd-pdp-scarcity-lbl {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #18181b;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.splayd-pdp-scarcity-bar {
+  width: 100%;
+  height: 6px;
+  background: #e4e4e7;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.splayd-pdp-scarcity-fill {
+  height: 100%;
+  background: #18181b;
+  width: 40%;
+}
+
+/* Live Viewers Counter */
+.splayd-pdp-viewers {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #3f3f46;
+  margin-bottom: 24px;
+}
+
+/* Payment Trust Icons Strip */
+.splayd-pdp-payments-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 0;
+  border-top: 1px solid #e4e4e7;
+  margin-bottom: 24px;
+}
+
+.splayd-payment-badge {
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  background: #f4f4f5;
+  border: 1px solid #e4e4e7;
+  border-radius: 4px;
+  color: #18181b;
+}
+
+/* SPLAYD Accordion Cards */
+.splayd-accordion-card {
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  margin-bottom: 12px;
+}
+
+.splayd-accordion-header {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #18181b;
+  user-select: none;
+}
+
+.splayd-accordion-body {
+  padding: 20px;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  font-size: 0.92rem;
+  color: #3f3f46;
+  line-height: 1.6;
+}
+
 

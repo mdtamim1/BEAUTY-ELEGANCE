@@ -208,12 +208,12 @@ export const SpinWheelModal: React.FC = () => {
         }, 4600);
       } else {
         setIsSpinning(false);
-        alert(res?.message || 'আপনি এই অ্যাকাউন্ট দিয়ে ইতিপূর্বে ১ বার স্পিন হুইল ব্যবহার করেছেন। প্রতি অ্যাকাউন্টে ১ বারই স্পিন প্রযোজ্য।');
+        alert(res?.message || 'You have already used the Spin Wheel once with this account. Only 1 spin is allowed per account.');
       }
     } catch (e) {
       setIsSpinning(false);
       console.error(e);
-      alert('একটি সমস্যা হয়েছে। দয়া করে একটু পর আবার চেষ্টা করুন।');
+      alert('Something went wrong. Please try again later.');
     }
   };
 
@@ -253,50 +253,54 @@ export const SpinWheelModal: React.FC = () => {
           }}
         >
           <Sparkles size={18} style={{ color: '#fbbf24' }} />
-          <span>লটারি হুইল ঘুরান!</span>
+          <span>SPIN & WIN REWARDS!</span>
           <Flame size={16} style={{ color: '#fbbf24' }} />
         </button>
       )}
 
-      {/* Main Modal Backdrop */}
+      {/* Modal Overlay */}
       {isOpen && (
         <div
           style={{
             position: 'fixed',
-            inset: 0,
-            zIndex: 99999,
-            background: 'rgba(5, 5, 12, 0.86)',
-            backdropFilter: 'blur(12px)',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(15, 23, 42, 0.85)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 9999,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '16px'
+            padding: '20px',
+            animation: 'fadeIn 0.3s ease-out'
           }}
         >
           <div
             style={{
               position: 'relative',
               width: '100%',
-              maxWidth: '460px',
-              background: 'linear-gradient(145deg, rgba(20, 16, 42, 0.96), rgba(10, 8, 25, 0.98))',
-              border: '1px solid rgba(251, 191, 36, 0.35)',
+              maxWidth: '440px',
+              background: 'linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%)',
+              border: '2px solid rgba(251, 191, 36, 0.4)',
               borderRadius: '24px',
-              boxShadow: '0 25px 50px -12px rgba(217, 119, 6, 0.3)',
               padding: '28px 24px',
               textAlign: 'center',
-              color: '#fff',
-              overflow: 'hidden'
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+              color: '#fff'
             }}
           >
             {/* Close Button */}
             <button
-              onClick={handleClose}
+              onClick={() => setIsOpen(false)}
+              disabled={isSpinning}
               style={{
                 position: 'absolute',
                 top: '16px',
                 right: '16px',
-                background: 'rgba(255,255,255,0.1)',
-                border: '1px solid rgba(255,255,255,0.2)',
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: 'none',
                 color: '#cbd5e1',
                 borderRadius: '50%',
                 width: '32px',
@@ -304,22 +308,33 @@ export const SpinWheelModal: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
+                cursor: isSpinning ? 'not-allowed' : 'pointer'
               }}
             >
               <X size={18} />
             </button>
 
-            {/* Header Title */}
+            {/* Title HUD */}
             <div style={{ marginBottom: '16px' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', padding: '4px 14px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '10px', border: '1px solid rgba(245, 158, 11, 0.4)' }}>
-                <Sparkles size={14} /> VIP FORTUNE WHEEL
-              </div>
-              <h2 style={{ fontSize: '1.45rem', fontWeight: 800, margin: '0 0 6px 0', background: 'linear-gradient(135deg, #ffffff 0%, #fbbf24 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              <span
+                style={{
+                  background: 'rgba(251, 191, 36, 0.15)',
+                  color: '#fbbf24',
+                  border: '1px solid rgba(251, 191, 36, 0.3)',
+                  padding: '4px 12px',
+                  borderRadius: '20px',
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                }}
+              >
+                🎁 SPECIAL LUCKY WHEEL
+              </span>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 900, margin: '10px 0 4px 0', color: '#fff' }}>
                 {config.title}
               </h2>
-              <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: 0 }}>
+              <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: 0 }}>
                 {config.subtitle}
               </p>
             </div>
@@ -338,13 +353,13 @@ export const SpinWheelModal: React.FC = () => {
               >
                 <Trophy size={48} style={{ color: '#fbbf24', margin: '0 auto 12px auto' }} />
                 <h3 style={{ color: '#4ade80', fontSize: '1.25rem', fontWeight: 800, margin: '0 0 4px 0' }}>
-                  অভিনন্দন! আপনি জিতেছেন 🎉
+                  Congratulations! You Won 🎉
                 </h3>
                 <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#fbbf24', margin: '8px 0' }}>
                   {winningSlice.label}
                 </div>
                 <p style={{ fontSize: '0.82rem', color: '#cbd5e1', marginBottom: '16px' }}>
-                  অর্ডার করার সময় নিচের কুপন কোডটি ব্যবহার করে ডিসকাউন্ট উপভোগ করুন:
+                  Use the coupon code below at checkout to enjoy your discount:
                 </p>
 
                 {/* Coupon Code Copy Box */}
@@ -382,7 +397,7 @@ export const SpinWheelModal: React.FC = () => {
                     }}
                   >
                     {copied ? <Check size={15} /> : <Copy size={15} />}
-                    <span>{copied ? 'কপি হয়েছে!' : 'কপি করুন'}</span>
+                    <span>{copied ? 'Copied!' : 'Copy Code'}</span>
                   </button>
                 </div>
 
@@ -401,7 +416,7 @@ export const SpinWheelModal: React.FC = () => {
                     boxShadow: '0 8px 20px -4px rgba(16, 185, 129, 0.5)'
                   }}
                 >
-                  শপিং করুন ও কুপন দাবি করুন 🛍️
+                  Shop Now & Claim Coupon 🛍️
                 </button>
               </div>
             ) : (

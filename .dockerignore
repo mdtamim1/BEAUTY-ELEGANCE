@@ -1,0 +1,9 @@
+node_modules
+.git
+.gitignore
+.firebase
+dist
+.env
+*.log
+npm-debug.log*
+.DS_Store

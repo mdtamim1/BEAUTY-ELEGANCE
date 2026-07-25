@@ -3,9 +3,10 @@ import { useOutletContext, useNavigate, Link, useLocation } from 'react-router-d
 import { Shield, Truck, RotateCcw, Headphones, User, MapPin, Package, CreditCard, CheckCircle, Zap, ArrowRight, Minus, Plus } from 'lucide-react';
 import { storeProducts } from './data';
 import { addOrder } from '../mock/data';
-import { sendOrderToBackend, validateCouponCode } from '../services/api';
+import { sendOrderToBackend, validateCouponCode, updateProductInBackend } from '../services/api';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
+import { SEOMeta } from '../components/layout/SEOMeta';
 import './storefront-checkout.css';
 import './storefront-account.css';
 
@@ -19,7 +20,7 @@ interface StorefrontContext {
 export default function Checkout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [config] = useStorefrontConfig();
+  const [config, setConfig] = useStorefrontConfig();
   const { customer, updateCustomerPhone, updateCustomerProfile, addCustomerAddress } = useCustomerAuth();
   
   const buyNowProduct = location.state?.product as any;
@@ -286,6 +287,12 @@ export default function Checkout() {
 
   return (
     <div className="checkout-container">
+      <SEOMeta
+        title="Secure Checkout - Tamim Global"
+        description="Complete your order securely at Tamim Global. Cash on delivery available nationwide."
+        slug="checkout"
+        noindex={true}
+      />
       <div className="checkout-header">
         <h1>নিরাপদ অর্ডার ফরম (Secure Order Form)</h1>
         <p>অর্ডারটি সম্পন্ন করতে আপনার সঠিক তথ্য দিয়ে ফরমটি পূরণ করুন</p>

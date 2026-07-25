@@ -9,18 +9,12 @@ import Login from './features/auth/Login';
 
 // Admin Features
 import Dashboard from './features/dashboard/Dashboard';
-import Analytics from './features/analytics/Analytics';
 import Orders from './features/orders/Orders';
 import Products from './features/products/Products';
 import Marketing from './features/marketing/Marketing';
 import Employees from './features/employees/Employees';
-import Finance from './features/finance/Finance';
-import Security from './features/security/Security';
-import SystemSettings from './features/system/SystemSettings';
-import AICenter from './features/ai/AICenter';
 import StorefrontManager from './features/storefront-manager/StorefrontManager';
 import RegisterEmployee from './features/employees/RegisterEmployee';
-import Customers from './features/customers/Customers';
 
 // Storefront (Customer-facing)
 import StorefrontLayout from './storefront/StorefrontLayout';
@@ -31,10 +25,10 @@ import CollectionPage from './storefront/CollectionPage';
 import CustomPage from './storefront/CustomPage';
 import CustomerAccount from './storefront/CustomerAccount';
 import CampaignPage from './storefront/CampaignPage';
+import EventsPage from './storefront/EventsPage';
 import PrivacyPolicy from './storefront/PrivacyPolicy';
 import TermsOfService from './storefront/TermsOfService';
 import AboutUs from './storefront/AboutUs';
-import Inbox from './features/chats/Inbox';
 import { CustomerAuthProvider } from './context/CustomerAuthContext';
 import { useStorefrontConfig, setStorefrontConfigLocally, getStorefrontConfig } from './store/storefrontConfig';
 import { fetchProductsFromBackend } from './services/api';
@@ -109,18 +103,11 @@ function AdminLayout() {
         <main className="app-content">
           <Routes>
             <Route index element={<Dashboard />} />
-            <Route path="analytics" element={<Analytics />} />
             <Route path="orders" element={<Orders />} />
             <Route path="products" element={<Products />} />
             <Route path="marketing" element={<Marketing />} />
             <Route path="employees" element={<Employees />} />
-            <Route path="finance" element={<Finance />} />
-            <Route path="security" element={<Security />} />
-            <Route path="settings" element={<SystemSettings />} />
-            <Route path="ai" element={<AICenter />} />
             <Route path="storefront-manager" element={<StorefrontManager />} />
-            <Route path="chats" element={<Inbox />} />
-            <Route path="customers" element={<Customers />} />
             <Route path="blogs" element={<BlogManager />} />
           </Routes>
         </main>
@@ -183,9 +170,12 @@ export default function App() {
           <Route path="/" element={<StorefrontLayout />}>
             <Route index element={<StorefrontHome />} />
             <Route path="product/:id" element={<ProductDetails />} />
+            <Route path="categories" element={<CollectionPage />} />
             <Route path="collection/:slug" element={<CollectionPage />} />
             <Route path="page/:id" element={<CustomPage />} />
+            <Route path="campaigns" element={<CampaignPage />} />
             <Route path="campaign/:id" element={<CampaignPage />} />
+            <Route path="events" element={<EventsPage />} />
             <Route path="checkout" element={<Checkout />} />
             <Route path="account" element={<CustomerAccount />} />
             <Route path="blogs" element={<BlogList />} />

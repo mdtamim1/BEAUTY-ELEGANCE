@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Image, Megaphone, Grid3X3, ShoppingBag, Link2, Columns3,
   Palette, Award, Truck, RotateCcw, Save, Plus, Trash2,
-  ChevronUp, ChevronDown, Edit3, Eye, EyeOff, X, Check, Upload
+  ChevronUp, ChevronDown, Edit3, Eye, EyeOff, X, Check, Upload, Sparkles
 } from 'lucide-react';
 import {
   useStorefrontConfig,
@@ -22,6 +22,8 @@ import './storefront-manager.css';
 // TAB DEFINITIONS
 // ============================================================
 const TABS = [
+  { id: 'live_view', label: 'Live Viewers Counter', icon: Eye },
+  { id: 'new_popular', label: 'New & Popular Section', icon: Sparkles },
   { id: 'banners', label: 'Hero Banners', icon: Image },
   { id: 'announcements', label: 'Announcements', icon: Megaphone },
   { id: 'categories', label: 'Categories', icon: Grid3X3 },
@@ -40,7 +42,7 @@ type TabId = (typeof TABS)[number]['id'];
 // ============================================================
 export default function StorefrontManager() {
   const [config, setConfig] = useStorefrontConfig();
-  const [activeTab, setActiveTab] = useState<TabId>('banners');
+  const [activeTab, setActiveTab] = useState<TabId>('new_popular');
   const [toast, setToast] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -100,6 +102,8 @@ export default function StorefrontManager() {
       </div>
 
       {/* Tab Content */}
+      {activeTab === 'live_view' && <LiveViewSection config={config} updateConfig={updateConfig} />}
+      {activeTab === 'new_popular' && <NewPopularSection config={config} updateConfig={updateConfig} />}
       {activeTab === 'banners' && <BannersSection config={config} updateConfig={updateConfig} />}
       {activeTab === 'announcements' && <AnnouncementsSection config={config} updateConfig={updateConfig} />}
       {activeTab === 'categories' && <CategoriesSection config={config} updateConfig={updateConfig} />}
@@ -142,6 +146,189 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (val: boole
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       <span className="sfm-toggle-slider" />
     </label>
+  );
+}
+
+// ============================================================
+// 0. NEW & POPULAR SECTION MANAGER
+// ============================================================
+function NewPopularSection({ config, updateConfig }: SectionProps) {
+  const [selectedTab, setSelectedTab] = useState('ALL');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newProdName, setNewProdName] = useState('');
+  const [newProdCategory, setNewProdCategory] = useState('Sneakers');
+  const [newProdPrice, setNewProdPrice] = useState('');
+  const [newProdImage, setNewProdImage] = useState('');
+
+  const products = config.products || [];
+  const selectedProductIds = config.newPopularProductIds || [];
+
+  const availableCategories = useMemo(() => {
+    const cats = new Set<string>();
+    cats.add('ALL');
+    (config.categories || []).forEach(c => cats.add(c.name));
+    products.forEach(p => { if (p.category) cats.add(p.category); });
+    return Array.from(cats);
+  }, [config.categories, products]);
+
+  const filteredProducts = products.filter(p => {
+    if (!p.published) return false;
+    if (selectedTab === 'ALL') return true;
+    const cat = (p.category || '').toLowerCase();
+    const q = selectedTab.toLowerCase();
+    return cat.includes(q) || (p.name || '').toLowerCase().includes(q);
+  });
+
+  const handleToggleNewPopular = (prodId: number) => {
+    let updated: number[];
+    if (selectedProductIds.includes(prodId)) {
+      updated = selectedProductIds.filter(id => id !== prodId);
+    } else {
+      updated = [...selectedProductIds, prodId];
+    }
+    updateConfig('newPopularProductIds', updated);
+  };
+
+  const handleAddProduct = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProdName.trim() || !newProdPrice) return;
+
+    const newId = Math.max(100, ...products.map(p => p.id)) + 1;
+    const newProduct: ProductConfig = {
+      id: newId,
+      name: newProdName.trim(),
+      sku: `NP-${newId}`,
+      category: newProdCategory,
+      brand: 'CustomBrand',
+      price: parseFloat(newProdPrice) || 0,
+      originalPrice: (parseFloat(newProdPrice) || 0) * 1.2,
+      rating: 4.8,
+      reviews: 24,
+      image: newProdImage.trim() || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80',
+      gallery: [newProdImage.trim() || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80'],
+      badge: 'new',
+      inStock: true,
+      published: true,
+      description: `New & Popular ${newProdCategory} item added from control panel.`,
+      features: ['Premium Quality', 'Authentic Product'],
+      specs: [{ name: 'Category', value: newProdCategory }],
+      customerReviews: [],
+      relatedProducts: [],
+      stock: 50,
+      sold: 0,
+      revenue: 0,
+    };
+
+    updateConfig('products', [newProduct, ...products]);
+    updateConfig('newPopularProductIds', [newId, ...selectedProductIds]);
+    setNewProdName('');
+    setNewProdPrice('');
+    setNewProdImage('');
+    setShowAddModal(false);
+  };
+
+  const handleCategoryChange = (prodId: number, newCat: string) => {
+    const updated = products.map(p => p.id === prodId ? { ...p, category: newCat } : p);
+    updateConfig('products', updated);
+  };
+
+  return (
+    <div className="sfm-section">
+      <div className="sfm-section-header">
+        <div>
+          <div className="sfm-section-title">New & Popular Section Manager</div>
+          <div className="sfm-section-subtitle">
+            Select products by category. Only products you check will appear in the "NEW AND POPULAR" section on the frontend.
+          </div>
+        </div>
+        <button className="btn btn-primary btn-sm" onClick={() => setShowAddModal(true)}>
+          <Plus size={14} /> Add Product to New & Popular
+        </button>
+      </div>
+
+      {/* Dynamic Tabs Row */}
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', margin: '16px 0 24px 0', borderBottom: '1px solid var(--border-secondary)', paddingBottom: '16px' }}>
+        {availableCategories.map((tab: string) => (
+          <button
+            key={tab}
+            className={`btn btn-sm ${selectedTab === tab ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ fontWeight: 700 }}
+            onClick={() => setSelectedTab(tab)}
+          >
+            {tab} {tab !== 'ALL' && `(${products.filter(p => p.published && (p.category || '').toLowerCase().includes(tab.toLowerCase())).length})`}
+          </button>
+        ))}
+      </div>
+
+      {/* Product List for Selected Tab with Selection Toggle */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+        {filteredProducts.map(prod => {
+          const isSelected = selectedProductIds.includes(prod.id);
+          return (
+            <div key={prod.id} className="card" style={{ padding: '16px', display: 'flex', gap: '14px', alignItems: 'center', border: isSelected ? '1.5px solid var(--color-success)' : '1px solid var(--border-primary)', background: isSelected ? 'rgba(16, 185, 129, 0.05)' : 'var(--bg-secondary)' }}>
+              <img src={prod.image} alt={prod.name} style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border-primary)' }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{prod.name}</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', fontWeight: 800, margin: '2px 0 6px 0' }}>৳{prod.price}</div>
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '6px' }}>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${isSelected ? 'btn-success' : 'btn-secondary'}`}
+                    style={{ fontSize: '0.75rem', fontWeight: 700, padding: '4px 10px' }}
+                    onClick={() => handleToggleNewPopular(prod.id)}
+                  >
+                    {isSelected ? '✓ Selected for Frontend' : '+ Add to New & Popular'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Add Product Modal */}
+      {showAddModal && (
+        <div className="modal-overlay" style={{ display: 'flex' }}>
+          <div className="modal" style={{ maxWidth: '500px', width: '90%' }}>
+            <div className="modal-header">
+              <span className="modal-title">Add Product to New & Popular</span>
+              <button onClick={() => setShowAddModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={18} /></button>
+            </div>
+            <form onSubmit={handleAddProduct}>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div className="form-group">
+                  <label className="form-label">Product Name *</label>
+                  <input type="text" className="form-input" required value={newProdName} onChange={e => setNewProdName(e.target.value)} placeholder="e.g. AF-1 White Black Pebbled" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Section Category / Tab *</label>
+                  <select className="form-select" value={newProdCategory} onChange={e => setNewProdCategory(e.target.value)}>
+                    <option value="Sneakers">Sneakers</option>
+                    <option value="Panjabi">Panjabi</option>
+                    <option value="Shirts">Shirts</option>
+                    <option value="Perfumes">Perfumes</option>
+                    <option value="Pants">Pants</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Price (৳) *</label>
+                  <input type="number" className="form-input" required value={newProdPrice} onChange={e => setNewProdPrice(e.target.value)} placeholder="5800" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Product Image URL</label>
+                  <input type="text" className="form-input" value={newProdImage} onChange={e => setNewProdImage(e.target.value)} placeholder="https://..." />
+                </div>
+              </div>
+              <div className="modal-footer" style={{ padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Add to Storefront</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -361,6 +548,7 @@ function CategoriesSection({ config, updateConfig }: SectionProps) {
     updateConfig('categories', [...items, {
       id: newId, name: 'New Category', icon: 'Grid3X3',
       count: 0, published: true, sortOrder: items.length + 1,
+      image: '',
     }]);
     setEditId(newId);
   };
@@ -383,63 +571,78 @@ function CategoriesSection({ config, updateConfig }: SectionProps) {
       <div className="sfm-section-header">
         <div>
           <div className="sfm-section-title">Product Categories</div>
-          <div className="sfm-section-subtitle">Organize your store products into categories</div>
+          <div className="sfm-section-subtitle">Organize your store products into categories and customize category images</div>
         </div>
         <button className="btn btn-primary btn-sm" onClick={add}><Plus size={14} /> Add Category</button>
       </div>
 
       <div className="sfm-item-list">
-        {items.map((cat, idx) => (
-          <div key={cat.id}>
-            <div className="sfm-item">
-              <div className="sfm-item-number">{idx + 1}</div>
-              <div className="sfm-item-content">
-                <div className="sfm-item-title">{cat.name}</div>
-                <div className="sfm-item-meta">Icon: {cat.icon} • {cat.count} products • Sort #{cat.sortOrder}</div>
-              </div>
-              <span className={`sfm-card-badge ${cat.published ? 'enabled' : 'disabled'}`}>
-                {cat.published ? 'Published' : 'Draft'}
-              </span>
-              <div className="sfm-actions">
-                <button className="sfm-btn-icon" onClick={() => move(cat.id, -1)}><ChevronUp size={14} /></button>
-                <button className="sfm-btn-icon" onClick={() => move(cat.id, 1)}><ChevronDown size={14} /></button>
-                <button className="sfm-btn-icon" onClick={() => setEditId(editId === cat.id ? null : cat.id)}><Edit3 size={14} /></button>
-                <button className="sfm-btn-icon danger" onClick={() => remove(cat.id)}><Trash2 size={14} /></button>
-              </div>
-            </div>
+        {items.map((cat, idx) => {
+          const liveProductCount = (config.products || []).filter(
+            p => p.published && (p.category || '').toLowerCase().trim() === cat.name.toLowerCase().trim()
+          ).length;
 
-            {editId === cat.id && (
-              <div className="sfm-expand">
-                <div className="sfm-expand-body">
-                  <div className="sfm-form-grid">
-                    <div className="sfm-form-group">
-                      <label className="sfm-label">Name</label>
-                      <input className="sfm-input" value={cat.name} onChange={e => update(cat.id, 'name', e.target.value)} />
-                    </div>
-                    <div className="sfm-form-group">
-                      <label className="sfm-label">Icon</label>
-                      <select className="sfm-select" value={cat.icon} onChange={e => update(cat.id, 'icon', e.target.value)}>
-                        {ICON_OPTIONS.map(ic => <option key={ic} value={ic}>{ic}</option>)}
-                      </select>
-                    </div>
-                    <div className="sfm-form-group">
-                      <label className="sfm-label">Product Count</label>
-                      <input className="sfm-input" type="number" value={cat.count} onChange={e => update(cat.id, 'count', parseInt(e.target.value) || 0)} />
-                    </div>
-                    <div className="sfm-form-group">
-                      <label className="sfm-label">Sort Order</label>
-                      <input className="sfm-input" type="number" value={cat.sortOrder} onChange={e => update(cat.id, 'sortOrder', parseInt(e.target.value) || 0)} />
-                    </div>
-                    <div className="sfm-form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                      <label className="sfm-label" style={{ marginBottom: 0 }}>Published</label>
-                      <Toggle checked={cat.published} onChange={(v) => update(cat.id, 'published', v)} />
+          return (
+            <div key={cat.id}>
+              <div className="sfm-item">
+                <div className="sfm-item-number">{idx + 1}</div>
+                {cat.image ? (
+                  <img src={cat.image} alt={cat.name} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 8 }} />
+                ) : (
+                  <div style={{ width: 40, height: 40, background: 'rgba(255,255,255,0.05)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '11px' }}>No Img</div>
+                )}
+                <div className="sfm-item-content">
+                  <div className="sfm-item-title">{cat.name}</div>
+                  <div className="sfm-item-meta">Icon: {cat.icon} • {liveProductCount} Active Products (Display: {cat.count || liveProductCount}) • Sort #{cat.sortOrder}</div>
+                </div>
+                <span className={`sfm-card-badge ${cat.published ? 'enabled' : 'disabled'}`}>
+                  {cat.published ? 'Published' : 'Draft'}
+                </span>
+                <div className="sfm-actions">
+                  <button className="sfm-btn-icon" onClick={() => move(cat.id, -1)}><ChevronUp size={14} /></button>
+                  <button className="sfm-btn-icon" onClick={() => move(cat.id, 1)}><ChevronDown size={14} /></button>
+                  <button className="sfm-btn-icon" onClick={() => setEditId(editId === cat.id ? null : cat.id)}><Edit3 size={14} /></button>
+                  <button className="sfm-btn-icon danger" onClick={() => remove(cat.id)}><Trash2 size={14} /></button>
+                </div>
+              </div>
+
+              {editId === cat.id && (
+                <div className="sfm-expand">
+                  <div className="sfm-expand-body">
+                    <div className="sfm-form-grid">
+                      <div className="sfm-form-group">
+                        <label className="sfm-label">Name</label>
+                        <input className="sfm-input" value={cat.name} onChange={e => update(cat.id, 'name', e.target.value)} />
+                      </div>
+                      <div className="sfm-form-group">
+                        <label className="sfm-label">Icon</label>
+                        <select className="sfm-select" value={cat.icon} onChange={e => update(cat.id, 'icon', e.target.value)}>
+                          {ICON_OPTIONS.map(ic => <option key={ic} value={ic}>{ic}</option>)}
+                        </select>
+                      </div>
+                      <div className="sfm-form-group" style={{ gridColumn: 'span 2' }}>
+                        <label className="sfm-label">Category Banner / Card Image URL</label>
+                        <input className="sfm-input" placeholder="https://..." value={cat.image || ''} onChange={e => update(cat.id, 'image', e.target.value)} />
+                      </div>
+                      <div className="sfm-form-group">
+                        <label className="sfm-label">Product Count (Override)</label>
+                        <input className="sfm-input" type="number" value={cat.count ?? liveProductCount} onChange={e => update(cat.id, 'count', parseInt(e.target.value) || 0)} />
+                      </div>
+                      <div className="sfm-form-group">
+                        <label className="sfm-label">Sort Order</label>
+                        <input className="sfm-input" type="number" value={cat.sortOrder} onChange={e => update(cat.id, 'sortOrder', parseInt(e.target.value) || 0)} />
+                      </div>
+                      <div className="sfm-form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <label className="sfm-label" style={{ marginBottom: 0 }}>Published</label>
+                        <Toggle checked={cat.published} onChange={(v) => update(cat.id, 'published', v)} />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        ))}
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -801,11 +1004,89 @@ function FooterSection({ config, updateConfig }: SectionProps) {
     updateConfig('footerColumns', columns.filter((_, i) => i !== colIdx));
   };
 
+  const b = config.branding;
+
+  const updateBrandingField = (field: keyof typeof b, val: any) => {
+    updateConfig('branding', { ...b, [field]: val });
+  };
+
   return (
     <div className="sfm-section">
+      
+      {/* ── 1. Web Developer Portfolio Link & Credit Control Card ── */}
+      <div className="sfm-card" style={{ marginBottom: 24, border: '1px solid rgba(245, 158, 11, 0.3)', background: 'rgba(245, 158, 11, 0.03)' }}>
+        <div className="sfm-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div className="sfm-card-title" style={{ color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Sparkles size={16} /> Web Developer Portfolio Credit (Footer Bottom)
+            </div>
+            <div className="sfm-card-subtitle" style={{ color: 'rgba(255,255,255,0.6)' }}>
+              Highlight your agency / portfolio link at the bottom of the storefront footer (Name: Tamim Labs).
+            </div>
+          </div>
+          <Toggle
+            checked={b.developerEnabled ?? true}
+            onChange={(v) => updateBrandingField('developerEnabled', v)}
+          />
+        </div>
+
+        <div className="sfm-grid-2" style={{ marginTop: 16 }}>
+          <div className="sfm-field">
+            <label className="sfm-label">Developer / Agency Name</label>
+            <input
+              type="text"
+              className="sfm-input"
+              value={b.developerName ?? 'Tamim Labs'}
+              onChange={(e) => updateBrandingField('developerName', e.target.value)}
+              placeholder="e.g. Tamim Labs"
+            />
+          </div>
+
+          <div className="sfm-field">
+            <label className="sfm-label">Developer Portfolio Link URL</label>
+            <input
+              type="url"
+              className="sfm-input"
+              value={b.developerUrl ?? 'https://tamimlabs.com'}
+              onChange={(e) => updateBrandingField('developerUrl', e.target.value)}
+              placeholder="https://yourportfolio.com"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ── 2. Store Address & Copyright Settings ── */}
+      <div className="sfm-card" style={{ marginBottom: 24 }}>
+        <div className="sfm-card-title" style={{ marginBottom: 16 }}>Footer Contact Address & Copyright Notice</div>
+        <div className="sfm-grid-2">
+          <div className="sfm-field">
+            <label className="sfm-label">Store Physical Address (Footer)</label>
+            <input
+              type="text"
+              className="sfm-input"
+              value={b.addressText ?? '5th Floor, Block-B, Shop no: 46, 47, 56, 57, 58, Basundhara City Complex'}
+              onChange={(e) => updateBrandingField('addressText', e.target.value)}
+              placeholder="Store address..."
+            />
+          </div>
+
+          <div className="sfm-field">
+            <label className="sfm-label">Copyright Notice Text</label>
+            <input
+              type="text"
+              className="sfm-input"
+              value={b.copyrightText ?? '© 2026 Tamim Global. All rights reserved.'}
+              onChange={(e) => updateBrandingField('copyrightText', e.target.value)}
+              placeholder="© 2026 Store Name. All rights reserved."
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ── 3. Footer Columns & Link Manager ── */}
       <div className="sfm-section-header">
         <div>
-          <div className="sfm-section-title">Footer Columns</div>
+          <div className="sfm-section-title">Footer Link Columns</div>
           <div className="sfm-section-subtitle">Manage footer link columns. Click the edit button on a link to customize its rich HTML page content.</div>
         </div>
         <button className="btn btn-primary btn-sm" onClick={addColumn}><Plus size={14} /> Add Column</button>
@@ -876,7 +1157,7 @@ function FooterSection({ config, updateConfig }: SectionProps) {
                           className="btn btn-primary"
                           style={{ fontSize: '10px', padding: '2px 8px', height: 'auto', minHeight: 'unset' }}
                           onClick={() => {
-                            updateLink(colIdx, link.id, 'customPageContent', '<h3>নূতন পেজ</h3><p>এখানে আপনার পেজ এর লেখাগুলো লিখুন।</p>');
+                            updateLink(colIdx, link.id, 'customPageContent', '<h3>New Page</h3><p>Write your page content here.</p>');
                           }}
                         >
                           Enable Page Content
@@ -1328,3 +1609,114 @@ function DeliverySection({ config, updateConfig }: SectionProps) {
     </div>
   );
 }
+
+// ============================================================
+// LIVE VIEW COUNTER SECTION
+// ============================================================
+function LiveViewSection({ config, updateConfig }: SectionProps) {
+  const liveConfig = config.liveViewConfig || {
+    enabled: true,
+    presetRange: '30-50',
+    customMin: 30,
+    customMax: 85,
+    updateIntervalSeconds: 4,
+  };
+
+  const handleUpdate = (updated: Partial<typeof liveConfig>) => {
+    updateConfig('liveViewConfig', { ...liveConfig, ...updated });
+  };
+
+  return (
+    <div className="sfm-card">
+      <div className="sfm-card-header">
+        <div>
+          <div className="sfm-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Eye size={20} color="#38bdf8" />
+            <span>Product Live Viewer Counter & AI Badge</span>
+          </div>
+          <p className="sfm-card-subtitle" style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>
+            Configure the dynamic live viewing count range displayed on Product Detail Pages (PDP).
+          </p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{liveConfig.enabled ? 'Enabled' : 'Disabled'}</span>
+          <Toggle checked={liveConfig.enabled} onChange={(enabled) => handleUpdate({ enabled })} />
+        </div>
+      </div>
+
+      <div style={{ padding: '20px 0' }}>
+        <h4 style={{ margin: '0 0 14px 0', fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)' }}>Select Viewing Count Fluctuation Range:</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+          {[
+            { id: '0-20', label: '0 - 20 Viewers', desc: 'Low activity count range' },
+            { id: '0-30', label: '0 - 30 Viewers', desc: 'Moderate activity count range' },
+            { id: '30-50', label: '30 - 50 Viewers', desc: 'High activity count range' },
+            { id: '50-70', label: '50 - 70 Viewers', desc: 'Popular / Trending count range' },
+            { id: 'custom', label: 'Custom Range', desc: 'Manually specify min & max' },
+          ].map(opt => (
+            <div
+              key={opt.id}
+              onClick={() => handleUpdate({ presetRange: opt.id as any })}
+              style={{
+                border: liveConfig.presetRange === opt.id ? '2px solid #38bdf8' : '1px solid var(--border)',
+                background: liveConfig.presetRange === opt.id ? 'rgba(56, 189, 248, 0.1)' : 'rgba(255,255,255,0.02)',
+                borderRadius: '12px',
+                padding: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: liveConfig.presetRange === opt.id ? '#38bdf8' : '#ffffff', marginBottom: '4px' }}>
+                {opt.label}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>{opt.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        {liveConfig.presetRange === 'custom' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px', color: 'var(--text-secondary)' }}>Minimum Live Viewers Count</label>
+              <input
+                type="number"
+                className="sfm-input"
+                value={liveConfig.customMin}
+                onChange={(e) => handleUpdate({ customMin: Math.max(0, parseInt(e.target.value) || 0) })}
+                min={0}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px', color: 'var(--text-secondary)' }}>Maximum Live Viewers Count</label>
+              <input
+                type="number"
+                className="sfm-input"
+                value={liveConfig.customMax}
+                onChange={(e) => handleUpdate({ customMax: Math.max(1, parseInt(e.target.value) || 1) })}
+                min={1}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Live Preview Card */}
+        <div style={{ padding: '16px', background: '#090d16', border: '1.5px dashed rgba(56, 189, 248, 0.4)', borderRadius: '12px' }}>
+          <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '10px', fontWeight: 800, letterSpacing: '0.05em' }}>STOREFRONT LIVE PREVIEW BADGE</span>
+          {liveConfig.enabled ? (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 14px', background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', borderRadius: '20px', fontWeight: 700, fontSize: '0.88rem', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+              <Eye size={18} />
+              <span>
+                {liveConfig.presetRange === '0-20' ? '12' : liveConfig.presetRange === '0-30' ? '24' : liveConfig.presetRange === '30-50' ? '42' : liveConfig.presetRange === '50-70' ? '65' : `${liveConfig.customMin} - ${liveConfig.customMax}`} People viewing this right now
+              </span>
+            </div>
+          ) : (
+            <div style={{ color: '#ef4444', fontSize: '0.85rem', fontWeight: 600 }}>
+              🚫 Live Viewing Counter is currently Disabled.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+

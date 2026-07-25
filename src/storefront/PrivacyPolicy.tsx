@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import { replaceContactInfo, formatPageContent } from '../utils/storefrontUtils';
+import { SEOMeta } from '../components/layout/SEOMeta';
 
 interface HeadingItem {
   id: string;
@@ -120,6 +121,12 @@ export default function PrivacyPolicy() {
 
   return (
     <div className="premium-policy-page" style={{ paddingBottom: '80px' }}>
+      <SEOMeta
+        title="Privacy Policy - Tamim Global"
+        description="Tamim Global privacy policy and data security details. We respect your privacy and protect your personal information."
+        slug="page/privacy-policy"
+        keywords="Privacy Policy Tamim Global, Customer Data Protection BD"
+      />
       {/* Hero Banner */}
       <div className="premium-page-hero">
         <div className="premium-page-hero-content">

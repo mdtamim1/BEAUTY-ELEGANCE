@@ -20,12 +20,46 @@ export default function Products() {
   const [tempProduct, setTempProduct] = useState<ProductConfig | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [editorTab, setEditorTab] = useState<'basic' | 'inventory' | 'media' | 'features'>('basic');
+  const [showNewBrandInput, setShowNewBrandInput] = useState(false);
+  const [newBrandName, setNewBrandName] = useState('');
 
   const perPage = viewMode === 'list' ? 12 : 8;
 
   const categoryNames = useMemo(() => {
     return config.categories.map(c => c.name);
   }, [config.categories]);
+
+  const brandOptions = useMemo(() => {
+    const configBrands = (config.brands || []).map(b => b.name);
+    const prodBrands = (products || []).map(p => p.brand).filter(Boolean);
+    const defaultBrands = ['PowerGym', 'AeroStep', 'Adidas', 'KidSports', 'FlexiFit', 'Yonex', 'FitMax', 'Nike', 'Apple', 'Samsung', 'Gucci', 'Rolex'];
+    const merged = Array.from(new Set([...configBrands, ...prodBrands, ...defaultBrands]));
+    return merged.sort();
+  }, [config.brands, products]);
+
+  const handleAddNewBrand = () => {
+    const trimmed = newBrandName.trim();
+    if (!trimmed) return;
+
+    const currentBrands = config.brands || [];
+    const exists = currentBrands.some(b => b.name.toLowerCase() === trimmed.toLowerCase());
+
+    if (!exists) {
+      const newBrandItem = {
+        id: `brand-${Date.now()}`,
+        name: trimmed,
+        category: tempProduct?.category || 'General'
+      };
+      const updatedBrands = [...currentBrands, newBrandItem];
+      setConfig({ ...config, brands: updatedBrands });
+    }
+
+    if (tempProduct) {
+      setTempProduct({ ...tempProduct, brand: trimmed });
+    }
+    setNewBrandName('');
+    setShowNewBrandInput(false);
+  };
 
   // Reorder single stock item (+20 units)
   const handleReorder = async (prodId: number) => {
@@ -202,6 +236,19 @@ export default function Products() {
     }
   };
 
+  const handleStockOut = async (productId: number | string) => {
+    if (window.confirm('Mark this product as Stock Out (0 items remaining)?')) {
+      const updatedList = products.map(p => {
+        if (String(p.id) === String(productId)) {
+          return { ...p, stock: 0, inStock: false };
+        }
+        return p;
+      });
+      setConfig({ ...config, products: updatedList });
+      await updateProductInBackend(productId, { stock: 0, in_stock: 0, inStock: false });
+    }
+  };
+
   // Sorting & Filtering memo
   const filtered = useMemo(() => {
     let result = [...products];
@@ -352,7 +399,17 @@ export default function Products() {
                     <td>{sold.toLocaleString()}</td>
                     <td><span className={`badge ${product.published ? 'badge-success' : 'badge-warning'}`}>{product.published ? 'Active' : 'Draft'}</span></td>
                     <td>
-                      <div style={{ display: 'flex', gap: '4px' }}>
+                      <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                        {stock > 0 && (
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            style={{ color: '#ef4444', fontSize: '11px', padding: '2px 6px', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '4px' }}
+                            onClick={() => handleStockOut(product.id)}
+                            title="Set Stock to 0 (Stock Out)"
+                          >
+                            Stock Out
+                          </button>
+                        )}
                         <button className="btn btn-ghost btn-sm" onClick={() => openEditEditor(product)}><Edit size={14} /></button>
                         <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-danger)' }} onClick={() => handleDeleteProduct(product)}><Trash2 size={14} /></button>
                       </div>
@@ -386,7 +443,10 @@ export default function Products() {
                       
                       <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }}>
                         <button className="btn btn-secondary btn-sm" style={{ flex: 1 }} onClick={() => openEditEditor(product)}><Edit size={12} /> Edit</button>
-                        {stock < 10 && (
+                        {stock > 0 && (
+                          <button className="btn btn-secondary btn-sm" style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.4)', fontSize: '11px' }} onClick={() => handleStockOut(product.id)} title="Mark as Stock Out">Out</button>
+                        )}
+                        {stock < 10 && stock > 0 && (
                           <button className="btn btn-secondary btn-sm" style={{ color: 'var(--color-success)', borderColor: 'var(--color-success)' }} onClick={() => handleReorder(product.id)} title="Quick Reorder 20 Items">Reorder</button>
                         )}
                         <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-danger)' }} onClick={() => handleDeleteProduct(product)}><Trash2 size={12} /></button>
@@ -445,8 +505,49 @@ export default function Products() {
                         <input type="text" className="form-input" required value={tempProduct.sku} onChange={e => setTempProduct({ ...tempProduct, sku: e.target.value })} placeholder="ST-EPB-001" />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">Brand</label>
-                        <input type="text" className="form-input" value={tempProduct.brand} onChange={e => setTempProduct({ ...tempProduct, brand: e.target.value })} placeholder="e.g. Apple / Samsung" />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                          <label className="form-label" style={{ margin: 0 }}>Brand</label>
+                          <button 
+                            type="button" 
+                            onClick={() => setShowNewBrandInput(!showNewBrandInput)} 
+                            style={{ background: 'none', border: 'none', color: '#38bdf8', fontSize: '12px', cursor: 'pointer', fontWeight: 700 }}
+                          >
+                            + Add New Brand
+                          </button>
+                        </div>
+
+                        {showNewBrandInput ? (
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <input 
+                              type="text" 
+                              className="form-input" 
+                              placeholder="Enter new brand name..." 
+                              value={newBrandName} 
+                              onChange={e => setNewBrandName(e.target.value)} 
+                              autoFocus
+                            />
+                            <button type="button" className="btn btn-primary btn-sm" onClick={handleAddNewBrand}>Save</button>
+                            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowNewBrandInput(false)}>Cancel</button>
+                          </div>
+                        ) : (
+                          <select 
+                            className="form-select" 
+                            value={tempProduct.brand || ''} 
+                            onChange={e => {
+                              if (e.target.value === '__add_new__') {
+                                setShowNewBrandInput(true);
+                              } else {
+                                setTempProduct({ ...tempProduct, brand: e.target.value });
+                              }
+                            }}
+                          >
+                            <option value="">-- Select Brand --</option>
+                            {brandOptions.map(b => (
+                              <option key={b} value={b}>{b}</option>
+                            ))}
+                            <option value="__add_new__">➕ Add New Brand...</option>
+                          </select>
+                        )}
                       </div>
                     </div>
 
@@ -454,7 +555,7 @@ export default function Products() {
                       <div className="form-group">
                         <label className="form-label">Category</label>
                         <select className="form-select" value={tempProduct.category} onChange={e => setTempProduct({ ...tempProduct, category: e.target.value })}>
-                          {categoryNames.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                          {Array.from(new Set(['Sneakers', 'Panjabi', 'Shirts', 'Perfumes', 'Pants', ...categoryNames])).map(cat => <option key={cat} value={cat}>{cat}</option>)}
                         </select>
                       </div>
                       <div className="form-group">
@@ -583,8 +684,8 @@ export default function Products() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     {/* Size Options Toggle */}
                     <div className="form-group">
-                      <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>📏 Available Sizes (সাইজ সিলেক্ট করুন)</label>
-                      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: '12px', marginTop: '2px' }}>এখানে যে সাইজগুলো Enable করবেন, Customer শুধু সেই সাইজগুলোই দেখতে পাবে এবং সেখান থেকে সিলেক্ট করে অর্ডার করতে পারবে।</p>
+                      <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>📏 Available Sizes (select to enable for customers)</label>
+                      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', marginBottom: '12px', marginTop: '2px' }}>Enabled sizes will be shown to customers as selectable options on the product page. Disabled sizes will be hidden.</p>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                         {['S', 'M', 'L', 'XL', 'XXL', '3XL'].map((label) => {
                           const isEnabled = tempProduct.sizes ? tempProduct.sizes.some(s => s.label === label && s.enabled) : false;
@@ -628,8 +729,8 @@ export default function Products() {
                       <div style={{ marginTop: '8px', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
                         {(() => {
                           const enabledSizes = (tempProduct.sizes || []).filter(s => s.enabled);
-                          if (enabledSizes.length === 0) return '⚠️ কোনো সাইজ সিলেক্ট করা হয়নি — Customer "Free Size" দেখবে।';
-                          return `✅ সক্রিয় সাইজ: ${enabledSizes.map(s => s.label).join(', ')}`;
+                          if (enabledSizes.length === 0) return '⚠️ No sizes selected — Customer will see "Free Size".';
+                          return `✅ Active sizes: ${enabledSizes.map(s => s.label).join(', ')}`;
                         })()}
                       </div>
                     </div>

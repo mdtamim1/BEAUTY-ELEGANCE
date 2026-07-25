@@ -1,18 +1,15 @@
-import { useState, useEffect } from 'react';
-import { useParams, Link, useOutletContext } from 'react-router-dom';
-import { Star, Heart, ShoppingCart, ChevronRight, Clock, ArrowLeft, Zap, SlidersHorizontal } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { useParams, Link, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
+import { Star, Heart, ShoppingCart, ChevronRight, Clock, ArrowLeft, Zap, SlidersHorizontal, Filter, ArrowRight, RotateCcw, X } from 'lucide-react';
 import { useStorefrontConfig } from '../store/storefrontConfig';
-
-interface StorefrontContext {
-  addToCart: (product: any) => void;
-  toggleWishlist: (productId: number) => void;
-  wishlist: number[];
-}
+import { fetchCampaignsFromBackend } from '../services/api';
+import { resolveProductWithCampaign } from '../utils/productCampaignResolver';
+import { SEOMeta } from '../components/layout/SEOMeta';
 
 const StarRating = ({ rating }: { rating: number }) => (
   <div className="product-card-stars">
     {[1, 2, 3, 4, 5].map(i => (
-      <Star key={i} size={12} fill={i <= Math.round(rating) ? '#fbbf24' : 'none'} color="#fbbf24" />
+      <Star key={i} size={12} fill={i <= Math.round(rating) ? '#f59e0b' : 'none'} color="#f59e0b" />
     ))}
   </div>
 );
@@ -35,7 +32,6 @@ function CountdownTimer({ startDate, endDate, startLabel, label, isLarge }: { st
         return;
       }
 
-      // Check if the timer is in the upcoming phase
       if (startDate && now < start) {
         const diff = start - now;
         setTimeLeft({
@@ -49,7 +45,6 @@ function CountdownTimer({ startDate, endDate, startLabel, label, isLarge }: { st
         return;
       }
 
-      // Check if the timer is in the active running phase
       const diff = end - now;
       if (diff <= 0) {
         setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, isUpcoming: false, expired: true });
@@ -113,280 +108,809 @@ function CountdownTimer({ startDate, endDate, startLabel, label, isLarge }: { st
 
 export { CountdownTimer };
 
+// Helper function for robust category matching
+function matchesCategory(productCategory: string, targetCategory: string): boolean {
+  if (!productCategory || !targetCategory) return false;
+  const p = productCategory.toLowerCase().trim();
+  const t = targetCategory.toLowerCase().trim();
+  
+  if (p === t) return true;
+
+  // Normalized (alphanumeric only)
+  const pNorm = p.replace(/[^a-z0-9]/g, '');
+  const tNorm = t.replace(/[^a-z0-9]/g, '');
+  if (pNorm === tNorm) return true;
+
+  // Singular / Plural handling (e.g. "shoes" vs "shoe", "pants" vs "pant", "perfumes" vs "perfume")
+  const pSingular = pNorm.endsWith('s') ? pNorm.slice(0, -1) : pNorm;
+  const tSingular = tNorm.endsWith('s') ? tNorm.slice(0, -1) : tNorm;
+  if (pSingular === tSingular && pSingular.length > 2) return true;
+
+  if (pNorm.includes(tNorm) || tNorm.includes(pNorm)) return true;
+  if (pSingular.includes(tSingular) || tSingular.includes(pSingular)) return true;
+
+  // Synonyms & Aliases
+  if ((tNorm.includes('shoe') || tNorm.includes('sneaker') || tNorm.includes('footwear')) && 
+      (pNorm.includes('shoe') || pNorm.includes('sneaker') || pNorm.includes('footwear'))) return true;
+  
+  if ((tNorm.includes('fitness') || tNorm.includes('dumb') || tNorm.includes('gym') || tNorm.includes('equip')) && 
+      (pNorm.includes('fit') || pNorm.includes('gym') || pNorm.includes('dumb') || pNorm.includes('equip'))) return true;
+  
+  if ((tNorm.includes('wear') || tNorm.includes('cloth') || tNorm.includes('shirt') || tNorm.includes('pant') || tNorm.includes('dress') || tNorm.includes('panjabi')) && 
+      (pNorm.includes('wear') || pNorm.includes('cloth') || pNorm.includes('shirt') || pNorm.includes('pant') || pNorm.includes('dress') || pNorm.includes('panjabi') || pNorm.includes('jersey'))) return true;
+  
+  if ((tNorm.includes('ball') || tNorm.includes('game') || tNorm.includes('footbal') || tNorm.includes('basket')) && 
+      (pNorm.includes('ball') || pNorm.includes('game') || pNorm.includes('footbal') || pNorm.includes('basket'))) return true;
+
+  return false;
+}
+
+const SPECIAL_COLLECTION_SLUGS: Record<string, string> = {
+  'most-selling': 'Most Selling Products',
+  'trending': 'Trending Collection',
+  'offers': 'Special Offers & Discounts',
+  'sale': 'Sale Items',
+  'new-arrivals': 'New Arrivals',
+  'popular-order': 'Popular Products',
+  'all': 'All Products',
+  'shop': 'Shop All',
+  'categories': 'Shop By Category',
+};
+
 export default function CollectionPage() {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { addToCart, toggleWishlist, wishlist, searchQuery } = useOutletContext<any>();
   const [config] = useStorefrontConfig();
 
   // Filter & Sort State
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [sortBy, setSortBy] = useState('default');
-
-  const products = config.products.filter(p => p.published);
-
-  // Find the matching nav link by slug (robust lookup by label-slug or url-slug)
-  let navLink = config.navLinks.find(n => {
-    const labelSlug = n.label.toLowerCase().replace(/[^a-z0-9]/g, '-');
-    const urlSlug = n.url.split('/').pop()?.replace('#', '');
-    return urlSlug === slug || labelSlug === slug;
-  });
-
-  // Fallback to Category config if navLink is not found
-  const categoryConfig = config.categories.find(c => {
-    return c.name.toLowerCase().replace(/[^a-z0-9]/g, '-') === slug;
-  });
-
-  if (!navLink && categoryConfig) {
-    navLink = {
-      id: categoryConfig.id + 1000,
-      label: categoryConfig.name,
-      url: `/collection/${slug}`,
-      enabled: categoryConfig.published,
-      productIds: products.filter(p => p.category === categoryConfig.name).map(p => p.id)
-    };
-  }
-
-  if (!navLink && (slug === 'most-selling' || slug === 'trending')) {
-    const isMostSelling = slug === 'most-selling';
-    const ids = isMostSelling 
-      ? (config.mostSellingProductIds || []) 
-      : (config.trendingProductIds || []);
-    
-    navLink = {
-      id: isMostSelling ? 8888 : 9999,
-      label: isMostSelling ? 'Most Selling' : 'Trending',
-      url: `/collection/${slug}`,
-      enabled: true,
-      productIds: ids
-    };
-  }
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [inStockOnly, setInStockOnly] = useState<boolean>(false);
+  const [sortBy, setSortBy] = useState<string>('default');
+  const [showMobileFilter, setShowMobileFilter] = useState<boolean>(false);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false);
+  const [activeCampaigns, setActiveCampaigns] = useState<any[]>([]);
 
   useEffect(() => {
-    // Reset filters when collection changes
-    setSelectedCategory('All');
+    const loadCampaigns = async () => {
+      try {
+        const campaigns = await fetchCampaignsFromBackend();
+        if (campaigns) {
+          setActiveCampaigns(campaigns.filter((c: any) => c.status === 'active'));
+        }
+      } catch (e) {
+        console.error('Failed to load campaigns in CollectionPage:', e);
+      }
+    };
+    loadCampaigns();
+  }, []);
+
+  const products = useMemo(() => {
+    const published = config.products.filter(p => p.published);
+    return published.map(p => resolveProductWithCampaign(p, activeCampaigns));
+  }, [config.products, activeCampaigns]);
+
+  // Determine if viewing main All Categories overview vs a dedicated Category Page
+  const isAllCategoriesPage = !slug || slug === 'all' || slug === 'categories';
+  const isSpecialCollection = slug ? Boolean(SPECIAL_COLLECTION_SLUGS[slug.toLowerCase()]) : false;
+
+  // Dynamic Category list combining storefront config categories and product categories
+  const dynamicCategories = useMemo(() => {
+    const publishedProducts = config.products.filter(p => p.published);
+    const catMap = new Map<string, { id: number | string; name: string; count: number; image: string; slug: string }>();
+
+    const categoryImages: Record<string, string> = {
+      'watch': 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80',
+      'glasses': 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=600&q=80',
+      'sunglasses': 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=600&q=80',
+      'women dress': 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=600&q=80',
+      'panjabi': 'https://images.unsplash.com/photo-1617137984095-74e4e5e3613f?auto=format&fit=crop&w=600&q=80',
+      't-shirts': 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80',
+      'polo': 'https://images.unsplash.com/photo-1625910513413-562624f38eec?auto=format&fit=crop&w=600&q=80',
+      'shirts': 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=600&q=80',
+      'pants': 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=600&q=80',
+      'sneakers': 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80',
+      'fitness item': 'https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?auto=format&fit=crop&w=600&q=80',
+      'sports shoes': 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80',
+      'sports wear': 'https://images.unsplash.com/photo-1518459031867-a89b944bffe4?auto=format&fit=crop&w=600&q=80',
+      'sports game': 'https://images.unsplash.com/photo-1614632537190-23e4146777db?auto=format&fit=crop&w=600&q=80',
+      'perfumes': 'https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&w=600&q=80',
+    };
+
+    (config.categories || []).forEach(cat => {
+      if (!cat.published) return;
+      const catNameLower = cat.name.toLowerCase().trim();
+      const catSlug = catNameLower.replace(/[^a-z0-9]/g, '-');
+      const matchedProducts = publishedProducts.filter(p => matchesCategory(p.category, cat.name));
+      const lastProductImage = matchedProducts.length > 0 ? matchedProducts[matchedProducts.length - 1].image : '';
+      const img = cat.image || lastProductImage || categoryImages[catNameLower] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80';
+
+      catMap.set(catSlug, {
+        id: cat.id,
+        name: cat.name,
+        count: matchedProducts.length || cat.count || 0,
+        image: img,
+        slug: catSlug,
+      });
+    });
+
+    publishedProducts.forEach(p => {
+      if (!p.category) return;
+      const catName = p.category.trim();
+      const catSlug = catName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      if (!catMap.has(catSlug)) {
+        const matchedProducts = publishedProducts.filter(prod => matchesCategory(prod.category, catName));
+        const img = p.image || categoryImages[catName.toLowerCase()] || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80';
+        catMap.set(catSlug, {
+          id: catSlug,
+          name: catName,
+          count: matchedProducts.length,
+          image: img,
+          slug: catSlug,
+        });
+      }
+    });
+
+    return Array.from(catMap.values());
+  }, [config.categories, config.products]);
+
+  // Available sizes & brands
+  const availableSizes = useMemo(() => {
+    const sizeSet = new Set<string>(['39', '40', '41', '42', '43', '44', 'S', 'M', 'L', 'XL', 'XXL']);
+    products.forEach(p => {
+      if (Array.isArray(p.sizes)) {
+        p.sizes.forEach((s: any) => {
+          if (typeof s === 'string') sizeSet.add(s);
+          else if (s && s.label) sizeSet.add(s.label);
+        });
+      }
+    });
+    return Array.from(sizeSet);
+  }, [products]);
+
+  const availableBrands = useMemo(() => {
+    const brandSet = new Set<string>(['Nike', 'Adidas', 'Puma', 'Under Armour', 'Splayd', 'Reebok', 'Jordan']);
+    products.forEach(p => {
+      if (p.brand) brandSet.add(p.brand);
+    });
+    return Array.from(brandSet);
+  }, [products]);
+
+  // Match nav link or category slug
+  const navLink = useMemo(() => {
+    if (!slug) return null;
+    let match = config.navLinks.find(n => {
+      const labelSlug = n.label.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      const urlSlug = n.url.split('/').pop()?.replace('#', '');
+      return urlSlug === slug || labelSlug === slug;
+    });
+
+    if (!match) {
+      const categoryConfig = config.categories.find(c => {
+        return c.name.toLowerCase().replace(/[^a-z0-9]/g, '-') === slug;
+      });
+      if (categoryConfig) {
+        match = {
+          id: categoryConfig.id + 1000,
+          label: categoryConfig.name,
+          url: `/collection/${slug}`,
+          enabled: categoryConfig.published,
+          productIds: products.filter(p => p.category === categoryConfig.name).map(p => Number(p.id))
+        };
+      }
+    }
+
+    return match;
+  }, [slug, config.navLinks, config.categories, products]);
+
+  // Active Category Name / Collection Title
+  const activeCategoryTitle = useMemo(() => {
+    if (slug && SPECIAL_COLLECTION_SLUGS[slug.toLowerCase()]) {
+      return SPECIAL_COLLECTION_SLUGS[slug.toLowerCase()];
+    }
+    if (isAllCategoriesPage) return selectedCategory;
+    const matched = dynamicCategories.find(c => c.slug === slug);
+    if (matched) return matched.name;
+    if (navLink) return navLink.label;
+    return slug ? slug.replace(/-/g, ' ').toUpperCase() : 'All';
+  }, [isAllCategoriesPage, selectedCategory, slug, navLink, dynamicCategories]);
+
+  useEffect(() => {
+    if (slug && !isAllCategoriesPage && !isSpecialCollection) {
+      const matchedCat = dynamicCategories.find(c => c.slug === slug);
+      if (matchedCat) {
+        setSelectedCategory(matchedCat.name);
+      } else if (navLink) {
+        setSelectedCategory(navLink.label);
+      }
+    } else {
+      setSelectedCategory('All');
+    }
+
+    setMinPrice('');
+    setMaxPrice('');
+    setSelectedSizes([]);
+
+    const brandParam = searchParams.get('brand');
+    if (brandParam) {
+      setSelectedBrands([brandParam]);
+    } else {
+      setSelectedBrands([]);
+    }
+
+    setInStockOnly(false);
     setSortBy('default');
-    
-    // Explicitly reset storefront scroll container to top
+
     const container = document.querySelector('.storefront-scroll-container');
     if (container) {
       container.scrollTop = 0;
     }
     window.scrollTo(0, 0);
-  }, [slug]);
+  }, [slug, navLink, isAllCategoriesPage, isSpecialCollection, dynamicCategories, searchParams]);
 
-  if (!navLink) {
-    return (
-      <div className="collection-page">
-        <div className="collection-empty">
-          <h2>Collection not found</h2>
-          <p>The collection you're looking for doesn't exist.</p>
-          <Link to="/" className="store-btn store-btn-primary">
-            <ArrowLeft size={16} /> Back to Store
-          </Link>
-        </div>
-      </div>
+  // Filter Products by Active Category / Special Collection + Sidebar Options
+  const filteredProducts = useMemo(() => {
+    let result = [...products];
+
+    const slugLower = (slug || '').toLowerCase();
+
+    // Special collections handling
+    if (slugLower === 'most-selling') {
+      if (config.mostSellingProductIds && config.mostSellingProductIds.length > 0) {
+        const setIds = new Set(config.mostSellingProductIds.map(id => Number(id)));
+        result = result.filter(p => setIds.has(Number(p.id)));
+      } else {
+        result.sort((a, b) => (b.reviews || 0) - (a.reviews || 0));
+      }
+    } else if (slugLower === 'trending') {
+      if (config.trendingProductIds && config.trendingProductIds.length > 0) {
+        const setIds = new Set(config.trendingProductIds.map(id => Number(id)));
+        result = result.filter(p => setIds.has(Number(p.id)));
+      } else {
+        result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      }
+    } else if (slugLower === 'offers' || slugLower === 'sale') {
+      result = result.filter(p => p.badge === 'sale' || (p.originalPrice && p.originalPrice > p.price));
+    } else if (slugLower === 'new-arrivals') {
+      result = result.filter(p => p.badge === 'new' || Number(p.id) > 5);
+    } else if (slugLower === 'popular-order') {
+      result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    } else if (!isAllCategoriesPage && !isSpecialCollection) {
+      // Real Category filtering
+      const currentCat = activeCategoryTitle;
+      if (currentCat && currentCat !== 'All') {
+        result = result.filter(p => {
+          const catName = p.category || (p as any).categoryName || '';
+          return matchesCategory(catName, currentCat);
+        });
+      }
+    } else if (isAllCategoriesPage && selectedCategory !== 'All') {
+      result = result.filter(p => {
+        const catName = p.category || (p as any).categoryName || '';
+        return matchesCategory(catName, selectedCategory);
+      });
+    }
+
+    // Min Price Filter
+    if (minPrice && !isNaN(Number(minPrice))) {
+      result = result.filter(p => p.price >= Number(minPrice));
+    }
+
+    // Max Price Filter
+    if (maxPrice && !isNaN(Number(maxPrice))) {
+      result = result.filter(p => p.price <= Number(maxPrice));
+    }
+
+    // Size Filter
+    if (selectedSizes.length > 0) {
+      result = result.filter(p => {
+        if (!p.sizes || !Array.isArray(p.sizes)) return true;
+        return p.sizes.some((s: any) => {
+          const val = typeof s === 'string' ? s : s?.label;
+          return val && selectedSizes.includes(val);
+        });
+      });
+    }
+
+    // Brand Filter
+    if (selectedBrands.length > 0) {
+      result = result.filter(p => p.brand && selectedBrands.includes(p.brand));
+    }
+
+    // Stock Filter
+    if (inStockOnly) {
+      result = result.filter(p => p.inStock !== false && (p.stock === undefined || p.stock > 0));
+    }
+
+    // Global Search Bar Query
+    if (searchQuery && searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter(p => 
+        (p.name && p.name.toLowerCase().includes(q)) ||
+        (p.category && p.category.toLowerCase().includes(q)) ||
+        (p.brand && p.brand.toLowerCase().includes(q)) ||
+        (p.description && p.description.toLowerCase().includes(q))
+      );
+    }
+
+    // Sorting
+    if (sortBy === 'price-low') {
+      result.sort((a, b) => a.price - b.price);
+    } else if (sortBy === 'price-high') {
+      result.sort((a, b) => b.price - a.price);
+    } else if (sortBy === 'rating') {
+      result.sort((a, b) => (b.rating || 5) - (a.rating || 5));
+    }
+
+    return result;
+  }, [products, isAllCategoriesPage, isSpecialCollection, selectedCategory, activeCategoryTitle, slug, config.mostSellingProductIds, config.trendingProductIds, minPrice, maxPrice, selectedSizes, selectedBrands, inStockOnly, searchQuery, sortBy]);
+
+  const handleCategoryCardClick = (cat: { name: string; slug: string }) => {
+    setSelectedCategory(cat.name);
+    navigate(`/collection/${cat.slug}`);
+  };
+
+  const toggleSize = (size: string) => {
+    setSelectedSizes(prev => 
+      prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]
     );
-  }
+  };
 
-  const collectionProducts = (navLink.productIds || [])
-    .map(id => products.find(p => p.id === id))
-    .filter(Boolean) as any[];
-
-  // Get categories from collection products dynamically
-  const uniqueCategories = ['All', ...Array.from(new Set(collectionProducts.map(p => p.category)))];
-
-  // Filter products
-  let filteredProducts = collectionProducts;
-  if (selectedCategory !== 'All') {
-    filteredProducts = filteredProducts.filter(p => p.category === selectedCategory);
-  }
-  if (searchQuery && searchQuery.trim()) {
-    const q = searchQuery.toLowerCase().trim();
-    filteredProducts = filteredProducts.filter(p => 
-      p.name.toLowerCase().includes(q) ||
-      p.category.toLowerCase().includes(q) ||
-      (p.brand && p.brand.toLowerCase().includes(q)) ||
-      (p.description && p.description.toLowerCase().includes(q))
+  const toggleBrand = (brand: string) => {
+    setSelectedBrands(prev => 
+      prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]
     );
-  }
+  };
 
-  // Sort products
-  if (sortBy === 'price-low') {
-    filteredProducts = [...filteredProducts].sort((a, b) => a.price - b.price);
-  } else if (sortBy === 'price-high') {
-    filteredProducts = [...filteredProducts].sort((a, b) => b.price - a.price);
-  } else if (sortBy === 'rating') {
-    filteredProducts = [...filteredProducts].sort((a, b) => b.rating - a.rating);
-  }
-
-  const isPromoCollection = !!(navLink.timerEnabled && navLink.timerEndDate);
+  const resetFilters = () => {
+    setSelectedCategory('All');
+    setMinPrice('');
+    setMaxPrice('');
+    setSelectedSizes([]);
+    setSelectedBrands([]);
+    setInStockOnly(false);
+    setSortBy('default');
+  };
 
   return (
-    <div className={`collection-page ${isPromoCollection ? 'promo-collection-page' : ''}`}>
-      {/* Breadcrumb */}
+    <div className="collection-page">
+      <SEOMeta
+        title={activeCategoryTitle || 'Collections & Categories'}
+        description={`Explore premium ${activeCategoryTitle || 'sports and fitness'} products at Tamim Global. Best prices, authentic items, fast delivery across Bangladesh.`}
+        slug={slug ? `collection/${slug}` : 'categories'}
+        keywords={`${activeCategoryTitle}, Tamim Global ${activeCategoryTitle}, Buy ${activeCategoryTitle} Bangladesh, Sports Equipment, Fitness Gear BD`}
+      />
+      {/* Breadcrumb Navigation */}
       <nav className="collection-breadcrumb">
         <Link to="/">Home</Link>
         <ChevronRight size={14} />
-        <span>{navLink.label}</span>
+        <Link to="/categories">Categories</Link>
+        {!isAllCategoriesPage && (
+          <>
+            <ChevronRight size={14} />
+            <span>{activeCategoryTitle}</span>
+          </>
+        )}
       </nav>
 
-      {isPromoCollection ? (
-        /* PREMIUM IMMERSIVE HERO BANNER FOR TIMED OFFERS */
-        <div className="collection-hero-banner">
-          <div className="collection-hero-mesh" />
-          <div className="collection-hero-content">
-            <div className="collection-hero-tag">
-              <Zap size={14} /> Exclusive Offers
+      {/* Conditionally Render Top Category Banner & Grid ON /categories ONLY */}
+      {isAllCategoriesPage ? (
+        <>
+          {/* Top Banner */}
+          <div className="category-page-hero">
+            <div className="category-hero-content">
+              <span className="category-hero-badge">BROWSE CATEGORIES</span>
+              <h1 className="category-hero-title">Shop By Category</h1>
+              <p className="category-hero-subtitle">
+                Find the perfect items for your lifestyle from our wide range of store categories.
+              </p>
             </div>
-            <h1 className="collection-hero-title">{navLink.label}</h1>
-            <p className="collection-hero-subtitle">
-              Enjoy limited-time discounts on selected items. Handpicked deals for a premium shopping experience.
-            </p>
-            
-            <div className="collection-hero-timer">
-              <CountdownTimer
-                startDate={navLink.timerStartDate}
-                endDate={navLink.timerEndDate}
-                startLabel={navLink.timerStartLabel}
-                label={navLink.timerLabel || 'Offer ends in'}
-                isLarge={true}
+            <div className="category-hero-media">
+              <img 
+                src="https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80" 
+                alt="Shop By Category" 
               />
             </div>
           </div>
-        </div>
+
+          {/* Dynamic Category Cards Grid */}
+          <div className="category-cards-section">
+            <div className="category-cards-grid">
+              {dynamicCategories.map(cat => (
+                <div
+                  key={cat.slug}
+                  className={`category-card-item ${selectedCategory.toLowerCase() === cat.name.toLowerCase() ? 'active' : ''}`}
+                  onClick={() => handleCategoryCardClick(cat)}
+                >
+                  <div className="category-card-img-wrap">
+                    <img src={cat.image} alt={cat.name} />
+                  </div>
+                  <h3 className="category-card-title">{cat.name}</h3>
+                  <span className="category-card-count">{cat.count} Products</span>
+                  <button
+                    type="button"
+                    className="category-card-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCategoryCardClick(cat);
+                    }}
+                  >
+                    <span>Shop Now</span>
+                    <ArrowRight size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
       ) : (
-        /* STANDARD HEADER */
-        <div className="collection-header">
+        /* Dedicated Category Header for specific Category Product Page */
+        <div className="collection-header" style={{ marginBottom: '24px' }}>
           <div className="collection-header-text">
-            <h1 className="collection-title">{navLink.label}</h1>
+            <h1 className="collection-title" style={{ textTransform: 'capitalize' }}>{activeCategoryTitle}</h1>
             <p className="collection-subtitle">
-              Explore our premium {navLink.label.toLowerCase()} collection — {collectionProducts.length} products
+              Explore our premium {activeCategoryTitle.toLowerCase()} collection — {filteredProducts.length} products available
             </p>
           </div>
         </div>
       )}
 
-      {/* Trust Badges Banner */}
-      {isPromoCollection && (
-        <div className="promo-trust-banner">
-          <div className="trust-item">
-            <span className="trust-icon">🚚</span>
-            <div className="trust-text">
-              <strong>Free Fast Delivery</strong>
-              <p>On orders above ৳৫০০০</p>
-            </div>
-          </div>
-          <div className="trust-item">
-            <span className="trust-icon">🛡️</span>
-            <div className="trust-text">
-              <strong>100% Genuine</strong>
-              <p>Verified seller items</p>
-            </div>
-          </div>
-          <div className="trust-item">
-            <span className="trust-icon">🔄</span>
-            <div className="trust-text">
-              <strong>Easy Returns</strong>
-              <p>7-day hassle-free refund</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Filter Trigger Button for Mobile & Quick Access */}
+      <button
+        type="button"
+        className="mobile-filter-toggle-btn"
+        onClick={() => setIsFilterDrawerOpen(true)}
+      >
+        <span><Filter size={16} /> Filter Products & Options</span>
+        <span>Open Sidebar ❯</span>
+      </button>
 
-      {/* Filter and Sorting Control Bar */}
-      {collectionProducts.length > 0 && (
-        <div className="collection-toolbar">
-          {/* Categories Filter list - Only show if there is more than 1 category */}
-          <div className="category-filters">
-            {uniqueCategories.length > 2 ? (
-              uniqueCategories.map(cat => (
-                <button
-                  key={cat}
-                  className={`filter-btn ${selectedCategory === cat ? 'active' : ''}`}
-                  onClick={() => setSelectedCategory(cat)}
-                >
-                  {cat}
-                </button>
-              ))
-            ) : (
-              <div style={{ fontStyle: 'italic', fontSize: '0.85rem', color: 'var(--sf-text-tertiary)' }}>
-                Showing products in {navLink.label}
-              </div>
+      {/* Main Layout: Left Filter Sidebar + Right Products Grid */}
+      <div className="collection-main-layout" id="collection-products-section">
+        {/* ---- LEFT FILTER SIDEBAR (Desktop) ---- */}
+        <aside className="filter-sidebar-card">
+          <div className="filter-sidebar-header">
+            <h3 className="filter-sidebar-title">
+              <Filter size={18} /> Filter Options
+            </h3>
+            {(selectedCategory !== 'All' || minPrice || maxPrice || selectedSizes.length > 0 || selectedBrands.length > 0 || inStockOnly) && (
+              <button className="filter-clear-btn" onClick={resetFilters}>
+                Clear All
+              </button>
             )}
           </div>
 
-          {/* Sorting Dropdown */}
-          <div className="sort-control">
-            <SlidersHorizontal size={14} />
-            <span>Sort by:</span>
-            <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="sort-select">
-              <option value="default">Featured</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-              <option value="rating">Rating: High to Low</option>
-            </select>
+          {/* Pricing Filter */}
+          <div className="filter-group">
+            <h4 className="filter-group-title">Pricing (Tk)</h4>
+            <div className="filter-price-inputs">
+              <input
+                type="number"
+                placeholder="Min Price"
+                value={minPrice}
+                onChange={e => setMinPrice(e.target.value)}
+                className="filter-price-input"
+              />
+              <span>-</span>
+              <input
+                type="number"
+                placeholder="Max Price"
+                value={maxPrice}
+                onChange={e => setMaxPrice(e.target.value)}
+                className="filter-price-input"
+              />
+            </div>
+            <div className="filter-price-presets">
+              <button
+                type="button"
+                className={`filter-price-preset-btn ${maxPrice === '1000' && !minPrice ? 'active' : ''}`}
+                onClick={() => { setMinPrice(''); setMaxPrice('1000'); }}
+              >
+                Under ৳1,000
+              </button>
+              <button
+                type="button"
+                className={`filter-price-preset-btn ${minPrice === '1000' && maxPrice === '3000' ? 'active' : ''}`}
+                onClick={() => { setMinPrice('1000'); setMaxPrice('3000'); }}
+              >
+                ৳1,000 - ৳3,000
+              </button>
+              <button
+                type="button"
+                className={`filter-price-preset-btn ${minPrice === '3000' && maxPrice === '5000' ? 'active' : ''}`}
+                onClick={() => { setMinPrice('3000'); setMaxPrice('5000'); }}
+              >
+                ৳3,000 - ৳5,000
+              </button>
+              <button
+                type="button"
+                className={`filter-price-preset-btn ${minPrice === '5000' && !maxPrice ? 'active' : ''}`}
+                onClick={() => { setMinPrice('5000'); setMaxPrice(''); }}
+              >
+                Above ৳5,000
+              </button>
+            </div>
           </div>
-        </div>
-      )}
 
-      {/* Products Grid */}
-      {filteredProducts.length > 0 ? (
-        <div className="products-grid collection-products-grid">
-          {filteredProducts.map((product: any) => (
-            <Link to={`/product/${product.id}`} key={product.id} className="product-card" style={{ textDecoration: 'none' }}>
-              <div className="product-card-image-container">
-                <img src={product.image} alt={product.name} className="product-card-image" />
-                {product.badge && (
-                  <span className={`product-card-badge ${product.badge}`}>
-                    {product.badge === 'sale' ? `Sale! -${Math.round((1 - product.price / (product.originalPrice || product.price)) * 100)}%` : 'New'}
-                  </span>
-                )}
-                {product.originalPrice && product.originalPrice > product.price && (
-                  <span className="product-card-save-badge">
-                    Save ৳{Math.round(product.originalPrice - product.price)}
-                  </span>
-                )}
+          {/* Size Filter */}
+          <div className="filter-group">
+            <h4 className="filter-group-title">Size</h4>
+            <div className="filter-size-grid">
+              {availableSizes.map(size => (
                 <button
-                  className="product-card-wishlist"
-                  onClick={(e) => { e.preventDefault(); toggleWishlist(product.id); }}
-                  style={{ color: wishlist.includes(product.id) ? '#ef4444' : undefined }}
+                  type="button"
+                  key={size}
+                  className={`filter-size-pill ${selectedSizes.includes(size) ? 'active' : ''}`}
+                  onClick={() => toggleSize(size)}
                 >
-                  <Heart size={18} fill={wishlist.includes(product.id) ? '#ef4444' : 'none'} />
+                  {size}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Brand Filter */}
+          <div className="filter-group">
+            <h4 className="filter-group-title">Brands</h4>
+            <div className="filter-brand-list">
+              {availableBrands.map(brand => (
+                <label key={brand} className="filter-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={selectedBrands.includes(brand)}
+                    onChange={() => toggleBrand(brand)}
+                  />
+                  <span>{brand}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Stock Filter */}
+          <div className="filter-group">
+            <label className="filter-checkbox-label" style={{ fontWeight: 700, color: '#18181b' }}>
+              <input
+                type="checkbox"
+                checked={inStockOnly}
+                onChange={e => setInStockOnly(e.target.checked)}
+              />
+              <span>In Stock Only</span>
+            </label>
+          </div>
+        </aside>
+
+        {/* ---- RIGHT PRODUCTS COLUMN ---- */}
+        <div className="collection-products-column">
+          {/* Top Control Bar */}
+          <div className="collection-toolbar" style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button 
+                type="button" 
+                className="filter-drawer-trigger-btn"
+                onClick={() => setIsFilterDrawerOpen(true)}
+              >
+                <Filter size={16} />
+                <span>Filter Options</span>
+                {(selectedCategory !== 'All' || minPrice || maxPrice || selectedSizes.length > 0 || selectedBrands.length > 0 || inStockOnly) && (
+                  <span className="filter-active-badge">Active</span>
+                )}
+              </button>
+              <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#71717a' }}>
+                Showing <strong>{filteredProducts.length}</strong> products
+              </span>
+            </div>
+
+            <div className="sort-control">
+              <SlidersHorizontal size={14} />
+              <span>Sort by:</span>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="sort-select">
+                <option value="default">Featured</option>
+                <option value="price-low">Price: Low to High</option>
+                <option value="price-high">Price: High to Low</option>
+                <option value="rating">Rating: High to Low</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Unified Ultra-Premium Product Grid */}
+          {filteredProducts.length > 0 ? (
+            <div className="products-grid collection-products-grid">
+              {filteredProducts.map((product: any) => (
+                <Link to={`/product/${product.id}`} key={product.id} className="product-card" style={{ textDecoration: 'none' }}>
+                  <div className="product-card-image-container">
+                    <img src={product.image || product.imageUrl} alt={product.name || product.title} className="product-card-image" />
+                    {product.badge && (
+                      <span className="product-card-badge sale">
+                        {product.badge === 'sale' ? `Sale! -${Math.round((1 - product.price / (product.originalPrice || product.price)) * 100)}%` : product.badge}
+                      </span>
+                    )}
+                    <button
+                      className={`product-card-wishlist ${wishlist.includes(product.id) ? 'active' : ''}`}
+                      onClick={(e) => { e.preventDefault(); toggleWishlist(product.id); }}
+                      title="Wishlist"
+                    >
+                      <Heart size={16} fill={wishlist.includes(product.id) ? 'currentColor' : 'none'} />
+                    </button>
+                  </div>
+
+                  <div className="product-card-body">
+                    <div className="product-card-category">{product.category || product.categoryName}</div>
+                    <div className="product-card-name">{product.name || product.title}</div>
+                    
+                    <div className="product-card-rating">
+                      <StarRating rating={product.rating || 5} />
+                      <span className="product-card-reviews">({product.reviews || 12})</span>
+                    </div>
+
+                    <div className="product-card-footer">
+                      <div className="product-card-price-group">
+                        <span className="product-card-price">৳{product.price.toLocaleString()}</span>
+                        {product.originalPrice && product.originalPrice > product.price && (
+                          <span className="product-card-original-price">৳{product.originalPrice.toLocaleString()}</span>
+                        )}
+                      </div>
+                      <button
+                        className="product-card-cart-btn"
+                        onClick={(e) => { e.preventDefault(); addToCart(product); }}
+                        title="Add to Cart"
+                      >
+                        <ShoppingCart size={18} />
+                      </button>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="collection-empty" style={{ padding: '80px 24px' }}>
+              <ShoppingCart size={48} style={{ opacity: 0.2, marginBottom: 16 }} />
+              <h3>No products found</h3>
+              <p>No products currently available in this category.</p>
+              <button className="store-btn store-btn-primary" onClick={resetFilters} style={{ background: '#18181b', color: '#ffffff' }}>
+                <RotateCcw size={14} /> Reset All Filters
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Slide-Over Off-Canvas Filter Sidebar Drawer */}
+      <div 
+        className={`filter-drawer-overlay ${isFilterDrawerOpen ? 'open' : ''}`} 
+        onClick={() => setIsFilterDrawerOpen(false)}
+      >
+        <div className="filter-drawer-sidebar" onClick={(e) => e.stopPropagation()}>
+          <div className="filter-drawer-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Filter size={20} />
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>Filter Options</h3>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {(selectedCategory !== 'All' || minPrice || maxPrice || selectedSizes.length > 0 || selectedBrands.length > 0 || inStockOnly) && (
+                <button className="filter-clear-btn" onClick={resetFilters}>Clear All</button>
+              )}
+              <button className="filter-drawer-close-btn" onClick={() => setIsFilterDrawerOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+
+          <div className="filter-drawer-body">
+            {/* Pricing Filter */}
+            <div className="filter-group">
+              <h4 className="filter-group-title">Pricing (Tk)</h4>
+              <div className="filter-price-inputs">
+                <input
+                  type="number"
+                  placeholder="Min Price"
+                  value={minPrice}
+                  onChange={e => setMinPrice(e.target.value)}
+                  className="filter-price-input"
+                />
+                <span>-</span>
+                <input
+                  type="number"
+                  placeholder="Max Price"
+                  value={maxPrice}
+                  onChange={e => setMaxPrice(e.target.value)}
+                  className="filter-price-input"
+                />
+              </div>
+              <div className="filter-price-presets">
+                <button
+                  type="button"
+                  className={`filter-price-preset-btn ${maxPrice === '1000' && !minPrice ? 'active' : ''}`}
+                  onClick={() => { setMinPrice(''); setMaxPrice('1000'); }}
+                >
+                  Under ৳1,000
+                </button>
+                <button
+                  type="button"
+                  className={`filter-price-preset-btn ${minPrice === '1000' && maxPrice === '3000' ? 'active' : ''}`}
+                  onClick={() => { setMinPrice('1000'); setMaxPrice('3000'); }}
+                >
+                  ৳1,000 - ৳3,000
+                </button>
+                <button
+                  type="button"
+                  className={`filter-price-preset-btn ${minPrice === '3000' && maxPrice === '5000' ? 'active' : ''}`}
+                  onClick={() => { setMinPrice('3000'); setMaxPrice('5000'); }}
+                >
+                  ৳3,000 - ৳5,000
+                </button>
+                <button
+                  type="button"
+                  className={`filter-price-preset-btn ${minPrice === '5000' && !maxPrice ? 'active' : ''}`}
+                  onClick={() => { setMinPrice('5000'); setMaxPrice(''); }}
+                >
+                  Above ৳5,000
                 </button>
               </div>
-              <div className="product-card-body">
-                <div className="product-card-category">{product.category}</div>
-                <div className="product-card-name">{product.name}</div>
-                <div className="product-card-rating">
-                  <StarRating rating={product.rating} />
-                  <span className="product-card-reviews">({product.reviews.toLocaleString()})</span>
-                </div>
-                <div className="product-card-footer">
-                  <div>
-                    <span className="product-card-price">৳{product.price}</span>
-                    {product.originalPrice && (
-                      <span className="product-card-original-price">৳{product.originalPrice}</span>
-                    )}
-                  </div>
+            </div>
+
+            {/* Size Filter */}
+            <div className="filter-group">
+              <h4 className="filter-group-title">Size</h4>
+              <div className="filter-size-grid">
+                {availableSizes.map(size => (
                   <button
-                    className="product-card-cart-btn"
-                    onClick={(e) => { e.preventDefault(); addToCart(product); }}
-                    title="Add to Cart"
+                    type="button"
+                    key={size}
+                    className={`filter-size-pill ${selectedSizes.includes(size) ? 'active' : ''}`}
+                    onClick={() => toggleSize(size)}
                   >
-                    <ShoppingCart size={18} />
+                    {size}
                   </button>
-                </div>
+                ))}
               </div>
-            </Link>
-          ))}
+            </div>
+
+            {/* Brand Filter */}
+            <div className="filter-group">
+              <h4 className="filter-group-title">Brands</h4>
+              <div className="filter-brand-list">
+                {availableBrands.map(brand => (
+                  <label key={brand} className="filter-checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={selectedBrands.includes(brand)}
+                      onChange={() => toggleBrand(brand)}
+                    />
+                    <span>{brand}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Stock Filter */}
+            <div className="filter-group">
+              <label className="filter-checkbox-label" style={{ fontWeight: 700, color: '#18181b' }}>
+                <input
+                  type="checkbox"
+                  checked={inStockOnly}
+                  onChange={e => setInStockOnly(e.target.checked)}
+                />
+                <span>In Stock Only</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="filter-drawer-footer">
+            <button 
+              type="button" 
+              className="filter-apply-btn" 
+              onClick={() => setIsFilterDrawerOpen(false)}
+            >
+              Show {filteredProducts.length} Results
+            </button>
+          </div>
         </div>
-      ) : (
-        <div className="collection-empty" style={{ padding: '80px 24px' }}>
-          <ShoppingCart size={48} style={{ opacity: 0.2, marginBottom: 16 }} />
-          <h3>No products found</h3>
-          <p>No products match the selected category in this collection.</p>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

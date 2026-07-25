@@ -27,7 +27,6 @@ import customerRoutes from './routes/customers';
 import dashboardRoutes from './routes/dashboard';
 import settingsRoutes from './routes/settings';
 import chatRoutes from './routes/chats';
-import aiRoutes from './routes/ai';
 import employeeRoutes from './routes/employees';
 import marketingRoutes from './routes/marketing';
 import analyticsRoutes from './routes/analytics';
@@ -160,6 +159,9 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });
 });
 
+import { cacheService } from './services/cacheService';
+import { getDbStatus } from './config/db';
+
 // ========================================
 // API ROUTES (v1)
 // ========================================
@@ -168,11 +170,12 @@ app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/chats', chatRoutes);
-app.use('/api/v1/ai', aiRoutes);
 app.use('/api/v1/employees', employeeRoutes);
 app.use('/api/v1/marketing', marketingRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/blogs', blogRoutes);
+app.get('/api/v1/cache-status', (_req, res) => res.json({ status: 'success', data: cacheService.getStatus() }));
+app.get('/api/v1/db-status', (_req, res) => res.json({ status: 'success', data: getDbStatus() }));
 app.use('/', seoRoutes);
 
 // Fallback stubs for other routes to prevent breaks

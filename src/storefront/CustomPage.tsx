@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import { replaceContactInfo, formatPageContent } from '../utils/storefrontUtils';
+import { SEOMeta } from '../components/layout/SEOMeta';
 
 export default function CustomPage() {
   const { id } = useParams<{ id: string }>();
@@ -28,8 +29,18 @@ export default function CustomPage() {
     );
   }
 
+  const cleanDescription = activeLink.customPageContent
+    ? activeLink.customPageContent.replace(/<[^>]*>/g, ' ').slice(0, 160)
+    : `${activeLink.label} - Tamim Global Official Policy and Information Page.`;
+
   return (
     <div className="collection-page custom-page">
+      <SEOMeta
+        title={activeLink.label}
+        description={cleanDescription}
+        slug={`page/${activeLink.id}`}
+        keywords={`Tamim Global ${activeLink.label}, ${activeLink.label} BD, Tamim Global Policy`}
+      />
       {/* Breadcrumb */}
       <nav className="collection-breadcrumb">
         <Link to="/">Home</Link>

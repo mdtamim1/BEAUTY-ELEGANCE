@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { NavLink, useLocation, Link } from 'react-router-dom';
 import {
   LayoutDashboard, BarChart3, Users, ShoppingCart, Package, Store,
-  Megaphone, UserCog, DollarSign, Shield, Settings, Brain,
+  Megaphone, UserCog, DollarSign, Shield, Settings,
   ChevronLeft, ChevronRight, Zap, MessageSquare, BookOpen
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -18,16 +18,13 @@ import { generateOrders } from '../../mock/data';
 export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const { user } = useAuth();
   const location = useLocation();
-  const [ordersCount, setOrdersCount] = useState(0);
+  const [ordersCount, setOrdersCount] = useState<number | null>(null);
 
   useEffect(() => {
-    // Set fallback mock order count initially
-    setOrdersCount(generateOrders().length);
-
     const loadActualOrdersCount = async () => {
       try {
         const dbOrders = await fetchOrdersFromBackend();
-        if (dbOrders) {
+        if (dbOrders && Array.isArray(dbOrders)) {
           setOrdersCount(dbOrders.length);
         }
       } catch (e) {
@@ -37,9 +34,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
     loadActualOrdersCount();
 
-    // Listen to changes in case orders are added/updated elsewhere
     const handleStorageChange = () => {
-      setOrdersCount(generateOrders().length);
       loadActualOrdersCount();
     };
 
@@ -63,18 +58,15 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       title: 'Overview',
       items: [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/admin', badge: '', badgeType: '' },
-        { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/admin/analytics', badge: 'Live', badgeType: 'success' },
       ],
     },
     {
       title: 'Management',
       items: [
-        { id: 'orders', label: 'Orders', icon: ShoppingCart, path: '/admin/orders', badge: ordersCount > 0 ? String(ordersCount) : '', badgeType: 'warning' },
+        { id: 'orders', label: 'Orders', icon: ShoppingCart, path: '/admin/orders', badge: (ordersCount !== null && ordersCount > 0) ? String(ordersCount) : '', badgeType: 'warning' },
         { id: 'products', label: 'Products', icon: Package, path: '/admin/products', badge: '', badgeType: '' },
-        { id: 'customers', label: 'User Accounts', icon: Users, path: '/admin/customers', badge: '', badgeType: '' },
         { id: 'storefront', label: 'Storefront', icon: Store, path: '/admin/storefront-manager', badge: 'New', badgeType: 'success' },
         { id: 'blogs', label: 'Blog Posts', icon: BookOpen, path: '/admin/blogs', badge: '', badgeType: '' },
-        { id: 'chats', label: 'Inbox', icon: MessageSquare, path: '/admin/chats', badge: unreadChatsCount > 0 ? String(unreadChatsCount) : '', badgeType: 'danger' },
       ],
     },
     {
@@ -82,15 +74,6 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       items: [
         { id: 'marketing', label: 'Marketing', icon: Megaphone, path: '/admin/marketing', badge: '', badgeType: '' },
         { id: 'employees', label: 'Employees', icon: UserCog, path: '/admin/employees', badge: '', badgeType: '' },
-        { id: 'finance', label: 'Finance', icon: DollarSign, path: '/admin/finance', badge: '', badgeType: '' },
-      ],
-    },
-    {
-      title: 'System',
-      items: [
-        { id: 'security', label: 'Security', icon: Shield, path: '/admin/security', badge: '', badgeType: '' },
-        { id: 'settings', label: 'Settings', icon: Settings, path: '/admin/settings', badge: '', badgeType: '' },
-        { id: 'ai', label: 'AI Center', icon: Brain, path: '/admin/ai', badge: 'New', badgeType: 'success' },
       ],
     },
   ];

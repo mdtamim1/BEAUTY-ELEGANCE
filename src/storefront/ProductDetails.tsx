@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useOutletContext } from 'react-router-dom';
-import { ShoppingCart, Heart, Share2, Star, CheckCircle, Shield, Truck, RotateCcw, ChevronRight, Smartphone, Phone, MessageCircle, X, User, MapPin, Package, CreditCard, ArrowRight, Minus, Plus, Headphones, Store, Send } from 'lucide-react';
+import { ShoppingCart, Heart, Share2, Star, CheckCircle, Shield, Truck, RotateCcw, ChevronRight, Smartphone, Phone, MessageCircle, X, User, MapPin, Package, CreditCard, ArrowRight, Minus, Plus, Headphones, Store, Send, Eye } from 'lucide-react';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import { addOrder } from '../mock/data';
-import { sendOrderToBackend, fetchProductByIdFromBackend, fetchChatHistory, validateCouponCode } from '../services/api';
+import { sendOrderToBackend, fetchProductByIdFromBackend, fetchChatHistory, validateCouponCode, fetchCampaignsFromBackend } from '../services/api';
+import { resolveProductWithCampaign } from '../utils/productCampaignResolver';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { OptimizedImage } from '../components/layout/OptimizedImage';
 import { SEOMeta } from '../components/layout/SEOMeta';
@@ -88,6 +89,61 @@ export default function ProductDetails() {
   const [reviewMsg, setReviewMsg] = useState('');
   const [reviewError, setReviewError] = useState('');
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+
+  // Live Viewing Counter Fluctuation Effect based on Admin liveViewConfig
+  const liveViewConfig = config.liveViewConfig || {
+    enabled: true,
+    presetRange: '30-50',
+    customMin: 30,
+    customMax: 85,
+    updateIntervalSeconds: 4,
+  };
+
+  const getRangeBounds = () => {
+    const range = liveViewConfig.presetRange || '30-50';
+    if (range === '0-20') return { min: 5, max: 20 };
+    if (range === '0-30') return { min: 8, max: 30 };
+    if (range === '30-50') return { min: 30, max: 50 };
+    if (range === '50-70') return { min: 50, max: 70 };
+    if (range === 'custom') {
+      const min = Math.max(0, liveViewConfig.customMin ?? 30);
+      const max = Math.max(min + 1, liveViewConfig.customMax ?? 85);
+      return { min, max };
+    }
+    return { min: 30, max: 50 };
+  };
+
+  const [liveViewersCount, setLiveViewersCount] = useState<number>(() => {
+    const { min, max } = getRangeBounds();
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  });
+
+  useEffect(() => {
+    if (liveViewConfig.enabled === false) return;
+    const interval = setInterval(() => {
+      const { min, max } = getRangeBounds();
+      setLiveViewersCount(prev => {
+        const delta = Math.floor(Math.random() * 7) - 3;
+        const nextVal = prev + delta;
+        if (nextVal < min) return min + Math.floor(Math.random() * 3);
+        if (nextVal > max) return max - Math.floor(Math.random() * 3);
+        return nextVal;
+      });
+    }, (liveViewConfig.updateIntervalSeconds || 4) * 1000);
+
+    return () => clearInterval(interval);
+  }, [liveViewConfig.presetRange, liveViewConfig.customMin, liveViewConfig.customMax, liveViewConfig.enabled]);
+
+  // Accordion open states for SPLAYD PDP layout
+  const [accordionOpen, setAccordionOpen] = useState<{ description: boolean; additional: boolean; reviews: boolean }>({
+    description: true,
+    additional: false,
+    reviews: false,
+  });
+
+  const toggleAccordion = (key: 'description' | 'additional' | 'reviews') => {
+    setAccordionOpen(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const handleReviewSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -598,14 +654,24 @@ export default function ProductDetails() {
           ];
         }
 
+        let activeCamps: any[] = [];
+        try {
+          const campaignsData = await fetchCampaignsFromBackend();
+          if (campaignsData) {
+            activeCamps = campaignsData.filter((c: any) => c.status === 'active');
+          }
+        } catch (err) {}
+
         const finalProduct = {
           ...localProduct,
           customerReviews: reviewsList,
           reviews: reviewsList.length
         };
 
-        setProduct(finalProduct);
-        setActiveImage(finalProduct.gallery?.[0] || finalProduct.image);
+        const resolvedProduct = resolveProductWithCampaign(finalProduct, activeCamps);
+
+        setProduct(resolvedProduct);
+        setActiveImage(resolvedProduct.gallery?.[0] || resolvedProduct.image);
         setLoading(false);
       } else {
         // If not found in local cache, show skeleton loader
@@ -614,6 +680,14 @@ export default function ProductDetails() {
 
       window.scrollTo(0, 0);
       
+      let activeCamps: any[] = [];
+      try {
+        const campaignsData = await fetchCampaignsFromBackend();
+        if (campaignsData) {
+          activeCamps = campaignsData.filter((c: any) => c.status === 'active');
+        }
+      } catch (err) {}
+
       const dbProduct = await fetchProductByIdFromBackend(id);
       if (!active) return;
 
@@ -663,11 +737,11 @@ export default function ProductDetails() {
           ];
         }
 
-        const finalProduct = {
+        const finalProduct = resolveProductWithCampaign({
           ...dbProduct,
           customerReviews: reviewsList,
           reviews: reviewsList.length
-        };
+        }, activeCamps);
 
         setProduct(finalProduct);
         setActiveImage(prev => {
@@ -716,381 +790,347 @@ export default function ProductDetails() {
     );
   }
 
-  return (
-    <div className="pdp-container">
-      <SEOMeta 
-        title={product.name} 
-        description={product.description ? product.description.replace(/<[^>]*>/g, '').slice(0, 160) : `Buy ${product.name} at premium price.`}
-        image={product.image}
-        slug={`product/${product.id}`}
-      />
-      {/* Breadcrumbs */}
-      <nav className="pdp-breadcrumbs">
-        <Link to="/">Home</Link>
-        <ChevronRight size={14} />
-        <Link to="/">{product.category}</Link>
-        <ChevronRight size={14} />
-        <span>{product.name}</span>
-      </nav>
+  const effectivePrice = product.campaignOfferPrice || product.price;
 
-      {/* Main Product Section */}
-      <div className="pdp-grid">
+  return (
+    <div className="splayd-pdp-container">
+      <SEOMeta 
+        title={`${product.name} - ৳${effectivePrice}`}
+        description={product.description ? product.description.replace(/<[^>]*>/g, '').slice(0, 160) : `Buy ${product.name} online at best price ৳${effectivePrice} in Bangladesh. Genuine quality, fast delivery.`}
+        image={activeImage || product.image}
+        slug={`product/${product.id}`}
+        type="product"
+        keywords={`${product.name}, Buy ${product.name} Bangladesh, ${product.brand || 'Tamim Global'}, ${product.category || 'Sports Item'}, Price in BD`}
+        product={{
+          id: product.id,
+          name: product.name,
+          description: product.description ? product.description.replace(/<[^>]*>/g, '').slice(0, 200) : undefined,
+          price: effectivePrice,
+          originalPrice: product.originalPrice || product.price,
+          currency: 'BDT',
+          inStock: product.inStock !== false,
+          brand: product.brand,
+          rating: product.rating,
+          reviewsCount: product.reviews,
+          sku: product.sku,
+          image: activeImage || product.image,
+          category: product.category,
+        }}
+      />
+
+      {/* Top Breadcrumb & Quick Nav */}
+      <div className="splayd-pdp-breadcrumbs-row">
+        <div className="splayd-pdp-breadcrumbs">
+          <Link to="/">Home</Link>
+          <ChevronRight size={12} />
+          <Link to={`/collection/${(product.category || '').toLowerCase().replace(/[^a-z0-9]/g, '-')}`}>{(product.category || 'SHOP ALL PRODUCTS').toUpperCase()}</Link>
+          <ChevronRight size={12} />
+          <span>{product.name}</span>
+        </div>
+      </div>
+
+      {/* Main Grid */}
+      <div className="splayd-pdp-grid">
         {/* Gallery */}
-        <div className="pdp-gallery">
-          <div className="pdp-main-image-container">
-            <OptimizedImage src={activeImage} alt={product.name} className="pdp-main-image" width={800} height={800} />
-            {product.badge && (
-              <span className={`pdp-badge ${product.badge}`}>
-                {product.badge === 'sale' ? `Sale! -${Math.round((1 - product.price / (product.originalPrice || product.price)) * 100)}%` : 'NEW'}
-              </span>
-            )}
-          </div>
-          <div className="pdp-thumbnails">
-            {product.gallery.map((img: string, i: number) => (
+        <div className="splayd-pdp-gallery-wrap">
+          <div className="splayd-pdp-thumbnails-strip">
+            {(product.gallery && product.gallery.length > 0 ? product.gallery : [product.image]).map((img: string, i: number) => (
               <button 
                 key={i} 
-                className={`pdp-thumbnail ${activeImage === img ? 'active' : ''}`}
+                className={`splayd-pdp-thumb-btn ${activeImage === img ? 'active' : ''}`}
                 onClick={() => setActiveImage(img)}
               >
-                <OptimizedImage src={img} alt={`Thumbnail ${i+1}`} width={100} height={100} />
+                <img src={img} alt={`Thumbnail ${i+1}`} />
               </button>
             ))}
           </div>
+          <div className="splayd-pdp-main-img-box">
+            <img src={activeImage || product.image} alt={product.name} />
+          </div>
         </div>
 
-        {/* Info */}
-        <div className="pdp-info">
-          <div className="pdp-brand">{product.brand}</div>
-          <h1 className="pdp-title">{product.name}</h1>
-          
-          <div className="pdp-rating-row">
-            <StarRating rating={product.rating} />
-            <span className="pdp-reviews-count">{product.reviews.toLocaleString()} Reviews</span>
-            <span className="pdp-sku">SKU: {product.sku}</span>
+        {/* Right Product Details Info */}
+        <div className="splayd-pdp-info-col">
+          <div className="splayd-pdp-top-meta">
+            <span 
+              className="splayd-pdp-ask-link" 
+              onClick={() => {
+                if (config.contactInfo.whatsappNumber) {
+                  window.open(`https://wa.me/${config.contactInfo.whatsappNumber.replace(/[^0-9]/g, '')}?text=Question%20about%20${encodeURIComponent(product.name)}`, '_blank');
+                } else if (config.contactInfo.phoneNumber) {
+                  window.location.href = `tel:${config.contactInfo.phoneNumber}`;
+                }
+              }}
+            >
+              Ask a Question
+            </span>
           </div>
 
-          <div className="pdp-price-row">
-            <span className="pdp-price">৳{product.price}</span>
-            {product.originalPrice && <span className="pdp-original-price">৳{product.originalPrice}</span>}
-          </div>
+          <h1 className="splayd-pdp-title">{product.name}</h1>
+          <div className="splayd-pdp-price">Tk {Number(product.price).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
 
-
-          {/* Size Selector - only show if product has enabled sizes */}
+          {/* Size Selector */}
           {product.sizes && product.sizes.filter((s: any) => s.enabled).length > 0 && (
-            <div className="pdp-size-selector" style={{ margin: '8px 0 4px 0' }}>
-              <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--sf-text-primary)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                📏 সাইজ সিলেক্ট করুন (Select Size)
-                {selectedSize && <span style={{ fontSize: '0.78rem', color: 'var(--sf-accent)', fontWeight: 800 }}>— {selectedSize}</span>}
+            <div style={{ marginBottom: '24px' }}>
+              <div className="splayd-pdp-size-title">
+                SHOE SIZE: {selectedSize || (product.sizes.filter((s: any) => s.enabled)[0]?.label || '')}
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              <div className="splayd-pdp-size-pills">
                 {product.sizes.filter((s: any) => s.enabled).map((size: any, idx: number) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => setSelectedSize(size.label)}
-                    style={{
-                      minWidth: '52px',
-                      height: '42px',
-                      padding: '0 16px',
-                      borderRadius: '10px',
-                      border: selectedSize === size.label ? '2px solid var(--sf-accent)' : '1.5px solid var(--sf-border)',
-                      background: selectedSize === size.label ? 'rgba(225, 29, 72, 0.08)' : 'var(--sf-bg-light, #f8f9fa)',
-                      color: selectedSize === size.label ? 'var(--sf-accent)' : 'var(--sf-text-primary)',
-                      fontWeight: 700,
-                      fontSize: '0.9rem',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
+                    className={`splayd-pdp-size-circle ${selectedSize === size.label ? 'active' : ''}`}
                   >
                     {size.label}
                   </button>
                 ))}
               </div>
-              {!selectedSize && (
-                <div style={{ fontSize: '0.78rem', color: '#ef4444', marginTop: '8px', fontWeight: 600 }}>
-                  ⚠️ অর্ডার করতে দয়া করে আপনার সাইজ সিলেক্ট করুন।
+            </div>
+          )}
+
+          {/* Quantity Stepper & Add to Cart */}
+          {(() => {
+            const isOutOfStock = product.stock !== undefined
+              ? Number(product.stock) <= 0
+              : (product.in_stock === 0 || product.in_stock === false || product.inStock === false);
+            const realStockCount = product.stock !== undefined ? Number(product.stock) : (isOutOfStock ? 0 : 15);
+            const isLowStock = realStockCount > 0 && realStockCount <= 15;
+
+            return (
+              <>
+                <div className="splayd-pdp-cart-row">
+                  <div className="splayd-pdp-qty-stepper">
+                    <button type="button" onClick={() => setBuyNowQty(Math.max(1, buyNowQty - 1))} disabled={isOutOfStock}>-</button>
+                    <span>{buyNowQty}</span>
+                    <button type="button" onClick={() => setBuyNowQty(buyNowQty + 1)} disabled={isOutOfStock}>+</button>
+                  </div>
+                  <button 
+                    className="splayd-pdp-add-btn" 
+                    disabled={isOutOfStock}
+                    style={isOutOfStock ? { opacity: 0.5, cursor: 'not-allowed', background: '#475569' } : {}}
+                    onClick={() => {
+                      if (isOutOfStock) return;
+                      const hasSizes = product.sizes && product.sizes.filter((s: any) => s.enabled).length > 0;
+                      if (hasSizes && !selectedSize) {
+                        alert('দয়া করে প্রথমে সাইজ সিলেক্ট করুন!');
+                        return;
+                      }
+                      addToCart({ ...product, selectedSize: selectedSize || 'Free Size' });
+                    }}
+                  >
+                    {isOutOfStock ? 'OUT OF STOCK' : 'ADD TO CART'}
+                  </button>
+                </div>
+
+                {/* Buy It Now */}
+                <button 
+                  className="splayd-pdp-buy-btn"
+                  disabled={isOutOfStock}
+                  style={isOutOfStock ? { opacity: 0.5, cursor: 'not-allowed', background: '#334155' } : {}}
+                  onClick={() => {
+                    if (isOutOfStock) return;
+                    const hasSizes = product.sizes && product.sizes.filter((s: any) => s.enabled).length > 0;
+                    if (hasSizes && !selectedSize) {
+                      alert('দয়া করে প্রথমে সাইজ সিলেক্ট করুন!');
+                      return;
+                    }
+                    setBuyNowQty(1);
+                    setIsCheckoutOpen(true);
+                  }}
+                >
+                  {isOutOfStock ? 'PRODUCT UNAVAILABLE' : 'BUY IT NOW'}
+                </button>
+
+                {/* Scarcity / Stock Bar */}
+                <div 
+                  className="splayd-pdp-scarcity" 
+                  style={
+                    isOutOfStock 
+                      ? { background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)' } 
+                      : !isLowStock 
+                        ? { background: 'rgba(16, 185, 129, 0.08)', borderColor: 'rgba(16, 185, 129, 0.25)' }
+                        : {}
+                  }
+                >
+                  <div 
+                    className="splayd-pdp-scarcity-lbl" 
+                    style={
+                      isOutOfStock 
+                        ? { color: '#ef4444' } 
+                        : !isLowStock 
+                          ? { color: '#10b981' } 
+                          : {}
+                    }
+                  >
+                    {isOutOfStock 
+                      ? '⚠️ OUT OF STOCK - PRODUCT CURRENTLY UNAVAILABLE' 
+                      : isLowStock
+                        ? `🔥 HURRY! ONLY ${realStockCount} LEFT IN STOCK.`
+                        : `✔ IN STOCK (${realStockCount} UNITS AVAILABLE)`
+                    }
+                  </div>
+                  {!isOutOfStock && (
+                    <div className="splayd-pdp-scarcity-bar">
+                      <div className="splayd-pdp-scarcity-fill" style={{ width: `${Math.min(100, Math.max(8, (realStockCount / 50) * 100))}%` }} />
+                    </div>
+                  )}
+                </div>
+
+                {/* Live Viewers */}
+                {liveViewConfig.enabled !== false && (
+                  <div className="splayd-pdp-viewers">
+                    <Eye size={18} />
+                    <span>{liveViewersCount} People viewing this right now</span>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+
+          {/* Payment Trust Icons Strip */}
+          <div className="splayd-pdp-payments-strip">
+            <span className="splayd-payment-badge">VISA</span>
+            <span className="splayd-payment-badge">MasterCard</span>
+            <span className="splayd-payment-badge">SSLCommerz</span>
+            <span className="splayd-payment-badge">Cash on Delivery</span>
+            <span className="splayd-payment-badge">Fast Delivery</span>
+            <span className="splayd-payment-badge">bKash</span>
+            <span className="splayd-payment-badge">Nagad</span>
+          </div>
+
+          {/* Expandable Accordion Cards (Description & Additional Information) */}
+          <div className="splayd-pdp-accordions">
+            {/* 1. Description Accordion */}
+            <div className="splayd-accordion-card">
+              <div 
+                className="splayd-accordion-header" 
+                onClick={() => toggleAccordion('description')}
+              >
+                <span>Description</span>
+                <span>{accordionOpen.description ? <Minus size={18} /> : <Plus size={18} />}</span>
+              </div>
+              {accordionOpen.description && (
+                <div className="splayd-accordion-body">
+                  <p style={{ margin: '0 0 12px 0' }}>{product.description}</p>
+                  {product.features && product.features.length > 0 && (
+                    <>
+                      <h4 style={{ fontWeight: 800, margin: '12px 0 6px 0', fontSize: '0.9rem' }}>Key Highlights & Features:</h4>
+                      <ul style={{ paddingLeft: '20px', margin: 0 }}>
+                        {product.features.map((feat: string, i: number) => (
+                          <li key={i} style={{ marginBottom: '4px' }}>{feat}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
                 </div>
               )}
             </div>
-          )}
 
-          <div className="pdp-stock-status">
-            <CheckCircle size={20} color="var(--sf-success)" />
-            <span>In Stock and ready to ship</span>
-          </div>
-
-          <div className="pdp-actions">
-            <button className="store-btn store-btn-primary pdp-add-to-cart" onClick={() => {
-              const hasSizes = product.sizes && product.sizes.filter((s: any) => s.enabled).length > 0;
-              if (hasSizes && !selectedSize) {
-                alert('দয়া করে প্রথমে সাইজ সিলেক্ট করুন!');
-                return;
-              }
-              addToCart({ ...product, selectedSize: selectedSize || 'Free Size' });
-            }}>
-              <ShoppingCart size={20} /> Add to Cart
-            </button>
-            <button 
-              onClick={() => {
-                const hasSizes = product.sizes && product.sizes.filter((s: any) => s.enabled).length > 0;
-                if (hasSizes && !selectedSize) {
-                  alert('দয়া করে প্রথমে সাইজ সিলেক্ট করুন!');
-                  return;
-                }
-                setBuyNowQty(1);
-                setIsCheckoutOpen(true);
-              }}
-              className="store-btn pdp-buy-now" 
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: 'none' }}
-            >
-              Buy Now
-            </button>
-            <div className="pdp-action-icons">
-              <button 
-                className={`pdp-icon-btn ${wishlist.includes(product.id) ? 'active' : ''}`}
-                onClick={() => toggleWishlist(product.id)}
-                title="Add to Wishlist"
+            {/* 2. Additional Information Accordion */}
+            <div className="splayd-accordion-card">
+              <div 
+                className="splayd-accordion-header" 
+                onClick={() => toggleAccordion('additional')}
               >
-                <Heart size={24} fill={wishlist.includes(product.id) ? '#ef4444' : 'none'} />
-              </button>
-              <button className="pdp-icon-btn" title="Share">
-                <Share2 size={22} />
-              </button>
-            </div>
-          </div>
-
-          <div className="pdp-contact-actions">
-            {config.contactInfo.whatsappNumber && (
-              <a 
-                href={`https://wa.me/${config.contactInfo.whatsappNumber}?text=I%20want%20to%20buy%20${encodeURIComponent(product.name)}`}
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="pdp-contact-btn pdp-whatsapp"
-              >
-                <Smartphone size={18} /> WhatsApp এ কথা বলুন
-              </a>
-            )}
-            {config.contactInfo.phoneNumber && (
-              <a href={`tel:${config.contactInfo.phoneNumber}`} className="pdp-contact-btn pdp-call">
-                <Phone size={18} /> সরাসরি কল: {config.contactInfo.phoneNumber}
-              </a>
-            )}
-            {config.contactInfo.messengerUrl && (
-              <a 
-                href={config.contactInfo.messengerUrl} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="pdp-contact-btn pdp-messenger"
-              >
-                <MessageCircle size={18} /> মেসেঞ্জার
-              </a>
-            )}
-          </div>
-
-          <div className="pdp-trust-badges">
-            <div className="trust-badge"><Truck size={20} /> Free Shipping</div>
-            <div className="trust-badge"><Shield size={20} /> 1 Year Warranty</div>
-            <div className="trust-badge"><RotateCcw size={20} /> 30-Day Returns</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs Section */}
-      <div className="pdp-tabs-container">
-        <div className="pdp-tabs-header">
-          <button className={`pdp-tab ${activeTab === 'description' ? 'active' : ''}`} onClick={() => setActiveTab('description')}>Description</button>
-          <button className={`pdp-tab ${activeTab === 'specs' ? 'active' : ''}`} onClick={() => setActiveTab('specs')}>Specifications</button>
-          <button className={`pdp-tab ${activeTab === 'reviews' ? 'active' : ''}`} onClick={() => setActiveTab('reviews')}>Reviews ({product.customerReviews?.length || 0})</button>
-        </div>
-        
-        <div className="pdp-tab-content">
-          {activeTab === 'description' && (
-            <div className="pdp-description-tab">
-              <h3>Product Overview</h3>
-              <p>{product.description}</p>
-              <h4>Key Features</h4>
-              <ul>
-                {product.features.map((feat: string, i: number) => <li key={i}>{feat}</li>)}
-              </ul>
-            </div>
-          )}
-          
-          {activeTab === 'specs' && (
-            <div className="pdp-specs-tab">
-              <table className="pdp-specs-table">
-                <tbody>
-                  {product.specs.map((spec: { name: string; value: string }, i: number) => (
-                    <tr key={i}>
-                      <th>{spec.name}</th>
-                      <td>{spec.value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-
-
-          {activeTab === 'reviews' && (
-            <div className="pdp-reviews-tab">
-              
-              {/* Existing Reviews List */}
-              <div className="pdp-reviews-list" style={{ marginBottom: '40px' }}>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--sf-text-primary)', marginBottom: '20px' }}>
-                  কাস্টমার রিভিউসমূহ ({product.customerReviews?.length || 0})
-                </h3>
-                {product.customerReviews && product.customerReviews.length > 0 ? (
-                  product.customerReviews.map((review: any) => (
-                    <div key={review.id} className="pdp-review-card" style={{ padding: '20px', borderRadius: '12px', background: 'var(--sf-bg-light)', border: '1px solid var(--sf-border)', marginBottom: '16px' }}>
-                      <div className="review-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                        <span className="review-user" style={{ fontWeight: 800, color: 'var(--sf-text-primary)', fontSize: '0.95rem' }}>{review.user}</span>
-                        <span className="review-date" style={{ fontSize: '0.8rem', color: 'var(--sf-text-tertiary)' }}>{new Date(review.date).toLocaleDateString('bn-BD')}</span>
-                      </div>
-                      <StarRating rating={review.rating} />
-                      <p className="review-comment" style={{ margin: '10px 0 0 0', color: 'var(--sf-text-secondary)', fontSize: '0.92rem', lineHeight: 1.6 }}>{review.comment}</p>
-                      
-                      {/* Review Photo Attachment */}
-                      {review.image && (
-                        <div style={{ marginTop: '12px' }}>
-                          <img 
-                            src={review.image} 
-                            alt="Review attachment" 
-                            onClick={() => setLightboxImage(review.image)}
-                            style={{ maxWidth: '120px', maxHeight: '120px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--sf-border)', cursor: 'pointer' }} 
-                            className="hover-scale"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <p style={{ color: 'var(--sf-text-tertiary)' }}>এই প্রোডাক্টে এখনও কোনো রিভিউ দেওয়া হয়নি। প্রথম রিভিউটি আপনিই দিন!</p>
-                )}
+                <span>Additional Information</span>
+                <span>{accordionOpen.additional ? <Minus size={18} /> : <Plus size={18} />}</span>
               </div>
-
-              {/* Write a Review Form */}
-              <div className="pdp-write-review-form" style={{ background: 'var(--sf-bg-light)', padding: '24px', borderRadius: '16px', border: '1px solid var(--sf-border)' }}>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--sf-text-primary)', marginBottom: '16px' }}>একটি রিভিউ লিখুন</h3>
-                
-                {reviewMsg && (
-                  <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#10b981', padding: '10px 16px', borderRadius: '8px', fontSize: '0.9rem', marginBottom: '16px' }}>
-                    {reviewMsg}
-                  </div>
-                )}
-
-                {reviewError && (
-                  <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444', padding: '10px 16px', borderRadius: '8px', fontSize: '0.9rem', marginBottom: '16px' }}>
-                    {reviewError}
-                  </div>
-                )}
-
-                <form onSubmit={handleReviewSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  
-                  {/* Name Input */}
-                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--sf-text-secondary)' }}>আপনার নাম (Your Name)</label>
-                    <input 
-                      type="text" 
-                      placeholder="আপনার নাম লিখুন" 
-                      required 
-                      value={reviewerName} 
-                      onChange={(e) => setReviewerName(e.target.value)} 
-                      style={{ padding: '10px 14px', border: '1px solid var(--sf-border)', borderRadius: '8px', fontSize: '0.9rem', outline: 'none', background: 'var(--sf-bg-main)', color: 'var(--sf-text-primary)' }}
-                    />
-                  </div>
-
-                  {/* Rating Selector */}
-                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--sf-text-secondary)' }}>রেটিং সিলেক্ট করুন (Rating)</label>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      {[1, 2, 3, 4, 5].map((stars) => (
-                        <button
-                          key={stars}
-                          type="button"
-                          onClick={() => setReviewerRating(stars)}
-                          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                        >
-                          <Star 
-                            size={24} 
-                            fill={stars <= reviewerRating ? '#fbbf24' : 'none'} 
-                            color="#fbbf24" 
-                          />
-                        </button>
+              {accordionOpen.additional && (
+                <div className="splayd-accordion-body">
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+                    <tbody>
+                      <tr>
+                        <td style={{ padding: '8px 0', fontWeight: 700, width: '40%', borderBottom: '1px solid #f3f4f6' }}>SKU Code</td>
+                        <td style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>{product.sku || 'TG-PRD-101'}</td>
+                      </tr>
+                      <tr>
+                        <td style={{ padding: '8px 0', fontWeight: 700, borderBottom: '1px solid #f3f4f6' }}>Brand</td>
+                        <td style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>{product.brand || 'Tamim Global'}</td>
+                      </tr>
+                      <tr>
+                        <td style={{ padding: '8px 0', fontWeight: 700, borderBottom: '1px solid #f3f4f6' }}>Category</td>
+                        <td style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>{product.category || 'Standard'}</td>
+                      </tr>
+                      {product.specs && product.specs.map((spec: any, idx: number) => (
+                        <tr key={idx}>
+                          <td style={{ padding: '8px 0', fontWeight: 700, borderBottom: '1px solid #f3f4f6' }}>{spec.name}</td>
+                          <td style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>{spec.value}</td>
+                        </tr>
                       ))}
-                      <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--sf-text-secondary)', marginLeft: '8px' }}>
-                        {reviewerRating} / 5
-                      </span>
-                    </div>
-                  </div>
+                      <tr>
+                        <td style={{ padding: '8px 0', fontWeight: 700, borderBottom: '1px solid #f3f4f6' }}>Delivery Time</td>
+                        <td style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>Dhaka: 24-48 Hours | Outside: 2-3 Days</td>
+                      </tr>
+                      <tr>
+                        <td style={{ padding: '8px 0', fontWeight: 700 }}>Return Policy</td>
+                        <td style={{ padding: '8px 0' }}>7-Day Instant Easy Return & Exchange Guarantee</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
 
-                  {/* Comment Textarea */}
-                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--sf-text-secondary)' }}>মন্তব্য লিখুন (Your Review)</label>
-                    <textarea 
-                      placeholder="এখানে আপনার মতামত লিখুন..." 
-                      required 
-                      rows={4}
-                      value={reviewerComment} 
-                      onChange={(e) => setReviewerComment(e.target.value)} 
-                      style={{ padding: '10px 14px', border: '1px solid var(--sf-border)', borderRadius: '8px', fontSize: '0.9rem', outline: 'none', resize: 'vertical', fontFamily: 'inherit', background: 'var(--sf-bg-main)', color: 'var(--sf-text-primary)' }}
-                    />
-                  </div>
-
-                  {/* Photo Upload Attachment */}
-                  <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--sf-text-secondary)' }}>প্রোডাক্টের ছবি যোগ করুন (Add Photo - Optional)</label>
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setReviewerImage(reader.result as string);
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }} 
-                      style={{ fontSize: '0.85rem', color: 'var(--sf-text-secondary)' }}
-                    />
-                    
-                    {reviewerImage && (
-                      <div style={{ marginTop: '10px', position: 'relative', display: 'inline-block' }}>
-                        <img 
-                          src={reviewerImage} 
-                          alt="Review attachment preview" 
-                          style={{ maxWidth: '100px', maxHeight: '100px', borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--sf-border)' }} 
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setReviewerImage('')}
-                          style={{ position: 'absolute', top: '-6px', right: '-6px', width: '20px', height: '20px', background: 'rgba(239,68,68,0.9)', color: 'white', border: 'none', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold' }}
-                        >
-                          ✕
-                        </button>
-                      </div>
+            {/* 3. Customer Reviews Accordion */}
+            <div className="splayd-accordion-card">
+              <div 
+                className="splayd-accordion-header" 
+                onClick={() => toggleAccordion('reviews')}
+              >
+                <span>Customer Reviews ({product.customerReviews?.length || 0})</span>
+                <span>{accordionOpen.reviews ? <Minus size={18} /> : <Plus size={18} />}</span>
+              </div>
+              {accordionOpen.reviews && (
+                <div className="splayd-accordion-body">
+                  {/* Reviews List & Write Review Form */}
+                  <div className="pdp-reviews-list" style={{ marginBottom: '24px' }}>
+                    {product.customerReviews && product.customerReviews.length > 0 ? (
+                      product.customerReviews.map((review: any) => (
+                        <div key={review.id} style={{ padding: '14px', borderRadius: '8px', background: '#f8f9fa', border: '1px solid #e4e4e7', marginBottom: '12px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                            <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>{review.user}</span>
+                            <span style={{ fontSize: '0.78rem', color: '#71717a' }}>{new Date(review.date).toLocaleDateString('bn-BD')}</span>
+                          </div>
+                          <StarRating rating={review.rating} />
+                          <p style={{ margin: '6px 0 0 0', fontSize: '0.88rem', color: '#3f3f46' }}>{review.comment}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p style={{ color: '#71717a' }}>এই প্রোডাক্টে এখনও কোনো রিভিউ দেওয়া হয়নি।</p>
                     )}
                   </div>
 
-                  {/* Submit Button */}
-                  <button 
-                    type="submit" 
-                    className="store-btn"
-                    style={{ background: 'var(--sf-accent)', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '30px', fontWeight: 'bold', cursor: 'pointer', marginTop: '8px', alignSelf: 'flex-start' }}
-                  >
-                    রিভিউ সাবমিট করুন
-                  </button>
-
-                </form>
-              </div>
-
+                  {/* Review Form */}
+                  <div style={{ background: '#f8f9fa', padding: '16px', borderRadius: '8px', border: '1px solid #e4e4e7' }}>
+                    <h4 style={{ margin: '0 0 12px 0', fontSize: '0.95rem', fontWeight: 800 }}>একটি রিভিউ লিখুন</h4>
+                    {reviewMsg && <div style={{ background: '#dcfce7', color: '#16a34a', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '12px' }}>{reviewMsg}</div>}
+                    {reviewError && <div style={{ background: '#fee2e2', color: '#ef4444', padding: '8px 12px', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '12px' }}>{reviewError}</div>}
+                    <form onSubmit={handleReviewSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <input 
+                        type="text" 
+                        placeholder="আপনার নাম" 
+                        required 
+                        value={reviewerName} 
+                        onChange={e => setReviewerName(e.target.value)} 
+                        style={{ padding: '8px 12px', border: '1px solid #d4d4d8', borderRadius: '4px', fontSize: '0.88rem' }}
+                      />
+                      <textarea 
+                        placeholder="আপনার প্রোডাক্ট রিভ্যু মতামত লিখুন..." 
+                        required 
+                        rows={3} 
+                        value={reviewerComment} 
+                        onChange={e => setReviewerComment(e.target.value)} 
+                        style={{ padding: '8px 12px', border: '1px solid #d4d4d8', borderRadius: '4px', fontSize: '0.88rem' }}
+                      />
+                      <button type="submit" className="splayd-pdp-add-btn" style={{ height: '40px', fontSize: '0.8rem' }}>SUBMIT REVIEW</button>
+                    </form>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -1145,20 +1185,24 @@ export default function ProductDetails() {
             </div>
           ) : (
             <div style={{ background: 'var(--sf-bg-light)', padding: '36px 20px', borderRadius: '16px', border: '1px dashed var(--sf-border)', textAlign: 'center' }}>
-              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(225, 29, 72, 0.1)', color: 'var(--sf-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
-                <MessageCircle size={28} />
+              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(24, 24, 27, 0.06)', color: 'var(--sf-text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
+                <Headphones size={28} />
               </div>
-              <h4 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--sf-text-primary)', marginBottom: '8px' }}>ভিডিও ও ছবি রিভিউ দেখতে চান?</h4>
+              <h4 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--sf-text-primary)', marginBottom: '8px' }}>ভিডিও ও ছবি রিভিউ চান?</h4>
               <p style={{ fontSize: '0.9rem', color: 'var(--sf-text-secondary)', maxWidth: '480px', margin: '0 auto 20px auto', lineHeight: 1.6 }}>
-                এই প্রোডাক্টটির রিয়েল ফটো বা লাইভ আনবক্সিং ভিডিও ডেমো দেখতে সরাসরি আমাদের সাপোর্ট টিমের চ্যাটে মেসেজ পাঠান।
+                এই প্রোডাক্টটির রিয়েল ফটো বা ভিডিও দেখতে সরাসরি হোয়াটসঅ্যাপ বা হেল্পলাইনে নক দিন।
               </p>
-              <button 
-                onClick={() => setIsChatDrawerOpen(true)} 
-                className="store-btn store-btn-primary" 
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 24px', borderRadius: '24px', fontWeight: 700, cursor: 'pointer', border: 'none' }}
-              >
-                <MessageCircle size={18} /> লাইভ চ্যাটে ভিডিও রিভিউ চান
-              </button>
+              {config.contactInfo.whatsappNumber && (
+                <a 
+                  href={`https://wa.me/${config.contactInfo.whatsappNumber.replace(/[^0-9]/g, '')}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="store-btn store-btn-primary" 
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 24px', borderRadius: '24px', fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}
+                >
+                  <Smartphone size={18} /> WhatsApp এ নক দিন
+                </a>
+              )}
             </div>
           )}
         </div>
@@ -1564,288 +1608,9 @@ export default function ProductDetails() {
         </div>
       )}
 
-      {/* Mobile Sticky Bottom Action Bar */}
-      <div className="pdp-mobile-sticky-bar">
-        <Link to="/" className="sticky-bar-icon-btn">
-          <Store size={20} />
-          <span>স্টোর</span>
-        </Link>
-        <button 
-          type="button" 
-          className="sticky-bar-icon-btn" 
-          onClick={() => {
-            setProductShared(false); // Reset session share status so they can share it
-            setIsChatDrawerOpen(true);
-          }}
-        >
-          <MessageCircle size={20} />
-          <span>চ্যাট</span>
-        </button>
-        <div className="sticky-bar-actions">
-          <button 
-            type="button" 
-            className="sticky-bar-btn buy-now" 
-            onClick={() => {
-              setBuyNowQty(1);
-              setIsCheckoutOpen(true);
-            }}
-          >
-            Buy Now
-          </button>
-          <button 
-            type="button" 
-            className="sticky-bar-btn add-to-cart" 
-            onClick={() => {
-              const hasSizes = product.sizes && product.sizes.filter((s: any) => s.enabled).length > 0;
-              if (hasSizes && !selectedSize) {
-                alert('দয়া করে প্রথমে সাইজ সিলেক্ট করুন!');
-                return;
-              }
-              addToCart({ ...product, selectedSize: selectedSize || 'Free Size' });
-            }}
-          >
-            Add to Cart
-          </button>
-        </div>
-      </div>
 
-      {/* Live Support Chat Drawer */}
-      {isChatDrawerOpen && (
-        <div className="pdp-chat-drawer-overlay" onClick={() => setIsChatDrawerOpen(false)}>
-          <div className="pdp-chat-drawer" onClick={e => e.stopPropagation()}>
-            {/* Header */}
-            <div className="pdp-chat-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255, 255, 255, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700 }}>
-                  {customer ? customer.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() : 'G'}
-                </div>
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>কাস্টমার চ্যাট সাপোর্ট</div>
-                  <div style={{ fontSize: '0.72rem', opacity: 0.85 }}>Support Agent Online</div>
-                </div>
-              </div>
-              <button onClick={() => setIsChatDrawerOpen(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', padding: '4px' }}>
-                <X size={18} />
-              </button>
-            </div>
 
-            {customer ? (
-              <>
-                {/* Messages List */}
-                <div className="pdp-chat-messages">
-                  {chatMessages.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--sf-text-tertiary)', margin: 'auto' }}>
-                      <MessageCircle size={40} style={{ opacity: 0.15, marginBottom: '12px', display: 'inline-block' }} />
-                      <p style={{ fontWeight: 600, color: 'var(--sf-text-secondary)', fontSize: '0.85rem' }}>আপনার কোনো মেসেজ নেই</p>
-                      <p style={{ fontSize: '0.75rem', marginTop: '4px' }}>এই পণ্যটি নিয়ে সরাসরি এডমিনের সাথে কথা বলতে নিচে মেসেজ করুন।</p>
-                    </div>
-                  ) : (
-                    chatMessages.map((msg, idx) => {
-                      const isAdmin = msg.sender === 'admin';
-                      return (
-                        <div 
-                          key={idx} 
-                          style={{ 
-                            display: 'flex', 
-                            justifyContent: isAdmin ? 'flex-start' : 'flex-end', 
-                            width: '100%' 
-                          }}
-                        >
-                          <div 
-                            style={{ 
-                              maxWidth: '75%', 
-                              padding: '10px 14px', 
-                              borderRadius: '14px', 
-                              borderTopLeftRadius: isAdmin ? '2px' : '14px',
-                              borderBottomRightRadius: isAdmin ? '14px' : '2px',
-                              background: isAdmin ? '#e2e8f0' : 'linear-gradient(135deg, var(--sf-accent) 0%, var(--sf-accent-hover) 100%)', 
-                              color: isAdmin ? '#1e293b' : 'white',
-                              boxShadow: 'var(--sf-shadow-sm)',
-                              position: 'relative'
-                            }}
-                          >
-                            {msg.message.startsWith('PRODUCT_SHARE:') ? (
-                              (() => {
-                                try {
-                                  const productInfo = JSON.parse(msg.message.substring(14));
-                                  return (
-                                    <Link 
-                                      to={`/product/${productInfo.id}`} 
-                                      onClick={() => setIsChatDrawerOpen(false)}
-                                      style={{ 
-                                        display: 'flex', 
-                                        flexDirection: 'column', 
-                                        gap: '6px', 
-                                        textDecoration: 'none', 
-                                        color: 'inherit',
-                                        background: isAdmin ? 'rgba(0, 0, 0, 0.03)' : 'rgba(255, 255, 255, 0.15)',
-                                        borderRadius: '8px',
-                                        padding: '8px',
-                                        width: '180px'
-                                      }}
-                                    >
-                                      <img 
-                                        src={productInfo.image} 
-                                        alt={productInfo.name} 
-                                        style={{ width: '100%', height: '100px', objectFit: 'cover', borderRadius: '4px' }} 
-                                      />
-                                      <div style={{ fontWeight: 700, fontSize: '0.7rem', color: isAdmin ? '#1e293b' : 'white', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                                        {productInfo.name}
-                                      </div>
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
-                                        <span style={{ fontWeight: 800, fontSize: '0.8rem', color: isAdmin ? '#1e293b' : 'white' }}>৳{productInfo.price}</span>
-                                        <span style={{ fontSize: '8px', background: 'rgba(255,255,255,0.2)', padding: '1px 4px', borderRadius: '2px' }}>লিংক</span>
-                                      </div>
-                                    </Link>
-                                  );
-                                } catch (e) {
-                                  return <div style={{ fontSize: '0.82rem', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{msg.message}</div>;
-                                }
-                              })()
-                            ) : (
-                              <div style={{ fontSize: '0.82rem', lineHeight: 1.4, whiteSpace: 'pre-wrap' }}>{msg.message}</div>
-                            )}
-                            <div 
-                              style={{ 
-                                fontSize: '0.6rem', 
-                                textAlign: 'right', 
-                                marginTop: '4px', 
-                                opacity: 0.6,
-                                color: isAdmin ? '#64748b' : 'white'
-                              }}
-                            >
-                              {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                  <div ref={chatEndRef} />
-                </div>
 
-                {/* Footer Input */}
-                <div className="pdp-chat-footer">
-                  {/* Share Product Hint */}
-                  {!productShared && (
-                    <div className="pdp-chat-product-preview-bar">
-                      <img src={product.image} alt={product.name} />
-                      <div className="pdp-chat-product-preview-bar-info">
-                        {product.name}
-                      </div>
-                      <button 
-                        type="button" 
-                        className="pdp-chat-product-preview-bar-btn"
-                        onClick={handleSendChatProductShare}
-                      >
-                        প্রোডাক্ট লিংক পাঠান
-                      </button>
-                    </div>
-                  )}
-
-                  <form onSubmit={handleSendChatMessage} className="pdp-chat-input-row">
-                    <input 
-                      type="text" 
-                      className="pdp-chat-input" 
-                      placeholder="মেসেজ লিখুন..." 
-                      value={inputMessage}
-                      onChange={e => setInputMessage(e.target.value)}
-                    />
-                    <button type="submit" className="pdp-chat-send-btn">
-                      <Send size={16} />
-                    </button>
-                  </form>
-                </div>
-              </>
-            ) : (
-              /* Quick Auth inside Chat Drawer */
-              <div className="pdp-chat-auth-container">
-                <div className="pdp-chat-auth-title">
-                  {chatIsRegister ? 'নতুন অ্যাকাউন্ট খুলুন' : 'চ্যাট করতে লগইন করুন'}
-                </div>
-                <div className="pdp-chat-auth-desc">
-                  এডমিনের সাথে সরাসরি কথা বলতে এবং আপনার মেসেজ ট্র্যাক করতে সাইন ইন করুন
-                </div>
-
-                {chatAuthError && (
-                  <div style={{ background: '#fee2e2', color: '#ef4444', padding: '8px 12px', borderRadius: '6px', fontSize: '0.78rem' }}>
-                    {chatAuthError}
-                  </div>
-                )}
-                {chatAuthSuccess && (
-                  <div style={{ background: '#f0fdf4', color: '#16a34a', padding: '8px 12px', borderRadius: '6px', fontSize: '0.78rem' }}>
-                    {chatAuthSuccess}
-                  </div>
-                )}
-
-                <form onSubmit={handleChatAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {chatIsRegister && (
-                    <>
-                      <input 
-                        type="text" 
-                        required 
-                        className="pdp-chat-auth-input" 
-                        placeholder="আপনার নাম" 
-                        value={chatAuthName}
-                        onChange={e => setChatAuthName(e.target.value)}
-                      />
-                      <input 
-                        type="tel" 
-                        required 
-                        className="pdp-chat-auth-input" 
-                        placeholder="যেমন: ০১৭XXXXXXXX" 
-                        value={chatAuthPhone}
-                        onChange={e => setChatAuthPhone(e.target.value)}
-                      />
-                    </>
-                  )}
-                  <input 
-                    type="email" 
-                    required 
-                    className="pdp-chat-auth-input" 
-                    placeholder="ইমেইল ঠিকানা" 
-                    value={chatAuthEmail}
-                    onChange={e => setChatAuthEmail(e.target.value)}
-                  />
-                  <input 
-                    type="password" 
-                    required 
-                    className="pdp-chat-auth-input" 
-                    placeholder="পাসওয়ার্ড" 
-                    value={chatAuthPassword}
-                    onChange={e => setChatAuthPassword(e.target.value)}
-                  />
-                  <button type="submit" className="pdp-chat-auth-btn">
-                    {chatIsRegister ? 'রেজিস্ট্রেশন করুন' : 'লগইন করুন'}
-                  </button>
-                </form>
-
-                <div style={{ display: 'flex', alignItems: 'center', margin: '14px 0', width: '100%' }}>
-                  <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
-                  <span style={{ fontSize: '0.72rem', color: '#94a3b8', padding: '0 8px' }}>অথবা</span>
-                  <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
-                </div>
-
-                <div id="google-chat-signin-btn" style={{ width: '100%', display: 'flex', justifyContent: 'center' }} />
-
-                <div className="pdp-chat-auth-toggle">
-                  {chatIsRegister ? (
-                    <>
-                      অলরেডি অ্যাকাউন্ট আছে?
-                      <button onClick={() => { setChatIsRegister(false); setChatAuthError(''); }}>লগইন করুন</button>
-                    </>
-                  ) : (
-                    <>
-                      অ্যাকাউন্ট নেই?
-                      <button onClick={() => { setChatIsRegister(true); setChatAuthError(''); }}>রেজিস্ট্রেশন করুন</button>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Lightbox Modal for Review Images */}
       {lightboxImage && (

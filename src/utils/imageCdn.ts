@@ -1,4 +1,4 @@
-const IMAGE_CDN_ENDPOINT = ''; // Disabled because the ImageKit endpoint returns 404
+const IMAGE_CDN_ENDPOINT = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_IMAGE_CDN_URL) || '';
 
 /**
  * Helper to generate optimized ImageKit CDN URLs for local/external images.

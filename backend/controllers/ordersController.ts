@@ -319,6 +319,59 @@ export const updateOrderStatus = (req: Request, res: Response) => {
         console.error(err);
         return res.status(500).json({ status: 'error', message: 'Database error' });
       }
+
+      // Handle Stock Deduction & Restoration based on Order Delivery Section Lifecycle
+      const isDeliveryStatus = (s: string) => {
+        if (!s) return false;
+        const l = s.toLowerCase().trim();
+        return l === 'shipped' || l === 'delivered' || l === 'in_transit' || l === 'in transit' || l === 'dispatched';
+      };
+
+      const wasInDelivery = isDeliveryStatus(oldStatus);
+      const isNowInDelivery = isDeliveryStatus(status);
+
+      if (!wasInDelivery && isNowInDelivery) {
+        // Order moved from Processing into Delivery Section (shipped/delivered) -> Deduct stock
+        db.all(`SELECT * FROM order_items WHERE order_id = ?`, [id], (itemErr, items: any[]) => {
+          if (!itemErr && items && items.length > 0) {
+            items.forEach((item) => {
+              const qty = item.quantity || 1;
+              const prodName = item.product_name;
+              const prodCode = item.code;
+              db.run(
+                `UPDATE products 
+                 SET stock = CASE WHEN stock >= ? THEN stock - ? ELSE 0 END, 
+                     sold = sold + ?, 
+                     in_stock = CASE WHEN stock - ? <= 0 THEN 0 ELSE 1 END 
+                 WHERE id = ? OR sku = ? OR name = ?`,
+                [qty, qty, qty, qty, prodCode, prodCode, prodName]
+              );
+            });
+            cacheService.del('products:all').catch(console.error);
+          }
+        });
+      } else if (wasInDelivery && !isNowInDelivery) {
+        // Order moved OUT of Delivery Section (e.g. back to processing, returned or cancelled) -> Restore product stock
+        db.all(`SELECT * FROM order_items WHERE order_id = ?`, [id], (itemErr, items: any[]) => {
+          if (!itemErr && items && items.length > 0) {
+            items.forEach((item) => {
+              const qty = item.quantity || 1;
+              const prodName = item.product_name;
+              const prodCode = item.code;
+              db.run(
+                `UPDATE products 
+                 SET stock = stock + ?, 
+                     sold = CASE WHEN sold >= ? THEN sold - ? ELSE 0 END, 
+                     in_stock = 1 
+                 WHERE id = ? OR sku = ? OR name = ?`,
+                [qty, qty, qty, prodCode, prodCode, prodName]
+              );
+            });
+            cacheService.del('products:all').catch(console.error);
+          }
+        });
+      }
+
       // Invalidate dashboard stats cache
       cacheService.del('dashboard:stats').catch(console.error);
 

@@ -15,8 +15,8 @@ interface WheelSlice {
 
 export const SpinWheelControl: React.FC = () => {
   const [enabled, setEnabled] = useState(true);
-  const [title, setTitle] = useState('🎁 ঘুরে জিতুন স্পেশাল ডিসকাউন্ট!');
-  const [subtitle, setSubtitle] = useState('আজকের সৌভাগ্যজনক কুপন কোড জিততে চাকাটি ঘোরান!');
+  const [title, setTitle] = useState('🎁 Spin & Win Special Discounts!');
+  const [subtitle, setSubtitle] = useState('Spin the wheel to win your exclusive coupon code today!');
   const [respinOrderCount, setRespinOrderCount] = useState(1);
   const [slices, setSlices] = useState<WheelSlice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,8 +33,8 @@ export const SpinWheelControl: React.FC = () => {
       const res = await fetchSpinWheelConfig();
       if (res && res.status === 'success' && res.data) {
         setEnabled(Boolean(res.data.enabled));
-        setTitle(res.data.title || '🎁 ঘুরে জিতুন স্পেশাল ডিসকাউন্ট!');
-        setSubtitle(res.data.subtitle || 'আজকের সৌভাগ্যজনক কুপন কোড জিততে চাকাটি ঘোরান!');
+        setTitle(res.data.title || '🎁 Spin & Win Special Discounts!');
+        setSubtitle(res.data.subtitle || 'Spin the wheel to win your exclusive coupon code today!');
         setRespinOrderCount(Number(res.data.respin_order_count_required) || 1);
         setSlices(res.data.slices || []);
       }
@@ -74,7 +74,7 @@ export const SpinWheelControl: React.FC = () => {
 
   const handleDeleteSlice = (index: number) => {
     if (slices.length <= 2) {
-      alert('স্পিন হুইলে কমপক্ষে ২টি স্লাইস থাকতে হবে।');
+      alert('The spin wheel must have at least 2 slices.');
       return;
     }
     setSlices(slices.filter((_, i) => i !== index));
@@ -93,12 +93,12 @@ export const SpinWheelControl: React.FC = () => {
       });
 
       if (res && res.status === 'success') {
-        setMessage({ type: 'success', text: 'স্পিন হুইল সেটিংস সফলভাবে সেভ করা হয়েছে!' });
+        setMessage({ type: 'success', text: 'Spin Wheel settings saved successfully!' });
       } else {
-        setMessage({ type: 'error', text: res.message || 'সেটিংস সেভ করতে ব্যর্থ হয়েছে।' });
+        setMessage({ type: 'error', text: res.message || 'Failed to save settings.' });
       }
     } catch (e) {
-      setMessage({ type: 'error', text: 'সার্ভারে সংযোগ করা যাচ্ছে না।' });
+      setMessage({ type: 'error', text: 'Cannot connect to server. Please try again.' });
     } finally {
       setSaving(false);
     }
@@ -108,7 +108,7 @@ export const SpinWheelControl: React.FC = () => {
     return (
       <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
         <RefreshCw className="animate-spin" size={24} style={{ margin: '0 auto 8px auto' }} />
-        <div>স্পিন হুইল কন্ট্রোল লোড হচ্ছে...</div>
+        <div>Loading Spin Wheel controls...</div>
       </div>
     );
   }
@@ -123,7 +123,7 @@ export const SpinWheelControl: React.FC = () => {
             <span>Spin & Win Wheel Controller</span>
           </div>
           <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>
-            ওয়েবসাইটে কাস্টমারদের জন্য লটারি চাকা অন/অফ করুন এবং জেতার সম্ভাবনা (Win Probability) কাস্টমাইজ করুন।
+            Turn the lucky wheel ON/OFF for customers and customize the win probability for each slice.
           </p>
         </div>
 
@@ -145,7 +145,7 @@ export const SpinWheelControl: React.FC = () => {
           }}
         >
           {enabled ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}
-          <span>{enabled ? 'স্পিন হুইল চালু (ON)' : 'স্পিন হুইল বন্ধ (OFF)'}</span>
+          <span>{enabled ? 'Spin Wheel: ON' : 'Spin Wheel: OFF'}</span>
         </button>
       </div>
 
@@ -173,31 +173,31 @@ export const SpinWheelControl: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         <div>
           <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-            পপআপ টাইটেল (Modal Title)
+            Popup Modal Title
           </label>
           <input
             type="text"
             className="input-field"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="🎁 ঘুরে জিতুন স্পেশাল ডিসকাউন্ট!"
+            placeholder="🎁 Spin & Win Special Discounts!"
           />
         </div>
         <div>
           <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-            সাব-টাইটেল (Subtitle)
+            Popup Subtitle
           </label>
           <input
             type="text"
             className="input-field"
             value={subtitle}
             onChange={(e) => setSubtitle(e.target.value)}
-            placeholder="আজকের সৌভাগ্যজনক কুপন কোড জিততে চাকাটি ঘোরান!"
+            placeholder="Spin the wheel to win your exclusive coupon code!"
           />
         </div>
         <div>
           <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-            পুনরায় ঘোরানোর অর্ডার রিকোয়ারমেন্ট (Re-Spin Orders)
+            Re-Spin Order Requirement
           </label>
           <input
             type="number"
@@ -207,7 +207,7 @@ export const SpinWheelControl: React.FC = () => {
             min={1}
           />
           <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '4px', display: 'block' }}>
-            কাস্টমার ১টি স্পিন করার পর আবার ঘুরানোর জন্য কতটি সফল অর্ডার প্রয়োজন।
+            Number of successful orders required before a customer can spin again.
           </span>
         </div>
       </div>
@@ -216,7 +216,7 @@ export const SpinWheelControl: React.FC = () => {
       <div style={{ marginBottom: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
           <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-            চাকার স্লাইস ও জেতার সম্ভাবনা (Slices & Win Weights)
+            Wheel Slices & Win Probability
           </h4>
           <button
             onClick={handleAddSlice}
@@ -235,7 +235,7 @@ export const SpinWheelControl: React.FC = () => {
             }}
           >
             <Plus size={16} />
-            <span>স্লাইস যোগ করুন</span>
+            <span>Add Slice</span>
           </button>
         </div>
 
@@ -243,19 +243,19 @@ export const SpinWheelControl: React.FC = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
               <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border)' }}>
-                <th style={{ padding: '10px', textAlign: 'left' }}>কালার</th>
-                <th style={{ padding: '10px', textAlign: 'left' }}>স্লাইসের লেখা</th>
-                <th style={{ padding: '10px', textAlign: 'left' }}>কুপন কোড</th>
-                <th style={{ padding: '10px', textAlign: 'left' }}>ছাড়ের ধরন</th>
-                <th style={{ padding: '10px', textAlign: 'left' }}>ছাড়ের পরিমাণ</th>
+                <th style={{ padding: '10px', textAlign: 'left' }}>Color</th>
+                <th style={{ padding: '10px', textAlign: 'left' }}>Slice Label</th>
+                <th style={{ padding: '10px', textAlign: 'left' }}>Coupon Code</th>
+                <th style={{ padding: '10px', textAlign: 'left' }}>Discount Type</th>
+                <th style={{ padding: '10px', textAlign: 'left' }}>Discount Value</th>
                 <th style={{ padding: '10px', textAlign: 'left' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span>Weight / চান্স</span>
-                    <span title="Weight যত বেশি হবে, এই অফারটি কাস্টমারদের কাছে পড়ার সম্ভাবনা তত বেশি হবে।"><HelpCircle size={14} /></span>
+                    <span>Weight / Chance</span>
+                    <span title="Higher weight = higher probability of landing on this slice."><HelpCircle size={14} /></span>
                   </div>
                 </th>
-                <th style={{ padding: '10px', textAlign: 'center' }}>পড়ার সম্ভাবনা (%)</th>
-                <th style={{ padding: '10px', textAlign: 'center' }}>একশন</th>
+                <th style={{ padding: '10px', textAlign: 'center' }}>Probability (%)</th>
+                <th style={{ padding: '10px', textAlign: 'center' }}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -300,8 +300,8 @@ export const SpinWheelControl: React.FC = () => {
                         onChange={(e) => handleSliceChange(i, 'type', e.target.value)}
                         style={{ padding: '6px 10px' }}
                       >
-                        <option value="percentage">পার্সেন্টেজ (%)</option>
-                        <option value="fixed">ফিক্সড টাকা (৳)</option>
+                        <option value="percentage">Percentage (%)</option>
+                        <option value="fixed">Fixed Amount (৳)</option>
                       </select>
                     </td>
                     {/* Value */}
@@ -384,7 +384,7 @@ export const SpinWheelControl: React.FC = () => {
           }}
         >
           {saving ? <RefreshCw className="animate-spin" size={18} /> : <Save size={18} />}
-          <span>{saving ? 'সেভ হচ্ছে...' : 'সেটিংস সেভ করুন'}</span>
+          <span>{saving ? 'Saving...' : 'Save Settings'}</span>
         </button>
       </div>
 

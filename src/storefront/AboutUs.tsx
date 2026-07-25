@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChevronRight, ArrowLeft, Target, ShieldCheck, HeartHandshake, Award } from 'lucide-react';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import { replaceContactInfo, formatPageContent } from '../utils/storefrontUtils';
+import { SEOMeta } from '../components/layout/SEOMeta';
 
 export default function AboutUs() {
   const [config] = useStorefrontConfig();
@@ -34,6 +35,12 @@ export default function AboutUs() {
 
   return (
     <div className="premium-about-page" style={{ paddingBottom: '80px' }}>
+      <SEOMeta
+        title="About Us - Tamim Global"
+        description="Learn about Tamim Global - Bangladesh's leading online sports, gym equipment and activewear store. Quality products, trusted service, fast delivery."
+        slug="page/about-us"
+        keywords="About Tamim Global, Sports Store BD, Gym Equipment Retailer Bangladesh"
+      />
       {/* Hero Banner */}
       <div className="premium-page-hero">
         <div className="premium-page-hero-content">

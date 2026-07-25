@@ -155,23 +155,29 @@ function parseArgs(args: any[]): { params: any[], cb: any } {
 let dbInstance: any = null;
 let mysqlPool: mysql.Pool | null = null;
 let pgPool: pg.Pool | null = null;
+let activeDbType = DB_TYPE;
+
+function initSqliteFallback() {
+  activeDbType = 'sqlite';
+  const dbPath = process.env.DATABASE_PATH || path.resolve(__dirname, '../../database/database.sqlite');
+  const dbDir = path.dirname(dbPath);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+  const sqlite = sqlite3.verbose();
+  dbInstance = new sqlite.Database(dbPath, (err) => {
+    if (err) {
+      console.error('❌ Failed to connect to SQLite database:', err.message);
+    } else {
+      console.log('🔌 Connected to local SQLite database (Fallback).');
+      initializeDatabase();
+    }
+  });
+}
 
 function connectDatabase() {
   if (DB_TYPE === 'sqlite') {
-    const dbPath = process.env.DATABASE_PATH || path.resolve(__dirname, '../../database/database.sqlite');
-    const dbDir = path.dirname(dbPath);
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true });
-    }
-    const sqlite = sqlite3.verbose();
-    dbInstance = new sqlite.Database(dbPath, (err) => {
-      if (err) {
-        console.error('❌ Failed to connect to SQLite database:', err.message);
-      } else {
-        console.log('🔌 Connected to local SQLite database.');
-        initializeDatabase();
-      }
-    });
+    initSqliteFallback();
   } else if (DB_TYPE === 'mysql') {
     mysqlPool = mysql.createPool({
       host: process.env.DB_HOST || 'localhost',
@@ -202,8 +208,17 @@ function connectDatabase() {
         max: 10
       });
     }
-    console.log('🔌 Connected to PostgreSQL database pool.');
-    initializeDatabase();
+    
+    // Validate PostgreSQL connection
+    pgPool.query('SELECT 1', (err) => {
+      if (err) {
+        console.warn('⚠️ Local PostgreSQL database unreachable. Falling back to SQLite database.');
+        initSqliteFallback();
+      } else {
+        console.log('🔌 Connected to PostgreSQL database pool.');
+        initializeDatabase();
+      }
+    });
   }
 }
 
@@ -211,13 +226,13 @@ const db: DBWrapper = {
   run(sql: string, ...args: any[]): void {
     const { params, cb } = parseArgs(args);
     if (sql.toUpperCase().includes('CREATE TABLE')) {
-      if (DB_TYPE === 'mysql') sql = translateSchemaForMysql(sql);
-      else if (DB_TYPE === 'postgres') sql = translateSchemaForPostgres(sql);
+      if (activeDbType === 'mysql') sql = translateSchemaForMysql(sql);
+      else if (activeDbType === 'postgres') sql = translateSchemaForPostgres(sql);
     }
 
-    if (DB_TYPE === 'sqlite') {
+    if (activeDbType === 'sqlite') {
       dbInstance.run(sql, params, cb);
-    } else if (DB_TYPE === 'mysql') {
+    } else if (activeDbType === 'mysql') {
       const translatedSql = translateSqlForMysql(sql);
       mysqlPool!.query(translatedSql, params, function (err, result) {
         if (cb) {
@@ -228,7 +243,7 @@ const db: DBWrapper = {
           cb.call(context, err);
         }
       });
-    } else if (DB_TYPE === 'postgres') {
+    } else if (activeDbType === 'postgres') {
       const { sql: translatedSql, params: translatedParams } = translateSqlForPostgres(sql, params);
       pgPool!.query(translatedSql, translatedParams, function (err, result) {
         if (cb) {
@@ -244,9 +259,9 @@ const db: DBWrapper = {
 
   get(sql: string, ...args: any[]): void {
     const { params, cb } = parseArgs(args);
-    if (DB_TYPE === 'sqlite') {
+    if (activeDbType === 'sqlite') {
       dbInstance.get(sql, params, cb);
-    } else if (DB_TYPE === 'mysql') {
+    } else if (activeDbType === 'mysql') {
       const translatedSql = translateSqlForMysql(sql);
       mysqlPool!.query(translatedSql, params, function (err, results: any) {
         if (cb) {
@@ -254,7 +269,7 @@ const db: DBWrapper = {
           cb(err, row);
         }
       });
-    } else if (DB_TYPE === 'postgres') {
+    } else if (activeDbType === 'postgres') {
       const { sql: translatedSql, params: translatedParams } = translateSqlForPostgres(sql, params);
       pgPool!.query(translatedSql, translatedParams, function (err, result) {
         if (cb) {
@@ -267,16 +282,16 @@ const db: DBWrapper = {
 
   all(sql: string, ...args: any[]): void {
     const { params, cb } = parseArgs(args);
-    if (DB_TYPE === 'sqlite') {
+    if (activeDbType === 'sqlite') {
       dbInstance.all(sql, params, cb);
-    } else if (DB_TYPE === 'mysql') {
+    } else if (activeDbType === 'mysql') {
       const translatedSql = translateSqlForMysql(sql);
       mysqlPool!.query(translatedSql, params, function (err, results: any) {
         if (cb) {
           cb(err, results || []);
         }
       });
-    } else if (DB_TYPE === 'postgres') {
+    } else if (activeDbType === 'postgres') {
       const { sql: translatedSql, params: translatedParams } = translateSqlForPostgres(sql, params);
       pgPool!.query(translatedSql, translatedParams, function (err, result) {
         if (cb) {
@@ -287,7 +302,7 @@ const db: DBWrapper = {
   },
 
   serialize(cb: () => void): void {
-    if (DB_TYPE === 'sqlite') {
+    if (activeDbType === 'sqlite') {
       dbInstance.serialize(cb);
     } else {
       cb();
@@ -295,7 +310,7 @@ const db: DBWrapper = {
   },
 
   prepare(sql: string, cb?: (err: Error | null) => void): any {
-    if (DB_TYPE === 'sqlite') {
+    if (activeDbType === 'sqlite') {
       return dbInstance.prepare(sql, cb);
     } else {
       if (cb) cb(null);
@@ -645,8 +660,8 @@ function initializeDatabase() {
 
     // Seed default roles and super admin employee
     const defaultRoles = [
-      { name: 'Super Admin', desc: 'System Administrator with full access', is_system: 1, permissions: ["dashboard", "analytics", "orders", "products", "storefront", "chats", "marketing", "employees", "finance", "security", "settings", "ai"] },
-      { name: 'Admin', desc: 'Administrator with full management access', is_system: 1, permissions: ["dashboard", "analytics", "orders", "products", "storefront", "chats", "marketing", "employees", "finance", "security", "settings", "ai"] },
+      { name: 'Super Admin', desc: 'System Administrator with full access', is_system: 1, permissions: ["dashboard", "analytics", "orders", "products", "storefront", "chats", "marketing", "employees", "finance", "security", "settings"] },
+      { name: 'Admin', desc: 'Administrator with full management access', is_system: 1, permissions: ["dashboard", "analytics", "orders", "products", "storefront", "chats", "marketing", "employees", "finance", "security", "settings"] },
       { name: 'Moderator', desc: 'Staff with moderate access to orders, products, and support', is_system: 1, permissions: ["dashboard", "orders", "products", "chats"] }
     ];
 
@@ -1131,6 +1146,18 @@ function initializeDatabase() {
 
     console.log('✅ SQLite Schema verification & seeding completed.');
   });
+}
+
+export function getDbStatus() {
+  return {
+    configuredType: DB_TYPE,
+    activeType: activeDbType,
+    databaseName: process.env.DB_NAME || 'beauty_elegance',
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || (activeDbType === 'postgres' ? '5432' : activeDbType === 'mysql' ? '3306' : 'N/A'),
+    user: process.env.DB_USER || 'postgres',
+    status: activeDbType === 'postgres' ? 'PostgreSQL Active & Pool Connected' : activeDbType === 'mysql' ? 'MySQL Active' : 'SQLite Fallback Active'
+  };
 }
 
 export default db;

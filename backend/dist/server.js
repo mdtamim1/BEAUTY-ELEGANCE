@@ -369,22 +369,27 @@ function parseArgs(args) {
 var dbInstance = null;
 var mysqlPool = null;
 var pgPool = null;
+var activeDbType = DB_TYPE;
+function initSqliteFallback() {
+  activeDbType = "sqlite";
+  const dbPath = process.env.DATABASE_PATH || path.resolve(__dirname, "../../database/database.sqlite");
+  const dbDir = path.dirname(dbPath);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+  const sqlite = sqlite3.verbose();
+  dbInstance = new sqlite.Database(dbPath, (err) => {
+    if (err) {
+      console.error("\u274C Failed to connect to SQLite database:", err.message);
+    } else {
+      console.log("\u{1F50C} Connected to local SQLite database (Fallback).");
+      initializeDatabase();
+    }
+  });
+}
 function connectDatabase() {
   if (DB_TYPE === "sqlite") {
-    const dbPath = process.env.DATABASE_PATH || path.resolve(__dirname, "../../database/database.sqlite");
-    const dbDir = path.dirname(dbPath);
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true });
-    }
-    const sqlite = sqlite3.verbose();
-    dbInstance = new sqlite.Database(dbPath, (err) => {
-      if (err) {
-        console.error("\u274C Failed to connect to SQLite database:", err.message);
-      } else {
-        console.log("\u{1F50C} Connected to local SQLite database.");
-        initializeDatabase();
-      }
-    });
+    initSqliteFallback();
   } else if (DB_TYPE === "mysql") {
     mysqlPool = mysql.createPool({
       host: process.env.DB_HOST || "localhost",
@@ -415,20 +420,27 @@ function connectDatabase() {
         max: 10
       });
     }
-    console.log("\u{1F50C} Connected to PostgreSQL database pool.");
-    initializeDatabase();
+    pgPool.query("SELECT 1", (err) => {
+      if (err) {
+        console.warn("\u26A0\uFE0F Local PostgreSQL database unreachable. Falling back to SQLite database.");
+        initSqliteFallback();
+      } else {
+        console.log("\u{1F50C} Connected to PostgreSQL database pool.");
+        initializeDatabase();
+      }
+    });
   }
 }
 var db = {
   run(sql, ...args) {
     const { params, cb } = parseArgs(args);
     if (sql.toUpperCase().includes("CREATE TABLE")) {
-      if (DB_TYPE === "mysql") sql = translateSchemaForMysql(sql);
-      else if (DB_TYPE === "postgres") sql = translateSchemaForPostgres(sql);
+      if (activeDbType === "mysql") sql = translateSchemaForMysql(sql);
+      else if (activeDbType === "postgres") sql = translateSchemaForPostgres(sql);
     }
-    if (DB_TYPE === "sqlite") {
+    if (activeDbType === "sqlite") {
       dbInstance.run(sql, params, cb);
-    } else if (DB_TYPE === "mysql") {
+    } else if (activeDbType === "mysql") {
       const translatedSql = translateSqlForMysql(sql);
       mysqlPool.query(translatedSql, params, function(err, result) {
         if (cb) {
@@ -439,7 +451,7 @@ var db = {
           cb.call(context, err);
         }
       });
-    } else if (DB_TYPE === "postgres") {
+    } else if (activeDbType === "postgres") {
       const { sql: translatedSql, params: translatedParams } = translateSqlForPostgres(sql, params);
       pgPool.query(translatedSql, translatedParams, function(err, result) {
         if (cb) {
@@ -454,9 +466,9 @@ var db = {
   },
   get(sql, ...args) {
     const { params, cb } = parseArgs(args);
-    if (DB_TYPE === "sqlite") {
+    if (activeDbType === "sqlite") {
       dbInstance.get(sql, params, cb);
-    } else if (DB_TYPE === "mysql") {
+    } else if (activeDbType === "mysql") {
       const translatedSql = translateSqlForMysql(sql);
       mysqlPool.query(translatedSql, params, function(err, results) {
         if (cb) {
@@ -464,7 +476,7 @@ var db = {
           cb(err, row);
         }
       });
-    } else if (DB_TYPE === "postgres") {
+    } else if (activeDbType === "postgres") {
       const { sql: translatedSql, params: translatedParams } = translateSqlForPostgres(sql, params);
       pgPool.query(translatedSql, translatedParams, function(err, result) {
         if (cb) {
@@ -476,16 +488,16 @@ var db = {
   },
   all(sql, ...args) {
     const { params, cb } = parseArgs(args);
-    if (DB_TYPE === "sqlite") {
+    if (activeDbType === "sqlite") {
       dbInstance.all(sql, params, cb);
-    } else if (DB_TYPE === "mysql") {
+    } else if (activeDbType === "mysql") {
       const translatedSql = translateSqlForMysql(sql);
       mysqlPool.query(translatedSql, params, function(err, results) {
         if (cb) {
           cb(err, results || []);
         }
       });
-    } else if (DB_TYPE === "postgres") {
+    } else if (activeDbType === "postgres") {
       const { sql: translatedSql, params: translatedParams } = translateSqlForPostgres(sql, params);
       pgPool.query(translatedSql, translatedParams, function(err, result) {
         if (cb) {
@@ -495,14 +507,14 @@ var db = {
     }
   },
   serialize(cb) {
-    if (DB_TYPE === "sqlite") {
+    if (activeDbType === "sqlite") {
       dbInstance.serialize(cb);
     } else {
       cb();
     }
   },
   prepare(sql, cb) {
-    if (DB_TYPE === "sqlite") {
+    if (activeDbType === "sqlite") {
       return dbInstance.prepare(sql, cb);
     } else {
       if (cb) cb(null);
@@ -809,8 +821,8 @@ function initializeDatabase() {
       }
     });
     const defaultRoles = [
-      { name: "Super Admin", desc: "System Administrator with full access", is_system: 1, permissions: ["dashboard", "analytics", "orders", "products", "storefront", "chats", "marketing", "employees", "finance", "security", "settings", "ai"] },
-      { name: "Admin", desc: "Administrator with full management access", is_system: 1, permissions: ["dashboard", "analytics", "orders", "products", "storefront", "chats", "marketing", "employees", "finance", "security", "settings", "ai"] },
+      { name: "Super Admin", desc: "System Administrator with full access", is_system: 1, permissions: ["dashboard", "analytics", "orders", "products", "storefront", "chats", "marketing", "employees", "finance", "security", "settings"] },
+      { name: "Admin", desc: "Administrator with full management access", is_system: 1, permissions: ["dashboard", "analytics", "orders", "products", "storefront", "chats", "marketing", "employees", "finance", "security", "settings"] },
       { name: "Moderator", desc: "Staff with moderate access to orders, products, and support", is_system: 1, permissions: ["dashboard", "orders", "products", "chats"] }
     ];
     let processedCount = 0;
@@ -1305,6 +1317,17 @@ function initializeDatabase() {
     console.log("\u2705 SQLite Schema verification & seeding completed.");
   });
 }
+function getDbStatus() {
+  return {
+    configuredType: DB_TYPE,
+    activeType: activeDbType,
+    databaseName: process.env.DB_NAME || "beauty_elegance",
+    host: process.env.DB_HOST || "localhost",
+    port: process.env.DB_PORT || (activeDbType === "postgres" ? "5432" : activeDbType === "mysql" ? "3306" : "N/A"),
+    user: process.env.DB_USER || "postgres",
+    status: activeDbType === "postgres" ? "PostgreSQL Active & Pool Connected" : activeDbType === "mysql" ? "MySQL Active" : "SQLite Fallback Active"
+  };
+}
 var db_default = db;
 
 // backend/routes/auth.ts
@@ -1561,6 +1584,18 @@ var cacheService = {
     const freshData = await fetchFn();
     await this.set(key, freshData, ttlSeconds);
     return freshData;
+  },
+  /**
+   * Get Redis connection and cache engine status
+   */
+  getStatus() {
+    return {
+      enabled: process.env.REDIS_ENABLED !== "false",
+      connected: isRedisConnected,
+      mode: isRedisConnected ? "Redis Centralized Cache" : "In-Memory Fallback Cache",
+      redisUrl: redisUrl ? redisUrl.replace(/:[^:@]+@/, ":***@") : "N/A",
+      defaultTtl: DEFAULT_TTL
+    };
   }
 };
 
@@ -2267,6 +2302,52 @@ var updateOrderStatus = (req, res) => {
       if (err2) {
         console.error(err2);
         return res.status(500).json({ status: "error", message: "Database error" });
+      }
+      const isDeliveryStatus = (s) => {
+        if (!s) return false;
+        const l = s.toLowerCase().trim();
+        return l === "shipped" || l === "delivered" || l === "in_transit" || l === "in transit" || l === "dispatched";
+      };
+      const wasInDelivery = isDeliveryStatus(oldStatus);
+      const isNowInDelivery = isDeliveryStatus(status);
+      if (!wasInDelivery && isNowInDelivery) {
+        db_default.all(`SELECT * FROM order_items WHERE order_id = ?`, [id], (itemErr, items) => {
+          if (!itemErr && items && items.length > 0) {
+            items.forEach((item) => {
+              const qty = item.quantity || 1;
+              const prodName = item.product_name;
+              const prodCode = item.code;
+              db_default.run(
+                `UPDATE products 
+                 SET stock = CASE WHEN stock >= ? THEN stock - ? ELSE 0 END, 
+                     sold = sold + ?, 
+                     in_stock = CASE WHEN stock - ? <= 0 THEN 0 ELSE 1 END 
+                 WHERE id = ? OR sku = ? OR name = ?`,
+                [qty, qty, qty, qty, prodCode, prodCode, prodName]
+              );
+            });
+            cacheService.del("products:all").catch(console.error);
+          }
+        });
+      } else if (wasInDelivery && !isNowInDelivery) {
+        db_default.all(`SELECT * FROM order_items WHERE order_id = ?`, [id], (itemErr, items) => {
+          if (!itemErr && items && items.length > 0) {
+            items.forEach((item) => {
+              const qty = item.quantity || 1;
+              const prodName = item.product_name;
+              const prodCode = item.code;
+              db_default.run(
+                `UPDATE products 
+                 SET stock = stock + ?, 
+                     sold = CASE WHEN sold >= ? THEN sold - ? ELSE 0 END, 
+                     in_stock = 1 
+                 WHERE id = ? OR sku = ? OR name = ?`,
+                [qty, qty, qty, prodCode, prodCode, prodName]
+              );
+            });
+            cacheService.del("products:all").catch(console.error);
+          }
+        });
       }
       cacheService.del("dashboard:stats").catch(console.error);
       const performedBy = req.user ? `${req.user.name} (${req.user.role})` : "System";
@@ -3574,488 +3655,8 @@ router7.get("/", authenticateToken, getChatHistory);
 router7.put("/read/:customerId", authenticateToken, markAsRead);
 var chats_default = router7;
 
-// backend/routes/ai.ts
-import { Router as Router8 } from "express";
-
-// backend/controllers/aiController.ts
-function buildSystemPrompt(products, storeName) {
-  const productList = products.map((p, i) => {
-    let features = [];
-    let specs = [];
-    try {
-      if (p.features) {
-        features = typeof p.features === "string" ? JSON.parse(p.features) : p.features;
-      }
-    } catch (e) {
-      console.error(`Error parsing features for product prompt ${p.id}:`, e);
-    }
-    try {
-      if (p.specs) {
-        specs = typeof p.specs === "string" ? JSON.parse(p.specs) : p.specs;
-      }
-    } catch (e) {
-      console.error(`Error parsing specs for product prompt ${p.id}:`, e);
-    }
-    const inStock = p.in_stock === 1 || p.in_stock === true || p.stock > 0;
-    const published = p.published === 1 || p.published === true;
-    if (!published) return null;
-    let info = `${i + 1}. **${p.name}**`;
-    info += `
-   - ID: ${p.id}`;
-    info += `
-   - Category: ${p.category || "N/A"}`;
-    info += `
-   - Brand: ${p.brand || "N/A"}`;
-    info += `
-   - Price: \u09F3${p.price}`;
-    if (p.original_price && p.original_price > p.price) {
-      const discount = Math.round((1 - p.price / p.original_price) * 100);
-      info += ` (was \u09F3${p.original_price}, ${discount}% off!)`;
-    }
-    info += `
-   - Stock: ${inStock ? `In Stock (${p.stock || "Available"})` : "Out of Stock"}`;
-    if (p.description) info += `
-   - Description: ${p.description}`;
-    if (features.length > 0) info += `
-   - Features: ${features.join(", ")}`;
-    if (specs.length > 0) {
-      const specStr = specs.map((s) => `${s.name}: ${s.value}`).join(", ");
-      info += `
-   - Specs: ${specStr}`;
-    }
-    if (p.rating) info += `
-   - Rating: ${p.rating}/5 (${p.reviews || 0} reviews)`;
-    return info;
-  }).filter(Boolean).join("\n\n");
-  return `You are a friendly, helpful, and knowledgeable AI shopping assistant for "${storeName}".
-
-YOUR ROLE:
-- Help customers find the right products
-- Answer questions about products (price, features, specs, stock availability)
-- Provide product recommendations based on customer needs
-- Be warm, conversational, and helpful
-- If a customer asks about something you don't know, politely say you don't have that information
-
-LANGUAGE:
-- Respond in the same language the customer uses
-- If they write in Bangla/Bengali, respond in Bangla
-- If they write in English, respond in English
-- Keep responses concise but informative
-
-IMPORTANT RULES:
-- NEVER make up product information \u2014 only use the data provided below
-- NEVER share internal IDs like "PRD-xxx" \u2014 just use product names
-- If a product is out of stock, let the customer know
-- If asked about pricing, always mention the currency as \u09F3 (Taka)
-- Be enthusiastic about deals and discounts!
-- DO NOT discuss topics unrelated to the store and its products
-
-CURRENT PRODUCT CATALOG:
-${productList || "No products currently available."}
-
-Remember: You represent ${storeName}. Be professional, friendly, and always prioritize the customer experience! \u{1F6CD}\uFE0F`;
-}
-var chatWithAI = async (req, res) => {
-  try {
-    const { message, history } = req.body;
-    if (!message || typeof message !== "string" || message.trim().length === 0) {
-      return res.status(400).json({ status: "error", message: "Message is required" });
-    }
-    if (message.trim().length > 2e3) {
-      return res.status(400).json({ status: "error", message: "Message too long (max 2000 characters)" });
-    }
-    const products = await new Promise((resolve, reject) => {
-      db_default.all(`SELECT * FROM products WHERE published = 1`, [], (err, rows) => {
-        if (err) {
-          console.error("Failed to fetch products for AI:", err);
-          resolve([]);
-        } else {
-          resolve((rows || []).map((row) => {
-            let features = [];
-            let specs = [];
-            try {
-              if (row.features) features = JSON.parse(row.features);
-            } catch (e) {
-              console.error(`Error parsing features for AI product ${row.id}:`, e);
-            }
-            try {
-              if (row.specs) specs = JSON.parse(row.specs);
-            } catch (e) {
-              console.error(`Error parsing specs for AI product ${row.id}:`, e);
-            }
-            return {
-              ...row,
-              features,
-              specs
-            };
-          }));
-        }
-      });
-    });
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.warn("GEMINI_API_KEY is not set in environment variables. Operating in Local AI mode.");
-      const localReply2 = generateLocalAIResponse(message.trim(), products);
-      db_default.run(
-        `INSERT INTO ai_queries (query_text, reply_text, model_used) VALUES (?, ?, ?)`,
-        [message.trim(), localReply2, "Local-Heuristic-Mode"]
-      );
-      return res.json({
-        status: "success",
-        data: {
-          reply: localReply2,
-          role: "model"
-        }
-      });
-    }
-    const storeName = "AURA Sports";
-    const systemPrompt = buildSystemPrompt(products, storeName);
-    const contents = [];
-    if (history && Array.isArray(history)) {
-      for (const msg of history.slice(-10)) {
-        if (msg.role === "user" || msg.role === "model") {
-          contents.push({
-            role: msg.role,
-            parts: [{ text: msg.text || "" }]
-          });
-        }
-      }
-    }
-    contents.push({
-      role: "user",
-      parts: [{ text: message.trim() }]
-    });
-    const models = [
-      "gemini-2.0-flash",
-      "gemini-1.5-flash"
-    ];
-    let lastError = "";
-    for (const model of models) {
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      try {
-        const geminiResponse = await fetch(geminiUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            system_instruction: {
-              parts: [{ text: systemPrompt }]
-            },
-            contents,
-            generationConfig: {
-              temperature: 0.7,
-              topP: 0.9,
-              topK: 40,
-              maxOutputTokens: 1024
-            },
-            safetySettings: [
-              { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-              { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-              { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-              { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" }
-            ]
-          })
-        });
-        if (geminiResponse.status === 429) {
-          console.warn(`Model ${model} quota exceeded, trying next model...`);
-          lastError = `Quota exceeded for ${model}`;
-          continue;
-        }
-        if (!geminiResponse.ok) {
-          const errorData = await geminiResponse.text();
-          console.error(`Gemini API error (${model}):`, geminiResponse.status, errorData);
-          lastError = `API error ${geminiResponse.status} for ${model}`;
-          continue;
-        }
-        const data = await geminiResponse.json();
-        const aiText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!aiText) {
-          console.error(`No AI response text from ${model}:`, JSON.stringify(data));
-          lastError = `Empty response from ${model}`;
-          continue;
-        }
-        console.log(`AI response generated successfully using model: ${model}`);
-        db_default.run(
-          `INSERT INTO ai_queries (query_text, reply_text, model_used) VALUES (?, ?, ?)`,
-          [message.trim(), aiText, model]
-        );
-        return res.json({
-          status: "success",
-          data: {
-            reply: aiText,
-            role: "model"
-          }
-        });
-      } catch (fetchError) {
-        console.error(`Fetch error for model ${model}:`, fetchError.message);
-        lastError = fetchError.message;
-        continue;
-      }
-    }
-    console.warn("All Gemini models failed. Falling back to Local AI mode. Error:", lastError);
-    const localReply = generateLocalAIResponse(message.trim(), products);
-    db_default.run(
-      `INSERT INTO ai_queries (query_text, reply_text, model_used) VALUES (?, ?, ?)`,
-      [message.trim(), localReply, "Local-Fallback-Mode"]
-    );
-    return res.json({
-      status: "success",
-      data: {
-        reply: localReply,
-        role: "model"
-      }
-    });
-  } catch (error) {
-    console.error("AI Chat Error:", error);
-    res.status(500).json({ status: "error", message: "Internal server error" });
-  }
-};
-var getAIAnalytics = async (req, res) => {
-  try {
-    db_default.all(`SELECT DATE(created_at) as date, COUNT(*) as count FROM ai_queries GROUP BY DATE(created_at) ORDER BY date ASC LIMIT 30`, [], (err, dailyRows) => {
-      if (err) return res.status(500).json({ status: "error", message: err.message });
-      db_default.all(`SELECT query_text as query, COUNT(*) as count FROM ai_queries GROUP BY query_text ORDER BY count DESC LIMIT 8`, [], (err2, popularRows) => {
-        if (err2) return res.status(500).json({ status: "error", message: err2.message });
-        db_default.get(`SELECT COUNT(*) as total FROM ai_queries`, [], (err3, totalRow) => {
-          if (err3) return res.status(500).json({ status: "error", message: err3.message });
-          db_default.all(`SELECT model_used as model, COUNT(*) as count FROM ai_queries GROUP BY model_used`, [], (err4, modelRows) => {
-            if (err4) return res.status(500).json({ status: "error", message: err4.message });
-            res.json({
-              status: "success",
-              data: {
-                dailyVolume: dailyRows || [],
-                popularQuestions: popularRows || [],
-                totalQueries: totalRow ? totalRow.total : 0,
-                modelDistribution: modelRows || []
-              }
-            });
-          });
-        });
-      });
-    });
-  } catch (error) {
-    console.error("Failed to get AI analytics:", error);
-    res.status(500).json({ status: "error", message: "Internal server error" });
-  }
-};
-function generateLocalAIResponse(message, products) {
-  const query = message.toLowerCase().trim();
-  const isAskingForUse = query.includes("use") || query.includes("kivabe") || query.includes("\u0995\u09BF\u09AD\u09BE\u09AC\u09C7") || query.includes("\u09A8\u09BF\u09DF\u09AE") || query.includes("rules") || query.includes("kaj") || query.includes("\u0995\u09BE\u099C") || query.includes("\u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0") || query.includes("work") || query.includes("hobe");
-  const isAskingForBenefits = query.includes("upokarita") || query.includes("\u0989\u09AA\u0995\u09BE\u09B0") || query.includes("\u09B8\u09C1\u09AC\u09BF\u09A7\u09BE") || query.includes("benefit") || query.includes("feature") || query.includes("\u09AB\u09BF\u099A\u09BE\u09B0");
-  const isAskingForSpecs = query.includes("spec") || query.includes("\u09AE\u09BE\u09AA") || query.includes("size") || query.includes("\u09B8\u09BE\u0987\u099C") || query.includes("material") || query.includes("\u0989\u09AA\u09BE\u09A6\u09BE\u09A8") || query.includes("\u09AC\u09BF\u09AC\u09B0\u09A3") || query.includes("details") || query.includes("\u09AC\u09BF\u09B8\u09CD\u09A4\u09BE\u09B0\u09BF\u09A4");
-  const isAskingForPrice = query.includes("price") || query.includes("\u09A6\u09BE\u09AE") || query.includes("\u0995\u09A4") || query.includes("\u099F\u09BE\u0995\u09BE") || query.includes("cost");
-  const isAskingForStock = query.includes("stock") || query.includes("\u0986\u099B\u09C7") || query.includes("\u09AA\u09BE\u09AC") || query.includes("\u09AA\u09BE\u0993\u09AF\u09BC\u09BE");
-  const buildTailoredResponse = (product) => {
-    const inStock = product.in_stock === 1 || product.in_stock === true || product.stock > 0;
-    if (isAskingForUse) {
-      let reply2 = `**${product.name}** \u098F\u09B0 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE \u0993 \u0995\u09BE\u099C\u09C7\u09B0 \u09AC\u09BF\u09AC\u09B0\u09A3:
-
-`;
-      if (product.description) {
-        reply2 += `**\u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE \u0993 \u09AA\u09B0\u09BE\u09AE\u09B0\u09CD\u09B6:** ${product.description}
-
-`;
-      } else {
-        reply2 += `\u09AA\u09A3\u09CD\u09AF\u099F\u09BF \u09A8\u09BF\u09B0\u09BE\u09AA\u09A6\u09C7 \u098F\u09AC\u0982 \u09A6\u0995\u09CD\u09B7\u09A4\u09BE\u09B0 \u09B8\u09BE\u09A5\u09C7 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u099C\u09A8\u09CD\u09AF \u09AA\u09CD\u09AF\u09BE\u0995\u09C7\u099C\u09C7\u09B0 \u0997\u09BE\u09DF\u09C7 \u09A5\u09BE\u0995\u09BE \u09A8\u09BF\u09B0\u09CD\u09A6\u09C7\u09B6\u09A8\u09BE\u09AC\u09B2\u09C0 \u0985\u09A8\u09C1\u09B8\u09B0\u09A3 \u0995\u09B0\u09C1\u09A8\u0964 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09B8\u09AE\u09DF \u0995\u09CB\u09A8\u09CB \u09B8\u09AE\u09B8\u09CD\u09AF\u09BE\u09DF \u09AA\u09DC\u09B2\u09C7 \u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u09B9\u09C7\u09B2\u09CD\u09AA\u09B2\u09BE\u0987\u09A8\u09C7 \u09AF\u09CB\u0997\u09BE\u09AF\u09CB\u0997 \u0995\u09B0\u09A4\u09C7 \u09AA\u09BE\u09B0\u09C7\u09A8\u0964
-
-`;
-      }
-      if (product.features && product.features.length > 0) {
-        reply2 += `**\u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09B8\u09C1\u09AC\u09BF\u09A7\u09BE \u0993 \u09AC\u09C8\u09B6\u09BF\u09B7\u09CD\u099F\u09CD\u09AF\u09B8\u09AE\u09C2\u09B9:**
-`;
-        product.features.forEach((f) => {
-          reply2 += `- ${f}
-`;
-        });
-      }
-      return reply2;
-    }
-    if (isAskingForBenefits) {
-      let reply2 = `**${product.name}** \u098F\u09B0 \u0989\u09AA\u0995\u09BE\u09B0\u09BF\u09A4\u09BE \u0993 \u09AC\u09BF\u09B6\u09C7\u09B7 \u09AB\u09BF\u099A\u09BE\u09B0\u09B8\u09AE\u09C2\u09B9:
-
-`;
-      if (product.features && product.features.length > 0) {
-        product.features.forEach((f) => {
-          reply2 += `- ${f}
-`;
-        });
-      } else if (product.description) {
-        reply2 += `${product.description}
-`;
-      } else {
-        reply2 += `\u098F\u099F\u09BF \u098F\u0995\u099F\u09BF \u0985\u09A4\u09CD\u09AF\u09A8\u09CD\u09A4 \u09AE\u09BE\u09A8\u09B8\u09AE\u09CD\u09AA\u09A8\u09CD\u09A8 \u0993 \u0995\u09BE\u09B0\u09CD\u09AF\u0995\u09B0\u09C0 \u09AA\u09A3\u09CD\u09AF\u0964
-`;
-      }
-      return reply2;
-    }
-    if (isAskingForSpecs) {
-      let reply2 = `**${product.name}** \u098F\u09B0 \u09B8\u09CD\u09AA\u09C7\u09B8\u09BF\u09AB\u09BF\u0995\u09C7\u09B6\u09A8 \u0993 \u09AC\u09BF\u09B8\u09CD\u09A4\u09BE\u09B0\u09BF\u09A4 \u09A4\u09A5\u09CD\u09AF:
-
-`;
-      if (product.specs && product.specs.length > 0) {
-        product.specs.forEach((s) => {
-          reply2 += `- **${s.name}**: ${s.value}
-`;
-        });
-      } else if (product.description) {
-        reply2 += `**\u09AC\u09BF\u09AC\u09B0\u09A3:** ${product.description}
-`;
-      }
-      return reply2;
-    }
-    if (isAskingForPrice) {
-      let reply2 = `**${product.name}** \u098F\u09B0 \u09AC\u09B0\u09CD\u09A4\u09AE\u09BE\u09A8 \u09AE\u09C2\u09B2\u09CD\u09AF \u09F3${product.price}\u0964`;
-      if (product.original_price && product.original_price > product.price) {
-        reply2 += ` (\u09AA\u09C2\u09B0\u09CD\u09AC\u09C7 \u098F\u09B0 \u09AE\u09C2\u09B2\u09CD\u09AF \u099B\u09BF\u09B2 \u09F3${product.original_price}, \u09AF\u09BE \u098F\u0996\u09A8 ${Math.round((1 - product.price / product.original_price) * 100)}% \u099B\u09BE\u09DC\u09C7 \u09AA\u09BE\u0993\u09DF\u09BE \u09AF\u09BE\u099A\u09CD\u099B\u09C7!)`;
-      }
-      return reply2;
-    }
-    if (isAskingForStock) {
-      return `**${product.name}** \u09AA\u09A3\u09CD\u09AF\u099F\u09BF ${inStock ? `\u09AC\u09B0\u09CD\u09A4\u09AE\u09BE\u09A8\u09C7 \u09B8\u09CD\u099F\u0995\u09C7 \u0986\u099B\u09C7 (\u09AC\u09BE\u0995\u09BF \u0986\u099B\u09C7 ${product.stock || 1} \u099F\u09BF)` : "\u09AC\u09B0\u09CD\u09A4\u09AE\u09BE\u09A8\u09C7 \u09B8\u09CD\u099F\u0995 \u0986\u0989\u099F"}`;
-    }
-    let reply = `**${product.name}** \u09B8\u09AE\u09CD\u09AA\u09B0\u09CD\u0995\u09C7 \u09AC\u09BF\u09B8\u09CD\u09A4\u09BE\u09B0\u09BF\u09A4 \u09A4\u09A5\u09CD\u09AF \u0993 \u09AA\u09B0\u09BE\u09AE\u09B0\u09CD\u09B6:
-
-`;
-    reply += `- **\u09AE\u09C2\u09B2\u09CD\u09AF**: \u09F3${product.price}
-`;
-    if (product.original_price && product.original_price > product.price) {
-      reply += `- **\u09AE\u09C2\u09B2\u09CD\u09AF\u099B\u09BE\u09DC**: \u09F3${product.original_price} (${Math.round((1 - product.price / product.original_price) * 100)}% \u099B\u09BE\u09DC!)
-`;
-    }
-    reply += `- **\u09B8\u09CD\u099F\u0995**: ${inStock ? `\u09B8\u09CD\u099F\u0995\u09C7 \u0986\u099B\u09C7 (\u09AC\u09BE\u0995\u09BF \u0986\u099B\u09C7 ${product.stock || 1} \u099F\u09BF)` : "\u09B8\u09CD\u099F\u0995 \u0986\u0989\u099F"}
-`;
-    if (product.description) reply += `- **\u09AC\u09BF\u09AC\u09B0\u09A3 \u0993 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE**: ${product.description}
-`;
-    if (product.features && product.features.length > 0) {
-      reply += `
-**\u09AB\u09BF\u099A\u09BE\u09B0\u09B8\u09AE\u09C2\u09B9:**
-`;
-      product.features.forEach((f) => {
-        reply += `- ${f}
-`;
-      });
-    }
-    if (product.specs && product.specs.length > 0) {
-      reply += `
-**\u09B8\u09CD\u09AA\u09C7\u09B8\u09BF\u09AB\u09BF\u0995\u09C7\u09B6\u09A8:**
-`;
-      product.specs.forEach((s) => {
-        reply += `- **${s.name}**: ${s.value}
-`;
-      });
-    }
-    if (product.category) {
-      const related = products.filter((p) => p.id !== product.id && p.category === product.category).slice(0, 3);
-      if (related.length > 0) {
-        reply += `
-\u{1F517} **\u09B8\u09AE\u09CD\u09AA\u09B0\u09CD\u0995\u09BF\u09A4 \u0985\u09A8\u09CD\u09AF\u09BE\u09A8\u09CD\u09AF \u09AA\u09A3\u09CD\u09AF (Related Products):**
-`;
-        related.forEach((p) => {
-          reply += `- **${p.name}** (\u09F3${p.price})
-`;
-        });
-      }
-    }
-    return reply;
-  };
-  let matched = products.find((p) => query.includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(query));
-  if (!matched) {
-    const aliases = [
-      { keywords: ["dumbbell", "\u09A1\u09BE\u09AE\u09CD\u09AC\u09C7\u09B2", "\u09A1\u09BE\u09AE\u09AC\u09C7\u09B2"], productId: "PRD-001" },
-      { keywords: ["roller", "\u09B0\u09CB\u09B2\u09BE\u09B0", "ab roller", "\u098F\u09AC\u09BF \u09B0\u09CB\u09B2\u09BE\u09B0"], productId: "PRD-002" },
-      { keywords: ["football", "\u09AB\u09C1\u099F\u09AC\u09B2", "\u09AC\u09B2"], productId: "PRD-003" },
-      { keywords: ["badminton", "\u09B0\u200D\u09CD\u09AF\u09BE\u0995\u09C7\u099F", "\u09B0\u09CD\u09AF\u09BE\u0995\u09C7\u099F", "\u09B0\u0995\u09C7\u099F", "\u09AC\u09CD\u09AF\u09BE\u09A1\u09AE\u09BF\u09A8\u09CD\u099F\u09A8"], productId: "PRD-004" },
-      { keywords: ["shoes", "\u099C\u09C1\u09A4\u09CB", "\u099C\u09C1\u09A4\u09BE", "\u09B0\u09BE\u09A8\u09BF\u0982", "running"], productId: "PRD-005" },
-      { keywords: ["jersey", "\u099C\u09BE\u09B0\u09CD\u09B8\u09BF", "\u09A1\u09CD\u09B0\u09BE\u0987-\u09AB\u09BF\u099F", "dri-fit"], productId: "PRD-006" },
-      { keywords: ["yoga", "\u09AE\u09CD\u09AF\u09BE\u099F", "\u0987\u09DF\u09CB\u0997\u09BE", "\u0987\u09DF\u09CB\u0997\u09BE"], productId: "PRD-007" },
-      { keywords: ["basketball", "\u09AC\u09BE\u09B8\u09CD\u0995\u09C7\u099F\u09AC\u09B2", "\u09B9\u09C1\u09AA", "hoop"], productId: "PRD-008" }
-    ];
-    for (const alias of aliases) {
-      if (alias.keywords.some((kw) => query.includes(kw))) {
-        matched = products.find((p) => p.id === alias.productId);
-        if (matched) break;
-      }
-    }
-  }
-  if (matched) {
-    return buildTailoredResponse(matched);
-  }
-  if (query.includes("\u09B9\u09CD\u09AF\u09BE\u09B2\u09CB") || query.includes("hi") || query.includes("hello") || query.includes("\u0995\u09C7\u09AE\u09A8 \u0986\u099B") || query.includes("\u0986\u099B\u09C7\u09A8")) {
-    return "\u09B9\u09CD\u09AF\u09BE\u09B2\u09CB! \u0986\u09AE\u09BF \u0986\u09AA\u09A8\u09BE\u09B0 AI \u09B6\u09AA\u09BF\u0982 \u0985\u09CD\u09AF\u09BE\u09B8\u09BF\u09B8\u09CD\u099F\u09CD\u09AF\u09BE\u09A8\u09CD\u099F\u0964 \u0986\u09AE\u09BF \u0986\u09AA\u09A8\u09BE\u0995\u09C7 \u09AA\u09A3\u09CD\u09AF \u0996\u09C1\u0981\u099C\u09C7 \u09AA\u09C7\u09A4\u09C7, \u09A6\u09BE\u09AE \u099C\u09BE\u09A8\u09A4\u09C7, \u0985\u09A5\u09AC\u09BE \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE \u0993 \u09AA\u09B0\u09BE\u09AE\u09B0\u09CD\u09B6 \u099C\u09BE\u09A8\u09A4\u09C7 \u09B8\u09BE\u09B9\u09BE\u09AF\u09CD\u09AF \u0995\u09B0\u09A4\u09C7 \u09AA\u09BE\u09B0\u09BF\u0964 \u0986\u09AA\u09A8\u09BF \u0995\u09BF \u0996\u09C1\u0981\u099C\u099B\u09C7\u09A8 \u09AC\u09B2\u09C1\u09A8?";
-  }
-  if (query.includes("\u09AA\u09A3\u09CD\u09AF") || query.includes("\u09AA\u09CD\u09B0\u09CB\u09A1\u09BE\u0995\u09CD\u099F") || query.includes("product") || query.includes("list") || query.includes("\u0995\u09BF \u0995\u09BF \u0986\u099B\u09C7")) {
-    if (products.length === 0) return "\u09A6\u09C1\u0983\u0996\u09BF\u09A4, \u098F\u0987 \u09AE\u09C1\u09B9\u09C2\u09B0\u09CD\u09A4\u09C7 \u0995\u09CB\u09A8\u09CB \u09AA\u09A3\u09CD\u09AF \u09AA\u09BE\u0993\u09DF\u09BE \u09AF\u09BE\u099A\u09CD\u099B\u09C7 \u09A8\u09BE\u0964";
-    const listStr = products.slice(0, 10).map((p) => `- **${p.name}** (\u09F3${p.price})`).join("\n");
-    return `\u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u09B8\u09CD\u099F\u09CB\u09B0\u09C7\u09B0 \u09AA\u09A3\u09CD\u09AF\u09B8\u09AE\u09C2\u09B9\u09C7\u09B0 \u09A4\u09BE\u09B2\u09BF\u0995\u09BE \u09A8\u09BF\u099A\u09C7 \u09A6\u09C7\u0993\u09DF\u09BE \u09B9\u09B2\u09CB:
-
-${listStr}
-
-\u09AF\u09C7\u0995\u09CB\u09A8\u09CB \u09AA\u09A3\u09CD\u09AF\u09C7\u09B0 \u09AC\u09BF\u09B8\u09CD\u09A4\u09BE\u09B0\u09BF\u09A4 \u09AC\u09BE \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE \u099C\u09BE\u09A8\u09A4\u09C7 \u09A4\u09BE\u09B0 \u09A8\u09BE\u09AE \u09B2\u09BF\u0996\u09C7 \u09AA\u09CD\u09B0\u09B6\u09CD\u09A8 \u0995\u09B0\u09C1\u09A8!`;
-  }
-  if (query.includes("\u0995\u09AE \u09A6\u09BE\u09AE") || query.includes("\u09B8\u09B8\u09CD\u09A4\u09BE") || query.includes("cheap") || query.includes("low price") || query.includes("\u0995\u09AE\u09A6\u09BE\u09AE\u09BF")) {
-    if (products.length === 0) return "\u09A6\u09C1\u0983\u0996\u09BF\u09A4, \u098F\u0987 \u09AE\u09C1\u09B9\u09C2\u09B0\u09CD\u09A4\u09C7 \u0995\u09CB\u09A8\u09CB \u09AA\u09A3\u09CD\u09AF \u09AA\u09BE\u0993\u09DF\u09BE \u09AF\u09BE\u099A\u09CD\u099B\u09C7 \u09A8\u09BE\u0964";
-    const sorted = [...products].sort((a, b) => a.price - b.price);
-    const listStr = sorted.slice(0, 5).map((p) => `- **${p.name}** (\u09F3${p.price})`).join("\n");
-    return `\u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u09B8\u09CD\u099F\u09CB\u09B0\u09C7\u09B0 \u09B8\u09AC\u099A\u09C7\u09DF\u09C7 \u0995\u09AE \u09A6\u09BE\u09AE\u09C7\u09B0 \u09AA\u09A3\u09CD\u09AF\u09B8\u09AE\u09C2\u09B9:
-
-${listStr}`;
-  }
-  if (query.includes("\u099B\u09BE\u09DC") || query.includes("\u0985\u09AB\u09BE\u09B0") || query.includes("discount") || query.includes("sale") || query.includes("\u0995\u09CD\u09AF\u09BE\u09AE\u09CD\u09AA\u09C7\u0987\u09A8")) {
-    const discounted = products.filter((p) => p.original_price && p.original_price > p.price);
-    if (discounted.length === 0) return "\u098F\u0987 \u09AE\u09C1\u09B9\u09C2\u09B0\u09CD\u09A4\u09C7 \u0995\u09CB\u09A8\u09CB \u09AA\u09A3\u09CD\u09AF\u09C7 \u09B8\u09B0\u09BE\u09B8\u09B0\u09BF \u09AE\u09C2\u09B2\u09CD\u09AF\u099B\u09BE\u09DC \u09A8\u09C7\u0987, \u09A4\u09AC\u09C7 \u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u09B8\u09AC \u09AA\u09A3\u09CD\u09AF\u09C7\u09B0 \u09A6\u09BE\u09AE\u0987 \u0985\u09A4\u09CD\u09AF\u09A8\u09CD\u09A4 \u09B8\u09BE\u09B6\u09CD\u09B0\u09DF\u09C0!";
-    const listStr = discounted.slice(0, 5).map((p) => {
-      const pct = Math.round((1 - p.price / p.original_price) * 100);
-      return `- **${p.name}**: \u09F3${p.price} (\u09AE\u09C2\u09B2\u09CD\u09AF: \u09F3${p.original_price}, **${pct}% \u099B\u09BE\u09DC!**)`;
-    }).join("\n");
-    return `\u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u0986\u0995\u09B0\u09CD\u09B7\u09A3\u09C0\u09DF \u0985\u09AB\u09BE\u09B0 \u0993 \u09A1\u09BF\u09B8\u0995\u09BE\u0989\u09A8\u09CD\u099F\u09AF\u09C1\u0995\u09CD\u09A4 \u09AA\u09A3\u09CD\u09AF\u09B8\u09AE\u09C2\u09B9:
-
-${listStr}`;
-  }
-  let targetCategoryName = null;
-  if (query.includes("fitness") || query.includes("\u09AB\u09BF\u099F\u09A8\u09C7\u09B8") || query.includes("gym") || query.includes("jim") || query.includes("jym") || query.includes("\u099C\u09BF\u09AE") || query.includes("\u09AC\u09CD\u09AF\u09BE\u09AF\u09BC\u09BE\u09AE") || query.includes("\u09AC\u09CD\u09AF\u09BE\u09DF\u09BE\u09AE") || query.includes("bayem") || query.includes("baem") || query.includes("workout") || query.includes("exercise") || query.includes("dumbbell") || query.includes("\u09A1\u09BE\u09AE\u09CD\u09AC\u09C7\u09B2") || query.includes("dambel") || query.includes("\u09B0\u09CB\u09B2\u09BE\u09B0") || query.includes("roller")) {
-    targetCategoryName = "Fitness Item";
-  } else if (query.includes("game") || query.includes("sports") || query.includes("\u0996\u09C7\u09B2\u09BE") || query.includes("\u0996\u09C7\u09B2\u09BE\u09B0") || query.includes("khela") || query.includes("\u09AB\u09C1\u099F\u09AC\u09B2") || query.includes("football") || query.includes("\u0995\u09CD\u09B0\u09BF\u0995\u09C7\u099F") || query.includes("cricket") || query.includes("ball") || query.includes("\u09AC\u09B2") || query.includes("bol") || query.includes("\u09AC\u09BE\u09B8\u09CD\u0995\u09C7\u099F\u09AC\u09B2") || query.includes("basketball") || query.includes("badminton") || query.includes("\u09AC\u09CD\u09AF\u09BE\u099F\u09AE\u09BF\u09A8\u09CD\u099F\u09A8") || query.includes("\u09B0\u09CD\u09AF\u09BE\u0995\u09C7\u099F")) {
-    targetCategoryName = "Sports Game";
-  } else if (query.includes("shoes") || query.includes("shoe") || query.includes("juta") || query.includes("juto") || query.includes("\u099C\u09C1\u09A4\u09BE") || query.includes("\u099C\u09C1\u09A4\u09CB") || query.includes("\u09B8\u09CD\u09A8\u09BF\u0995\u09BE\u09B0") || query.includes("sneakers") || query.includes("snikar")) {
-    targetCategoryName = "Sports Shoes";
-  } else if (query.includes("wear") || query.includes("jersey") || query.includes("\u099C\u09BE\u09B0\u09CD\u09B8\u09BF") || query.includes("tshirt") || query.includes("t-shirt") || query.includes("t shirt") || query.includes("\u099F\u09BF-\u09B6\u09BE\u09B0\u09CD\u099F") || query.includes("\u09AA\u09CB\u09B6\u09BE\u0995") || query.includes("cloth") || query.includes("\u0995\u09BE\u09AA\u09A1\u09BC") || query.includes("polo") || query.includes("\u09AA\u09CB\u09B2\u09CB") || query.includes("panjabi") || query.includes("punjabi") || query.includes("\u09AA\u09BE\u099E\u09CD\u099C\u09BE\u09AC\u09BF") || query.includes("\u09AA\u09BE\u099E\u09CD\u099C\u09BE\u09AC\u09C0")) {
-    targetCategoryName = "Sports wear";
-  }
-  let categoryMatched = products;
-  if (targetCategoryName) {
-    categoryMatched = products.filter((p) => p.category && p.category.toLowerCase().includes(targetCategoryName.toLowerCase()));
-  } else {
-    categoryMatched = products.filter((p) => p.category && query.includes(p.category.toLowerCase()));
-  }
-  if (categoryMatched.length > 0) {
-    const listStr = categoryMatched.slice(0, 5).map((p) => `- **${p.name}** (\u09F3${p.price})`).join("\n");
-    return `\u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u0995\u09BE\u099B\u09C7 **${categoryMatched[0].category || targetCategoryName}** \u09B8\u0982\u0995\u09CD\u09B0\u09BE\u09A8\u09CD\u09A4 \u09A8\u09BF\u099A\u09C7\u09B0 \u09AA\u09A3\u09CD\u09AF\u0997\u09C1\u09B2\u09CB \u09B0\u09DF\u09C7\u099B\u09C7:
-
-${listStr}
-
-\u09AA\u09A3\u09CD\u09AF\u09C7\u09B0 \u09AC\u09BF\u09AC\u09B0\u09A3, \u09A6\u09BE\u09AE \u09AC\u09BE \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0\u09C7\u09B0 \u09A8\u09BF\u09DF\u09AE \u099C\u09BE\u09A8\u09A4\u09C7 \u09AA\u09A3\u09CD\u09AF\u099F\u09BF\u09B0 \u09A8\u09BE\u09AE \u09B2\u09BF\u0996\u09C7 \u09AA\u09CD\u09B0\u09B6\u09CD\u09A8 \u0995\u09B0\u09A4\u09C7 \u09AA\u09BE\u09B0\u09C7\u09A8!`;
-  }
-  const categoryNames = Array.from(new Set(products.map((p) => p.category).filter(Boolean)));
-  const categoryListStr = categoryNames.length > 0 ? `
-
-\u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u09B8\u09CD\u099F\u09CB\u09B0\u09C7\u09B0 \u09AA\u09CD\u09B0\u09A7\u09BE\u09A8 \u0995\u09CD\u09AF\u09BE\u099F\u09BE\u0997\u09B0\u09BF\u0997\u09C1\u09B2\u09CB \u09B9\u09B2\u09CB:
-` + categoryNames.map((c) => `- **${c}**`).join("\n") : "";
-  const popularListStr = products.length > 0 ? `
-
-\u099C\u09A8\u09AA\u09CD\u09B0\u09BF\u09DF \u0995\u09BF\u099B\u09C1 \u09AA\u09A3\u09CD\u09AF:
-` + products.slice(0, 3).map((p) => `- **${p.name}** (\u09F3${p.price})`).join("\n") : "";
-  return `\u0986\u09AE\u09BF \u0986\u09AA\u09A8\u09BE\u09B0 \u09AA\u09CD\u09B0\u09B6\u09CD\u09A8\u099F\u09BF \u09B8\u09B0\u09BE\u09B8\u09B0\u09BF \u09AC\u09C1\u099D\u09A4\u09C7 \u09AA\u09BE\u09B0\u09BF\u09A8\u09BF\u0964 \u0986\u09AE\u09BF \u0986\u09AA\u09A8\u09BE\u0995\u09C7 \u09AA\u09A3\u09CD\u09AF \u0996\u09C1\u0981\u099C\u09C7 \u09AA\u09C7\u09A4\u09C7, \u09A6\u09BE\u09AE \u099C\u09BE\u09A8\u09A4\u09C7 \u0985\u09A5\u09AC\u09BE \u09AA\u09B0\u09BE\u09AE\u09B0\u09CD\u09B6 \u09A6\u09BF\u09A4\u09C7 \u09B8\u09BE\u09B9\u09BE\u09AF\u09CD\u09AF \u0995\u09B0\u09A4\u09C7 \u09AA\u09BE\u09B0\u09BF\u0964${categoryListStr}${popularListStr}
-
-\u0985\u09A8\u09C1\u0997\u09CD\u09B0\u09B9 \u0995\u09B0\u09C7 \u0995\u09CB\u09A8\u09CB \u09AA\u09A3\u09CD\u09AF\u09C7\u09B0 \u09A8\u09BE\u09AE \u09AC\u09BE \u0986\u09AA\u09A8\u09BE\u09B0 \u09AA\u099B\u09A8\u09CD\u09A6\u09C7\u09B0 \u0995\u09CD\u09AF\u09BE\u099F\u09BE\u0997\u09B0\u09BF \u09B2\u09BF\u0996\u09C7 \u09AA\u09CD\u09B0\u09B6\u09CD\u09A8 \u0995\u09B0\u09C1\u09A8!`;
-}
-
-// backend/routes/ai.ts
-var router8 = Router8();
-router8.post("/chat", chatWithAI);
-router8.get("/analytics", authenticateToken, getAIAnalytics);
-var ai_default = router8;
-
 // backend/routes/employees.ts
-import { Router as Router9 } from "express";
+import { Router as Router8 } from "express";
 
 // backend/controllers/employeesController.ts
 import bcrypt3 from "bcryptjs";
@@ -4447,124 +4048,33 @@ var toggleEmployeeStatus = (req, res) => {
 };
 
 // backend/routes/employees.ts
-var router9 = Router9();
-router9.get("/invite/verify", verifyInvitationToken);
-router9.post("/invite/register", registerInvitedEmployee);
-router9.get("/", authenticateToken, requireRole(["Super Admin", "Admin"]), getEmployees);
-router9.put("/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), updateEmployee);
-router9.delete("/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteEmployee);
-router9.put("/:id/toggle-status", authenticateToken, requireRole(["Super Admin", "Admin"]), toggleEmployeeStatus);
-router9.get("/invitations", authenticateToken, requireRole(["Super Admin", "Admin"]), getInvitations);
-router9.post("/invite", authenticateToken, requireRole(["Super Admin", "Admin"]), inviteEmployee);
-router9.delete("/invitations/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteInvitation);
-router9.get("/roles", authenticateToken, requireRole(["Super Admin", "Admin"]), getRoles);
-router9.post("/roles", authenticateToken, requireRole(["Super Admin", "Admin"]), createRole);
-router9.put("/roles/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), updateRole);
-router9.delete("/roles/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteRole);
-router9.get("/active-employees", authenticateToken, requireRole(["Super Admin", "Admin"]), getActiveEmployees);
-router9.get("/active-moderators", authenticateToken, requireRole(["Super Admin", "Admin"]), getActiveModerators);
-var employees_default = router9;
+var router8 = Router8();
+router8.get("/invite/verify", verifyInvitationToken);
+router8.post("/invite/register", registerInvitedEmployee);
+router8.get("/", authenticateToken, requireRole(["Super Admin", "Admin"]), getEmployees);
+router8.put("/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), updateEmployee);
+router8.delete("/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteEmployee);
+router8.put("/:id/toggle-status", authenticateToken, requireRole(["Super Admin", "Admin"]), toggleEmployeeStatus);
+router8.get("/invitations", authenticateToken, requireRole(["Super Admin", "Admin"]), getInvitations);
+router8.post("/invite", authenticateToken, requireRole(["Super Admin", "Admin"]), inviteEmployee);
+router8.delete("/invitations/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteInvitation);
+router8.get("/roles", authenticateToken, requireRole(["Super Admin", "Admin"]), getRoles);
+router8.post("/roles", authenticateToken, requireRole(["Super Admin", "Admin"]), createRole);
+router8.put("/roles/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), updateRole);
+router8.delete("/roles/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteRole);
+router8.get("/active-employees", authenticateToken, requireRole(["Super Admin", "Admin"]), getActiveEmployees);
+router8.get("/active-moderators", authenticateToken, requireRole(["Super Admin", "Admin"]), getActiveModerators);
+var employees_default = router8;
 
 // backend/routes/marketing.ts
-import { Router as Router10 } from "express";
+import { Router as Router9 } from "express";
 
 // backend/services/emailService.ts
 import nodemailer from "nodemailer";
-var createTransporter = () => {
-  return nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-      // Gmail App Password (not regular password)
-    }
-  });
-};
 var STORE_NAME = process.env.STORE_NAME || "Tamim Global";
 var STORE_URL = process.env.STORE_URL || "https://tamimglobal.com";
 var STORE_LOGO = `${STORE_URL}/logo.png`;
 var FROM_EMAIL = `"${STORE_NAME}" <${process.env.EMAIL_USER}>`;
-var emailTemplate = (content) => `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${STORE_NAME}</title>
-  <style>
-    body { margin: 0; padding: 0; background: #f4f4f5; font-family: 'Segoe UI', Arial, sans-serif; }
-    .wrapper { max-width: 560px; margin: 32px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
-    .header { background: #111827; padding: 28px 32px; text-align: center; }
-    .header img { height: 52px; object-fit: contain; }
-    .header h1 { color: #e11d48; font-size: 1.1rem; margin: 8px 0 0; letter-spacing: 2px; font-weight: 800; }
-    .body { padding: 32px; color: #1f2937; }
-    .body h2 { font-size: 1.3rem; font-weight: 800; margin: 0 0 12px; color: #111827; }
-    .body p { font-size: 0.92rem; line-height: 1.7; color: #4b5563; margin: 0 0 16px; }
-    .btn { display: inline-block; background: #e11d48; color: #ffffff !important; text-decoration: none; padding: 12px 28px; border-radius: 100px; font-weight: 700; font-size: 0.9rem; margin-top: 8px; }
-    .divider { border: none; border-top: 1px solid #f3f4f6; margin: 24px 0; }
-    .tag { display: inline-block; background: #fef2f2; color: #e11d48; border-radius: 100px; padding: 4px 12px; font-size: 0.78rem; font-weight: 700; margin: 4px 4px 4px 0; }
-    .product-card { display: flex; gap: 12px; align-items: center; background: #f9fafb; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
-    .product-img { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; }
-    .product-info { flex: 1; }
-    .product-name { font-weight: 700; font-size: 0.88rem; color: #111827; margin: 0 0 4px; }
-    .product-price { color: #e11d48; font-weight: 800; font-size: 0.9rem; }
-    .footer { background: #111827; padding: 20px 32px; text-align: center; }
-    .footer p { color: #6b7280; font-size: 0.75rem; margin: 4px 0; }
-    .footer a { color: #9ca3af; text-decoration: none; }
-    .unsubscribe { font-size: 0.7rem; color: #6b7280; margin-top: 12px; }
-  </style>
-</head>
-<body>
-  <div class="wrapper">
-    <div class="header">
-      <img src="${STORE_LOGO}" alt="${STORE_NAME}" onerror="this.style.display='none'" />
-      <h1>${STORE_NAME.toUpperCase()}</h1>
-    </div>
-    <div class="body">
-      ${content}
-    </div>
-    <div class="footer">
-      <p>\xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} ${STORE_NAME}. All rights reserved.</p>
-      <p><a href="${STORE_URL}">${STORE_URL}</a></p>
-      <p class="unsubscribe">\u0986\u09B0 \u0987\u09AE\u09C7\u0987\u09B2 \u09AA\u09C7\u09A4\u09C7 \u09A8\u09BE \u099A\u09BE\u0987\u09B2\u09C7 <a href="${STORE_URL}/unsubscribe">\u098F\u0996\u09BE\u09A8\u09C7 \u0995\u09CD\u09B2\u09BF\u0995 \u0995\u09B0\u09C1\u09A8</a></p>
-    </div>
-  </div>
-</body>
-</html>
-`;
-var sendWelcomeEmail = async (email) => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn("[EmailService] EMAIL_USER or EMAIL_PASS not set in .env, skipping email.");
-    return false;
-  }
-  const content = `
-    <h2>\u{1F389} \u09B8\u09BE\u09AC\u09B8\u09CD\u0995\u09CD\u09B0\u09BF\u09AA\u09B6\u09A8 \u09B8\u09AB\u09B2!</h2>
-    <p>\u0986\u09AA\u09A8\u09BE\u0995\u09C7 <strong>${STORE_NAME}</strong>-\u098F\u09B0 \u09A8\u09BF\u0989\u099C\u09B2\u09C7\u099F\u09BE\u09B0\u09C7 \u09B8\u09CD\u09AC\u09BE\u0997\u09A4\u09AE! \u098F\u0996\u09A8 \u09A5\u09C7\u0995\u09C7 \u0986\u09AA\u09A8\u09BF \u09AA\u09BE\u09AC\u09C7\u09A8:</p>
-    <div>
-      <span class="tag">\u{1F525} \u098F\u0995\u09CD\u09B8\u0995\u09CD\u09B2\u09C1\u09B8\u09BF\u09AD \u0985\u09AB\u09BE\u09B0</span>
-      <span class="tag">\u{1F195} \u09A8\u09A4\u09C1\u09A8 \u09AA\u09A3\u09CD\u09AF\u09C7\u09B0 \u0986\u09AA\u09A1\u09C7\u099F</span>
-      <span class="tag">\u{1F381} \u09AC\u09BF\u09B6\u09C7\u09B7 \u0995\u09C1\u09AA\u09A8 \u0995\u09CB\u09A1</span>
-      <span class="tag">\u26A1 \u09AB\u09CD\u09B2\u09CD\u09AF\u09BE\u09B6 \u09B8\u09C7\u09B2 \u09A8\u09CB\u099F\u09BF\u09B6</span>
-    </div>
-    <hr class="divider" />
-    <p>\u098F\u0996\u09A8\u0987 \u0995\u09C7\u09A8\u09BE\u0995\u09BE\u099F\u09BE \u09B6\u09C1\u09B0\u09C1 \u0995\u09B0\u09C1\u09A8 \u098F\u09AC\u0982 \u09B8\u09C7\u09B0\u09BE \u09A1\u09BF\u09B2\u0997\u09C1\u09B2\u09CB \u0989\u09AA\u09AD\u09CB\u0997 \u0995\u09B0\u09C1\u09A8\u0964</p>
-    <a href="${STORE_URL}" class="btn">\u{1F6CD}\uFE0F \u09B6\u09AA \u0995\u09B0\u09C1\u09A8 \u098F\u0996\u09A8\u0987</a>
-  `;
-  try {
-    const transporter = createTransporter();
-    await transporter.sendMail({
-      from: FROM_EMAIL,
-      to: email,
-      subject: `\u{1F389} ${STORE_NAME}-\u098F \u09B8\u09CD\u09AC\u09BE\u0997\u09A4\u09AE! \u0986\u09AA\u09A8\u09BE\u09B0 \u09B8\u09BE\u09AC\u09B8\u09CD\u0995\u09CD\u09B0\u09BF\u09AA\u09B6\u09A8 \u09B8\u09AB\u09B2`,
-      html: emailTemplate(content)
-    });
-    console.log(`[EmailService] Welcome email sent to: ${email}`);
-    return true;
-  } catch (err) {
-    console.error("[EmailService] Failed to send welcome email:", err);
-    return false;
-  }
-};
 
 // backend/controllers/marketingController.ts
 var getCoupons = (req, res) => {
@@ -4689,48 +4199,6 @@ var validateCoupon = (req, res) => {
     }
   });
 };
-var getSubscribers = (req, res) => {
-  db_default.all(`SELECT * FROM newsletter_subscribers ORDER BY created_at DESC`, [], (err, rows) => {
-    if (err) {
-      console.error("Failed to get subscribers:", err);
-      return res.status(500).json({ status: "error", message: "Database error" });
-    }
-    res.json({ status: "success", data: rows || [] });
-  });
-};
-var subscribeEmail = (req, res) => {
-  const { email } = req.body;
-  if (!email || !email.includes("@")) {
-    return res.status(400).json({ status: "error", message: "\u09B8\u09A0\u09BF\u0995 \u0987\u09AE\u09C7\u0987\u09B2 \u098F\u09A1\u09CD\u09B0\u09C7\u09B8 \u09AA\u09CD\u09B0\u09A6\u09BE\u09A8 \u0995\u09B0\u09C1\u09A8\u0964" });
-  }
-  const cleanEmail = email.trim().toLowerCase();
-  db_default.run(
-    `INSERT INTO newsletter_subscribers (email, status)
-     VALUES (?, 'subscribed')`,
-    [cleanEmail],
-    function(err) {
-      if (err) {
-        if (err.message.includes("UNIQUE")) {
-          return res.status(400).json({ status: "error", message: "\u0986\u09AA\u09A8\u09BF \u0987\u09A4\u09BF\u09AE\u09A7\u09CD\u09AF\u09C7 \u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u09A8\u09BF\u0989\u099C\u09B2\u09C7\u099F\u09BE\u09B0\u09C7 \u09B8\u09BE\u09AC\u09B8\u09CD\u0995\u09CD\u09B0\u09BE\u0987\u09AC \u0995\u09B0\u09C7\u099B\u09C7\u09A8!" });
-        }
-        console.error("Failed to subscribe email:", err);
-        return res.status(500).json({ status: "error", message: "Database error" });
-      }
-      sendWelcomeEmail(cleanEmail).catch(console.error);
-      res.json({ status: "success", message: "\u09A8\u09BF\u0989\u099C\u09B2\u09C7\u099F\u09BE\u09B0 \u09B8\u09BE\u09AC\u09B8\u09CD\u0995\u09CD\u09B0\u09BF\u09AA\u09B6\u09A8 \u09B8\u09AB\u09B2 \u09B9\u09DF\u09C7\u099B\u09C7! \u09A7\u09A8\u09CD\u09AF\u09AC\u09BE\u09A6\u0964" });
-    }
-  );
-};
-var deleteSubscriber = (req, res) => {
-  const { id } = req.params;
-  db_default.run(`DELETE FROM newsletter_subscribers WHERE id = ?`, [id], function(err) {
-    if (err) {
-      console.error("Failed to delete subscriber:", err);
-      return res.status(500).json({ status: "error", message: "Database error" });
-    }
-    res.json({ status: "success", message: "Subscriber removed" });
-  });
-};
 var getCampaigns = (req, res) => {
   db_default.all(`SELECT * FROM campaigns`, [], (err, rows) => {
     if (err) {
@@ -4826,137 +4294,6 @@ var deleteCampaign = (req, res) => {
     res.json({ status: "success", message: "Campaign deleted" });
   });
 };
-var DEFAULT_SPIN_WHEEL_CONFIG = {
-  enabled: true,
-  title: "\u0998\u09C1\u09B0\u09C7 \u099C\u09BF\u09A4\u09C1\u09A8 \u09B8\u09CD\u09AA\u09C7\u09B6\u09BE\u09B2 \u09A1\u09BF\u09B8\u0995\u09BE\u0989\u09A8\u09CD\u099F!",
-  subtitle: "\u0986\u099C\u0995\u09C7\u09B0 \u09B8\u09CC\u09AD\u09BE\u0997\u09CD\u09AF\u099C\u09A8\u0995 \u0995\u09C1\u09AA\u09A8 \u0995\u09CB\u09A1 \u099C\u09BF\u09A4\u09A4\u09C7 \u099A\u09BE\u0995\u09BE\u099F\u09BF \u0998\u09CB\u09B0\u09BE\u09A8!",
-  respin_order_count_required: 1,
-  slices: [
-    { id: "1", label: "10% OFF", coupon_code: "SPIN10", type: "percentage", value: 10, weight: 40, color: "#7c3aed" },
-    { id: "2", label: "\u09F3100 OFF", coupon_code: "SPIN100", type: "fixed", value: 100, weight: 30, color: "#059669" },
-    { id: "3", label: "15% OFF", coupon_code: "VIP15", type: "percentage", value: 15, weight: 15, color: "#d97706" },
-    { id: "4", label: "Free Delivery", coupon_code: "FREEDEL", type: "fixed", value: 60, weight: 10, color: "#e11d48" },
-    { id: "5", label: "25% MEGA", coupon_code: "MEGA25", type: "percentage", value: 25, weight: 5, color: "#2563eb" }
-  ]
-};
-var getSpinWheelConfig = (req, res) => {
-  db_default.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'spin_wheel_settings'`, [], (err, row) => {
-    if (err) {
-      console.error("Error fetching spin wheel config:", err);
-      return res.status(500).json({ status: "error", message: "Database error" });
-    }
-    if (!row || !row.setting_value) {
-      return res.json({ status: "success", data: DEFAULT_SPIN_WHEEL_CONFIG });
-    }
-    try {
-      const config = JSON.parse(row.setting_value);
-      return res.json({ status: "success", data: { ...DEFAULT_SPIN_WHEEL_CONFIG, ...config } });
-    } catch (e) {
-      return res.json({ status: "success", data: DEFAULT_SPIN_WHEEL_CONFIG });
-    }
-  });
-};
-var spinWheelPlay = (req, res) => {
-  const customerEmail = (req.body?.customer_email || req.body?.email || "").trim().toLowerCase();
-  if (customerEmail) {
-    db_default.get(
-      `SELECT id FROM customer_coupons WHERE LOWER(customer_email) = ? AND source = 'spin_wheel'`,
-      [customerEmail],
-      (checkErr, existingClaim) => {
-        if (existingClaim) {
-          return res.status(400).json({
-            status: "error",
-            message: "\u0986\u09AA\u09A8\u09BF \u098F\u0987 \u0985\u09CD\u09AF\u09BE\u0995\u09BE\u0989\u09A8\u09CD\u099F \u09A6\u09BF\u09DF\u09C7 \u0987\u09A4\u09BF\u09AA\u09C2\u09B0\u09CD\u09AC\u09C7 \u09E7 \u09AC\u09BE\u09B0 \u09B8\u09CD\u09AA\u09BF\u09A8 \u09B9\u09C1\u0987\u09B2 \u09AC\u09CD\u09AF\u09AC\u09B9\u09BE\u09B0 \u0995\u09B0\u09C7\u099B\u09C7\u09A8\u0964 \u09AA\u09CD\u09B0\u09A4\u09BF \u0985\u09CD\u09AF\u09BE\u0995\u09BE\u0989\u09A8\u09CD\u099F\u09C7 \u09E7 \u09AC\u09BE\u09B0\u0987 \u09B8\u09CD\u09AA\u09BF\u09A8 \u09AA\u09CD\u09B0\u09AF\u09CB\u099C\u09CD\u09AF\u0964"
-          });
-        }
-        processSpin();
-      }
-    );
-  } else {
-    processSpin();
-  }
-  function processSpin() {
-    db_default.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'spin_wheel_settings'`, [], (err, row) => {
-      let config = DEFAULT_SPIN_WHEEL_CONFIG;
-      if (row && row.setting_value) {
-        try {
-          config = { ...DEFAULT_SPIN_WHEEL_CONFIG, ...JSON.parse(row.setting_value) };
-        } catch (e) {
-        }
-      }
-      if (!config.enabled || !config.slices || config.slices.length === 0) {
-        return res.status(400).json({ status: "error", message: "\u09B8\u09CD\u09AA\u09BF\u09A8 \u09B9\u09C1\u0987\u09B2 \u0985\u09AB\u09BE\u09B0 \u0986\u09AA\u09BE\u09A4\u09A4 \u09AC\u09A8\u09CD\u09A7 \u09B0\u09DF\u09C7\u099B\u09C7\u0964" });
-      }
-      const totalWeight = config.slices.reduce((sum, s) => sum + (Number(s.weight) || 0), 0);
-      if (totalWeight <= 0) {
-        const defaultSlice = config.slices[0];
-        return res.json({ status: "success", data: defaultSlice, winningIndex: 0 });
-      }
-      let randomWeight = Math.random() * totalWeight;
-      let winningIndex = 0;
-      for (let i = 0; i < config.slices.length; i++) {
-        const sliceWeight = Number(config.slices[i].weight) || 0;
-        if (randomWeight < sliceWeight) {
-          winningIndex = i;
-          break;
-        }
-        randomWeight -= sliceWeight;
-      }
-      const winningSlice = config.slices[winningIndex];
-      const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-      const baseCode = (winningSlice.coupon_code || "SPIN").toUpperCase();
-      const uniqueCouponCode = `${baseCode}-${randomSuffix}`;
-      db_default.run(
-        `INSERT INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, '2030-12-31', 'active')`,
-        [uniqueCouponCode, winningSlice.type || "percentage", Number(winningSlice.value) || 10]
-      );
-      if (customerEmail) {
-        db_default.run(
-          `INSERT INTO customer_coupons (customer_email, code, title, discount_type, discount_value, status, source)
-           VALUES (?, ?, ?, ?, ?, 'active', 'spin_wheel')`,
-          [
-            customerEmail,
-            uniqueCouponCode,
-            winningSlice.label,
-            winningSlice.type || "percentage",
-            Number(winningSlice.value) || 10
-          ]
-        );
-      }
-      return res.json({
-        status: "success",
-        data: {
-          ...winningSlice,
-          coupon_code: uniqueCouponCode
-        },
-        winningIndex
-      });
-    });
-  }
-};
-var updateSpinWheelConfig = (req, res) => {
-  const { enabled, title, subtitle, respin_order_count_required, slices } = req.body;
-  const newConfig = {
-    enabled: enabled !== void 0 ? Boolean(enabled) : true,
-    title: title || DEFAULT_SPIN_WHEEL_CONFIG.title,
-    subtitle: subtitle || DEFAULT_SPIN_WHEEL_CONFIG.subtitle,
-    respin_order_count_required: Number(respin_order_count_required) || 1,
-    slices: Array.isArray(slices) ? slices : DEFAULT_SPIN_WHEEL_CONFIG.slices
-  };
-  const jsonVal = JSON.stringify(newConfig);
-  db_default.run(
-    `INSERT OR REPLACE INTO system_settings (setting_key, setting_value, group_name, is_public)
-     VALUES ('spin_wheel_settings', ?, 'marketing', 1)`,
-    [jsonVal],
-    function(err) {
-      if (err) {
-        console.error("Failed to update spin wheel config:", err);
-        return res.status(500).json({ status: "error", message: "Database error" });
-      }
-      res.json({ status: "success", message: "\u09B8\u09CD\u09AA\u09BF\u09A8 \u09B9\u09C1\u0987\u09B2 \u09B8\u09C7\u099F\u09BF\u0982\u09B8 \u09B8\u09AB\u09B2\u09AD\u09BE\u09AC\u09C7 \u09B8\u09C7\u09AD \u0995\u09B0\u09BE \u09B9\u09DF\u09C7\u099B\u09C7!", data: newConfig });
-    }
-  );
-};
 var getCustomerCoupons = (req, res) => {
   const email = (req.query.email || "").toString().trim().toLowerCase();
   if (!email) {
@@ -5040,142 +4377,22 @@ var getCustomerCoupons = (req, res) => {
     }
   );
 };
-var dispatchDirectCoupon = (req, res) => {
-  const { title, code, discount_type, discount_value, target, customer_email, auto_enroll_future } = req.body;
-  if (!title || !code || discount_value === void 0) {
-    return res.status(400).json({ status: "error", message: "\u0995\u09C1\u09AA\u09A8\u09C7\u09B0 \u09B6\u09BF\u09B0\u09CB\u09A8\u09BE\u09AE, \u0995\u09CB\u09A1 \u098F\u09AC\u0982 \u099B\u09BE\u09DC\u09C7\u09B0 \u09AA\u09B0\u09BF\u09AE\u09BE\u09A3 \u09AC\u09BE\u09A7\u09CD\u09AF\u09A4\u09BE\u09AE\u09C2\u09B2\u0995\u0964" });
-  }
-  const cleanCode = String(code).trim().toUpperCase();
-  const type = discount_type || "percentage";
-  const val = Number(discount_value);
-  const shouldAutoEnroll = auto_enroll_future !== void 0 ? Boolean(auto_enroll_future) : target === "all";
-  db_default.run(
-    `INSERT OR REPLACE INTO coupons (code, type, value, expiry, status) VALUES (?, ?, ?, '2030-12-31', 'active')`,
-    [cleanCode, type, val]
-  );
-  if (shouldAutoEnroll) {
-    db_default.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'auto_dispatch_coupons'`, [], (err, row) => {
-      let existingCampaigns = [];
-      if (row && row.setting_value) {
-        try {
-          existingCampaigns = JSON.parse(row.setting_value);
-        } catch (e) {
-        }
-      }
-      const newCampaign = {
-        id: `auto-${Date.now()}`,
-        title,
-        code: cleanCode,
-        discount_type: type,
-        discount_value: val,
-        enabled: true,
-        created_at: (/* @__PURE__ */ new Date()).toISOString()
-      };
-      existingCampaigns = existingCampaigns.filter((c) => c.code !== cleanCode);
-      existingCampaigns.unshift(newCampaign);
-      const jsonVal = JSON.stringify(existingCampaigns);
-      db_default.run(
-        `INSERT OR REPLACE INTO system_settings (setting_key, setting_value, group_name, is_public)
-         VALUES ('auto_dispatch_coupons', ?, 'marketing', 1)`,
-        [jsonVal]
-      );
-    });
-  }
-  if (target === "specific" && customer_email) {
-    const email = String(customer_email).trim().toLowerCase();
-    db_default.run(
-      `INSERT INTO customer_coupons (customer_email, code, title, discount_type, discount_value, status, source)
-       VALUES (?, ?, ?, ?, ?, 'active', 'admin_gift')`,
-      [email, cleanCode, title, type, val],
-      (err) => {
-        if (err) {
-          console.error("Failed to dispatch coupon:", err);
-          return res.status(500).json({ status: "error", message: "Database error" });
-        }
-        res.json({ status: "success", message: `\u0995\u09C1\u09AA\u09A8 \u0995\u09CB\u09A1\u099F\u09BF ${email} \u098F\u0995\u09BE\u0989\u09A8\u09CD\u099F\u09C7 \u09AA\u09BE\u09A0\u09BE\u09A8\u09CB \u09B9\u09DF\u09C7\u099B\u09C7!` });
-      }
-    );
-  } else {
-    db_default.all(`SELECT email FROM customers`, [], (err, rows) => {
-      if (err || !rows || rows.length === 0) {
-        return res.json({ status: "success", message: "\u0995\u09C1\u09AA\u09A8 \u09A1\u09BE\u099F\u09BE\u09AC\u09C7\u099C\u09C7 \u09A4\u09C8\u09B0\u09BF \u09B9\u09DF\u09C7\u099B\u09C7 \u098F\u09AC\u0982 \u0995\u09BE\u09B8\u09CD\u099F\u09AE\u09BE\u09B0 \u098F\u0995\u09BE\u0989\u09A8\u09CD\u099F\u0997\u09C1\u09B2\u09CB\u09B0 \u099C\u09A8\u09CD\u09AF \u0985\u09A8 \u0995\u09B0\u09BE \u09B9\u09DF\u09C7\u099B\u09C7!" });
-      }
-      rows.forEach((c) => {
-        if (c.email) {
-          db_default.run(
-            `INSERT INTO customer_coupons (customer_email, code, title, discount_type, discount_value, status, source)
-             VALUES (?, ?, ?, ?, ?, 'active', 'admin_gift')`,
-            [c.email.trim().toLowerCase(), cleanCode, title, type, val]
-          );
-        }
-      });
-      const autoMsg = shouldAutoEnroll ? " \u098F\u09AC\u0982 \u09B8\u0995\u09B2 \u0995\u09BE\u09B8\u09CD\u099F\u09AE\u09BE\u09B0 \u098F\u0995\u09BE\u0989\u09A8\u09CD\u099F\u09C7 \u09B8\u09CD\u09AC\u09DF\u0982\u0995\u09CD\u09B0\u09BF\u09DF\u09AD\u09BE\u09AC\u09C7 \u0985\u09A8 \u0995\u09B0\u09BE \u09B9\u09DF\u09C7\u099B\u09C7!" : "";
-      res.json({ status: "success", message: `\u09B8\u0995\u09B2 \u0995\u09BE\u09B8\u09CD\u099F\u09AE\u09BE\u09B0\u09C7\u09B0 \u098F\u0995\u09BE\u0989\u09A8\u09CD\u099F\u09C7 \u0995\u09C1\u09AA\u09A8 \u09AA\u09BE\u09A0\u09BE\u09A8\u09CB \u09B9\u09DF\u09C7\u099B\u09C7${autoMsg}` });
-    });
-  }
-};
-var getAutoDispatchCoupons = (req, res) => {
-  db_default.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'auto_dispatch_coupons'`, [], (err, row) => {
-    if (err || !row || !row.setting_value) {
-      return res.json({ status: "success", data: [] });
-    }
-    try {
-      const data = JSON.parse(row.setting_value);
-      return res.json({ status: "success", data: Array.isArray(data) ? data : [] });
-    } catch (e) {
-      return res.json({ status: "success", data: [] });
-    }
-  });
-};
-var deleteAutoDispatchCoupon = (req, res) => {
-  const { id } = req.params;
-  db_default.get(`SELECT setting_value FROM system_settings WHERE setting_key = 'auto_dispatch_coupons'`, [], (err, row) => {
-    if (err || !row || !row.setting_value) {
-      return res.json({ status: "success", message: "\u0995\u09CD\u09AF\u09BE\u09AE\u09CD\u09AA\u09C7\u0987\u09A8 \u09B0\u09BF\u09AE\u09C1\u09AD \u0995\u09B0\u09BE \u09B9\u09DF\u09C7\u099B\u09C7" });
-    }
-    try {
-      let existingCampaigns = JSON.parse(row.setting_value);
-      existingCampaigns = existingCampaigns.filter((c) => c.id !== id);
-      const jsonVal = JSON.stringify(existingCampaigns);
-      db_default.run(
-        `INSERT OR REPLACE INTO system_settings (setting_key, setting_value, group_name, is_public)
-         VALUES ('auto_dispatch_coupons', ?, 'marketing', 1)`,
-        [jsonVal],
-        function(err2) {
-          if (err2) return res.status(500).json({ status: "error", message: "Database error" });
-          res.json({ status: "success", message: "\u0985\u099F\u09CB-\u09A1\u09BF\u099A\u09AA\u09CD\u09AF\u09BE\u099A \u0995\u09CD\u09AF\u09BE\u09AE\u09CD\u09AA\u09C7\u0987\u09A8 \u09AC\u09A8\u09CD\u09A7 \u0995\u09B0\u09BE \u09B9\u09DF\u09C7\u099B\u09C7!" });
-        }
-      );
-    } catch (e) {
-      return res.status(500).json({ status: "error", message: "Failed to update" });
-    }
-  });
-};
 
 // backend/routes/marketing.ts
-var router10 = Router10();
-router10.post("/subscribers/subscribe", subscribeEmail);
-router10.get("/coupons/validate/:code", validateCoupon);
-router10.get("/campaigns", getCampaigns);
-router10.get("/spin-wheel", getSpinWheelConfig);
-router10.post("/spin-wheel/spin", spinWheelPlay);
-router10.get("/my-coupons", getCustomerCoupons);
-router10.post("/spin-wheel/settings", authenticateToken, requireRole(["Super Admin", "Admin"]), updateSpinWheelConfig);
-router10.post("/dispatch-coupon", authenticateToken, requireRole(["Super Admin", "Admin"]), dispatchDirectCoupon);
-router10.get("/auto-dispatch-coupons", authenticateToken, requireRole(["Super Admin", "Admin"]), getAutoDispatchCoupons);
-router10.delete("/auto-dispatch-coupons/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteAutoDispatchCoupon);
-router10.get("/coupons", authenticateToken, requireRole(["Super Admin", "Admin"]), getCoupons);
-router10.post("/coupons", authenticateToken, requireRole(["Super Admin", "Admin"]), createCoupon);
-router10.delete("/coupons/:code", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteCoupon);
-router10.get("/subscribers", authenticateToken, requireRole(["Super Admin", "Admin"]), getSubscribers);
-router10.delete("/subscribers/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteSubscriber);
-router10.post("/campaigns", authenticateToken, requireRole(["Super Admin", "Admin"]), createCampaign);
-router10.put("/campaigns/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), updateCampaign);
-router10.delete("/campaigns/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteCampaign);
-var marketing_default = router10;
+var router9 = Router9();
+router9.get("/coupons/validate/:code", validateCoupon);
+router9.get("/campaigns", getCampaigns);
+router9.get("/my-coupons", getCustomerCoupons);
+router9.get("/coupons", authenticateToken, requireRole(["Super Admin", "Admin"]), getCoupons);
+router9.post("/coupons", authenticateToken, requireRole(["Super Admin", "Admin"]), createCoupon);
+router9.delete("/coupons/:code", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteCoupon);
+router9.post("/campaigns", authenticateToken, requireRole(["Super Admin", "Admin"]), createCampaign);
+router9.put("/campaigns/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), updateCampaign);
+router9.delete("/campaigns/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteCampaign);
+var marketing_default = router9;
 
 // backend/routes/analytics.ts
-import { Router as Router11 } from "express";
+import { Router as Router10 } from "express";
 
 // backend/controllers/analyticsController.ts
 var dbAll2 = (sql, params = []) => {
@@ -5377,9 +4594,9 @@ var getAnalyticsStats = async (req, res) => {
 };
 
 // backend/routes/analytics.ts
-var router11 = Router11();
-router11.get("/", authenticateToken, requireRole(["Super Admin", "Admin"]), getAnalyticsStats);
-var analytics_default = router11;
+var router10 = Router10();
+router10.get("/", authenticateToken, requireRole(["Super Admin", "Admin"]), getAnalyticsStats);
+var analytics_default = router10;
 
 // backend/websocket/chatSocket.ts
 import { WebSocketServer, WebSocket } from "ws";
@@ -5443,7 +4660,7 @@ var initChatSocket = (server2) => {
 };
 
 // backend/routes/blogs.ts
-import { Router as Router12 } from "express";
+import { Router as Router11 } from "express";
 
 // backend/controllers/blogsController.ts
 var getBlogs = async (req, res) => {
@@ -5582,18 +4799,18 @@ var deleteBlog = (req, res) => {
 };
 
 // backend/routes/blogs.ts
-var router12 = Router12();
-router12.get("/", getBlogs);
-router12.get("/:slug", getBlogBySlug);
-router12.post("/", authenticateToken, requireRole(["Super Admin", "Admin"]), createBlog);
-router12.put("/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), updateBlog);
-router12.delete("/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteBlog);
-var blogs_default = router12;
+var router11 = Router11();
+router11.get("/", getBlogs);
+router11.get("/:slug", getBlogBySlug);
+router11.post("/", authenticateToken, requireRole(["Super Admin", "Admin"]), createBlog);
+router11.put("/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), updateBlog);
+router11.delete("/:id", authenticateToken, requireRole(["Super Admin", "Admin"]), deleteBlog);
+var blogs_default = router11;
 
 // backend/routes/seo.ts
-import { Router as Router13 } from "express";
-var router13 = Router13();
-router13.get("/sitemap.xml", (req, res) => {
+import { Router as Router12 } from "express";
+var router12 = Router12();
+router12.get("/sitemap.xml", (req, res) => {
   const domain = "https://beauty-elegance-ec88f.web.app";
   db_default.all("SELECT id, created_at FROM products WHERE published = 1", [], (err, products) => {
     if (err) {
@@ -5657,7 +4874,7 @@ router13.get("/sitemap.xml", (req, res) => {
     });
   });
 });
-var seo_default = router13;
+var seo_default = router12;
 
 // backend/server.ts
 import { rateLimit } from "express-rate-limit";
@@ -5770,11 +4987,12 @@ app.use("/api/v1/products", products_default);
 app.use("/api/v1/orders", orders_default);
 app.use("/api/v1/dashboard", dashboard_default);
 app.use("/api/v1/chats", chats_default);
-app.use("/api/v1/ai", ai_default);
 app.use("/api/v1/employees", employees_default);
 app.use("/api/v1/marketing", marketing_default);
 app.use("/api/v1/analytics", analytics_default);
 app.use("/api/v1/blogs", blogs_default);
+app.get("/api/v1/cache-status", (_req, res) => res.json({ status: "success", data: cacheService.getStatus() }));
+app.get("/api/v1/db-status", (_req, res) => res.json({ status: "success", data: getDbStatus() }));
 app.use("/", seo_default);
 app.use("/api/v1/customers", customers_default);
 app.use("/api/v1/settings", settings_default);

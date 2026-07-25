@@ -146,5 +146,18 @@ export const cacheService = {
     const freshData = await fetchFn();
     await this.set(key, freshData, ttlSeconds);
     return freshData;
+  },
+
+  /**
+   * Get Redis connection and cache engine status
+   */
+  getStatus() {
+    return {
+      enabled: process.env.REDIS_ENABLED !== 'false',
+      connected: isRedisConnected,
+      mode: isRedisConnected ? 'Redis Centralized Cache' : 'In-Memory Fallback Cache',
+      redisUrl: redisUrl ? redisUrl.replace(/:[^:@]+@/, ':***@') : 'N/A',
+      defaultTtl: DEFAULT_TTL,
+    };
   }
 };

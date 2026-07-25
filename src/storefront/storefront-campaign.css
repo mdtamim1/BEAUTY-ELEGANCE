@@ -1,0 +1,664 @@
+/* ============================================================
+   CAMPAIGN PAGE — Ultra-Premium Stylesheet
+   Glassmorphism · Animated Countdowns · Premium Product Cards
+   ============================================================ */
+
+/* ── Page Wrapper ─────────────────────────────────────────── */
+.cmp-page {
+  min-height: 100vh;
+  background: #f8f7f5;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ── HERO BANNER ──────────────────────────────────────────── */
+.cmp-hero {
+  position: relative;
+  width: 100%;
+  min-height: 520px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.cmp-hero-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transform: scale(1.05);
+  transition: transform 0.8s ease;
+}
+.cmp-hero:hover .cmp-hero-bg {
+  transform: scale(1.01);
+}
+
+.cmp-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    rgba(10, 10, 20, 0.90) 0%,
+    rgba(10, 10, 20, 0.68) 55%,
+    rgba(10, 10, 20, 0.28) 100%
+  );
+}
+
+.cmp-hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 80px 40px;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 60px;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.cmp-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 215, 0, 0.12);
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  color: #ffd700;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  padding: 6px 16px;
+  border-radius: 30px;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  backdrop-filter: blur(10px);
+}
+
+.cmp-hero-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffd700;
+  animation: cmp-pulse 1.6s infinite;
+}
+
+@keyframes cmp-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+.cmp-hero-title {
+  font-size: clamp(2.1rem, 4.5vw, 3.6rem);
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1.1;
+  margin: 0 0 16px 0;
+  letter-spacing: -0.03em;
+}
+
+.cmp-hero-title span {
+  background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.cmp-hero-subtitle {
+  font-size: 1.03rem;
+  color: rgba(255,255,255,0.72);
+  max-width: 540px;
+  line-height: 1.65;
+  margin: 0 0 36px 0;
+}
+
+/* ── Countdown Timer ────────────────────────────────────── */
+.cmp-countdown {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.cmp-count-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 14px;
+  padding: 14px 18px;
+  min-width: 68px;
+  transition: all 0.3s ease;
+}
+
+.cmp-count-item:hover {
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(255, 215, 0, 0.4);
+  transform: translateY(-2px);
+}
+
+.cmp-count-num {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #ffd700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.cmp-count-lbl {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: rgba(255,255,255,0.48);
+  text-transform: uppercase;
+  margin-top: 5px;
+}
+
+/* Hero Buttons */
+.cmp-hero-btns {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cmp-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+  color: #0a0a14;
+  font-weight: 900;
+  font-size: 0.84rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 13px 26px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 8px 24px rgba(255, 165, 0, 0.35);
+}
+
+.cmp-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(255, 165, 0, 0.5);
+}
+
+.cmp-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.09);
+  backdrop-filter: blur(12px);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.84rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 13px 26px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.24);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.cmp-btn-outline:hover {
+  background: rgba(255,255,255,0.17);
+  border-color: rgba(255,255,255,0.44);
+  transform: translateY(-2px);
+}
+
+/* Hero Right Stats Card */
+.cmp-hero-stats {
+  background: rgba(255,255,255,0.07);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.13);
+  border-radius: 24px;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 210px;
+}
+
+.cmp-stat-item {
+  text-align: center;
+}
+
+.cmp-stat-num {
+  font-size: 2.2rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+}
+
+.cmp-stat-lbl {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.52);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.cmp-stat-divider {
+  width: 100%;
+  height: 1px;
+  background: rgba(255,255,255,0.09);
+}
+
+/* ── MAIN BODY ─────────────────────────────────────────────── */
+.cmp-body {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+
+/* ── SECTION HEADER ─────────────────────────────────────────── */
+.cmp-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.cmp-section-title {
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: #111827;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.02em;
+}
+
+.cmp-section-title span {
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.cmp-section-subtitle {
+  font-size: 0.87rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* ── FILTER TABS ────────────────────────────────────────────── */
+.cmp-filter-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+  padding: 5px;
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+  width: fit-content;
+  max-width: 100%;
+}
+
+.cmp-filter-btn {
+  padding: 8px 18px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.cmp-filter-btn:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.cmp-filter-btn.active {
+  background: #111827;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(17,24,39,0.28);
+}
+
+/* ── PRODUCT GRID ───────────────────────────────────────────── */
+.cmp-products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
+  gap: 20px;
+}
+
+/* ── PRODUCT CARD ───────────────────────────────────────────── */
+.cmp-product-card {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid #f0ece8;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.cmp-product-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 44px rgba(0,0,0,0.12);
+  border-color: #e0d9d1;
+}
+
+/* Card Image Area */
+.cmp-card-img-wrap {
+  position: relative;
+  height: 225px;
+  overflow: hidden;
+  background: #f9f7f5;
+}
+
+.cmp-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cmp-product-card:hover .cmp-card-img {
+  transform: scale(1.08);
+}
+
+/* Campaign Offer Badge */
+.cmp-offer-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 900;
+  padding: 4px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+  z-index: 2;
+}
+
+/* Wishlist Button */
+.cmp-wishlist-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 33px;
+  height: 33px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(8px);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+  z-index: 2;
+}
+
+.cmp-wishlist-btn:hover {
+  transform: scale(1.12);
+  background: #ffffff;
+}
+
+/* Per-product Countdown Timer */
+.cmp-prod-timer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0) 100%);
+  padding: 20px 12px 10px;
+  z-index: 2;
+}
+
+.cmp-prod-timer-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.cmp-prod-timer-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.65);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cmp-prod-timer-units {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.cmp-prod-timer-unit {
+  background: rgba(255,255,255,0.13);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 5px;
+  padding: 3px 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #ffd700;
+  font-variant-numeric: tabular-nums;
+  min-width: 27px;
+  text-align: center;
+}
+
+.cmp-prod-timer-sep {
+  color: rgba(255,255,255,0.45);
+  font-weight: 800;
+  font-size: 0.7rem;
+}
+
+/* Card Body */
+.cmp-card-body {
+  padding: 15px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.cmp-card-brand {
+  font-size: 0.68rem;
+  color: #9ca3af;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.cmp-card-name {
+  font-size: 0.93rem;
+  font-weight: 800;
+  color: #111827;
+  line-height: 1.3;
+  margin: 0 0 8px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cmp-card-stars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 12px;
+}
+
+.cmp-card-reviews {
+  font-size: 0.68rem;
+  color: #9ca3af;
+  margin-left: 4px;
+}
+
+/* Price Row */
+.cmp-card-price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid #f3f0ec;
+  margin-top: auto;
+}
+
+.cmp-card-price-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.cmp-price-new {
+  font-size: 1.12rem;
+  font-weight: 900;
+  color: #111827;
+  line-height: 1;
+}
+
+.cmp-price-old {
+  font-size: 0.73rem;
+  color: #d1d5db;
+  text-decoration: line-through;
+  margin-top: 3px;
+}
+
+.cmp-price-saving {
+  font-size: 0.67rem;
+  color: #16a34a;
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+.cmp-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #111827;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 8px 14px;
+  border-radius: 9px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.22s ease;
+}
+
+.cmp-add-btn:hover {
+  background: #d97706;
+  transform: scale(1.04);
+  box-shadow: 0 6px 18px rgba(217, 119, 6, 0.35);
+}
+
+/* ── EMPTY STATE ────────────────────────────────────────────── */
+.cmp-empty {
+  text-align: center;
+  padding: 80px 24px;
+  grid-column: 1 / -1;
+}
+
+.cmp-empty-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  color: #9ca3af;
+}
+
+.cmp-empty-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #374151;
+  margin: 0 0 8px 0;
+}
+
+.cmp-empty-sub {
+  font-size: 0.88rem;
+  color: #9ca3af;
+  margin: 0;
+}
+
+/* ── NO ACTIVE CAMPAIGN BANNER ──────────────────────────────── */
+.cmp-no-campaign {
+  text-align: center;
+  padding: 120px 24px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.cmp-no-campaign-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  display: block;
+}
+
+.cmp-no-campaign-title {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #374151;
+  margin: 0 0 10px 0;
+}
+
+.cmp-no-campaign-sub {
+  font-size: 0.93rem;
+  color: #9ca3af;
+  line-height: 1.65;
+}
+
+/* ── RESPONSIVE ─────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .cmp-hero-content {
+    grid-template-columns: 1fr;
+    padding: 60px 24px;
+    gap: 28px;
+  }
+  .cmp-hero-stats {
+    flex-direction: row;
+    flex-wrap: wrap;
+    min-width: unset;
+    gap: 16px;
+    justify-content: center;
+  }
+  .cmp-hero-title { font-size: 2.1rem; }
+}
+
+@media (max-width: 600px) {
+  .cmp-hero { min-height: 400px; }
+  .cmp-hero-content { padding: 44px 18px; }
+  .cmp-countdown { gap: 7px; }
+  .cmp-count-item { padding: 10px 11px; min-width: 54px; }
+  .cmp-count-num { font-size: 1.45rem; }
+  .cmp-body { padding: 26px 14px 56px; }
+  .cmp-products-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+  .cmp-card-img-wrap { height: 170px; }
+  .cmp-filter-bar { padding: 4px; }
+  .cmp-filter-btn { padding: 6px 12px; font-size: 0.71rem; }
+}

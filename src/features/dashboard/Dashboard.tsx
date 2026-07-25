@@ -76,16 +76,6 @@ export default function Dashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const newFeed = generateActivityFeed(1);
-      if (newFeed && newFeed.length > 0 && newFeed[0]) {
-        setLiveOrders(prev => [newFeed[0], ...prev.slice(0, 7)]);
-      }
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
   const stats = dbData ? dbData.stats : null;
 
   const activities = dbData?.recentActivities || generateActivityFeed(15);

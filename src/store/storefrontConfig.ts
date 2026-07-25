@@ -37,6 +37,7 @@ export interface CategoryConfig {
   count: number;
   published: boolean;
   sortOrder: number;
+  image?: string;
 }
 
 export interface NavLinkItem {
@@ -75,6 +76,17 @@ export interface StoreBranding {
   footerDescription: string;
   copyrightText: string;
   paymentMethodsText: string;
+  developerName?: string;
+  developerUrl?: string;
+  developerEnabled?: boolean;
+  addressText?: string;
+}
+
+export interface BrandItem {
+  id: string;
+  name: string;
+  logo?: string;
+  category?: string;
 }
 
 export interface FeatureBadge {
@@ -127,6 +139,34 @@ export interface ProductConfig {
   sizes?: { label: string; enabled: boolean }[];
 }
 
+export interface LiveViewConfig {
+  enabled: boolean;
+  presetRange: '0-20' | '0-30' | '30-50' | '50-70' | 'custom';
+  customMin: number;
+  customMax: number;
+  updateIntervalSeconds: number;
+}
+
+// Campaign System Types
+export interface CampaignProductOffer {
+  productId: number;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  offerEndDate: string; // ISO date string — product-level countdown
+}
+
+export interface CampaignConfig {
+  id: string;
+  name: string;
+  status: 'active' | 'draft' | 'paused';
+  heroBannerImage: string;
+  heroBannerTitle: string;
+  heroBannerSubtitle: string;
+  startDate: string;
+  endDate: string;
+  productOffers: CampaignProductOffer[];
+}
+
 export interface StorefrontConfig {
   banners: BannerSlide[];
   announcements: AnnouncementItem[];
@@ -139,8 +179,12 @@ export interface StorefrontConfig {
   delivery: DeliveryConfig;
   newsletter: NewsletterConfig;
   products: ProductConfig[];
+  brands?: BrandItem[];
+  newPopularProductIds?: number[];
   mostSellingProductIds?: number[];
   trendingProductIds?: number[];
+  liveViewConfig?: LiveViewConfig;
+  campaigns?: CampaignConfig[];
 }
 
 // ============================================================
@@ -239,9 +283,13 @@ const DEFAULT_BRANDING: StoreBranding = {
   storeName: 'Tamim Global',
   logoTextPrimary: 'Tamim',
   logoTextSecondary: 'Global',
-  footerDescription: 'Tamim Global মানেই শক্তি, খেলা আর আনন্দ আমাদের কাছে পাবেন Gym Equipment, Sports Item ও Kids Sports Products —পুরো পরিবারের জন্য।',
+  footerDescription: 'Tamim Global stands for strength, sports & joy. Get premium Gym Equipment, Sports Items & Kids Products for your whole family.',
   copyrightText: '© 2026 Tamim Global. All rights reserved.',
   paymentMethodsText: 'Cash on Delivery • BKash • Rocket • Visa • Mastercard',
+  developerName: 'Tamim Labs',
+  developerUrl: 'https://tamimlabs.com',
+  developerEnabled: true,
+  addressText: '5th Floor, Block-B, Shop no: 46, 47, 56, 57, 58, Basundhara City Complex',
 };
 
 const DEFAULT_FEATURE_BADGES: FeatureBadge[] = [
@@ -253,9 +301,9 @@ const DEFAULT_FEATURE_BADGES: FeatureBadge[] = [
 
 const DEFAULT_DELIVERY: DeliveryConfig = {
   insideDhakaPrice: 60,
-  insideDhakaTimeline: '১-২ দিন',
+  insideDhakaTimeline: '1-2 Days',
   outsideDhakaPrice: 120,
-  outsideDhakaTimeline: '২-৩ দিন',
+  outsideDhakaTimeline: '2-3 Days',
 };
 
 const DEFAULT_NEWSLETTER: NewsletterConfig = {
@@ -268,7 +316,7 @@ const DEFAULT_NEWSLETTER: NewsletterConfig = {
 const DEFAULT_PRODUCTS: ProductConfig[] = [
   {
     id: 1, name: 'Hex Dumbbells Set (20kg)', category: 'Fitness Item', brand: 'PowerGym', sku: 'SSX-HEX-001',
-    price: 3500, originalPrice: 4200, rating: 4.8, reviews: 340,
+    price: 3500, originalPrice: 4200, rating: 4.8, reviews: 340, stock: 50,
     image: 'https://images.unsplash.com/photo-1638536532686-d610adfc8e5c?auto=format&fit=crop&w=600&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1638536532686-d610adfc8e5c?auto=format&fit=crop&w=600&q=80',
@@ -285,7 +333,7 @@ const DEFAULT_PRODUCTS: ProductConfig[] = [
   },
   {
     id: 2, name: '4-Wheels AB Roller for Core Strength', category: 'Fitness Item', brand: 'FitMax', sku: 'SSX-ABR-002',
-    price: 1200, originalPrice: 1800, rating: 4.7, reviews: 180,
+    price: 1200, originalPrice: 1800, rating: 4.7, reviews: 180, stock: 80,
     image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=600&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=600&q=80'
@@ -299,7 +347,7 @@ const DEFAULT_PRODUCTS: ProductConfig[] = [
   },
   {
     id: 3, name: 'Professional Match Football (Size 5)', category: 'Sports Game', brand: 'Puma', sku: 'SSX-FTB-003',
-    price: 1500, originalPrice: 2000, rating: 4.6, reviews: 120,
+    price: 1500, originalPrice: 2000, rating: 4.6, reviews: 120, stock: 60,
     image: 'https://images.unsplash.com/photo-1519415943484-9fa1873496d4?auto=format&fit=crop&w=600&q=80',
     gallery: ['https://images.unsplash.com/photo-1519415943484-9fa1873496d4?auto=format&fit=crop&w=600&q=80'],
     badge: 'sale', inStock: true, published: true,
@@ -311,7 +359,7 @@ const DEFAULT_PRODUCTS: ProductConfig[] = [
   },
   {
     id: 4, name: 'Professional Carbon Fiber Badminton Racket', category: 'Sports Game', brand: 'Yonex', sku: 'SSX-BAD-004',
-    price: 2800, originalPrice: 3500, rating: 4.8, reviews: 98,
+    price: 2800, originalPrice: 3500, rating: 4.8, reviews: 98, stock: 45,
     image: 'https://images.unsplash.com/photo-1687360441372-757f8b2b6835?auto=format&fit=crop&w=600&q=80',
     gallery: ['https://images.unsplash.com/photo-1687360441372-757f8b2b6835?auto=format&fit=crop&w=600&q=80'],
     badge: 'sale', inStock: true, published: true,
@@ -323,7 +371,7 @@ const DEFAULT_PRODUCTS: ProductConfig[] = [
   },
   {
     id: 5, name: 'Breathable Mesh Running Shoes', category: 'Sports Shoes', brand: 'AeroStep', sku: 'SSX-SH-005',
-    price: 4500, originalPrice: 6000, rating: 4.9, reviews: 220,
+    price: 4500, originalPrice: 6000, rating: 4.9, reviews: 220, stock: 35,
     image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80'
@@ -337,7 +385,7 @@ const DEFAULT_PRODUCTS: ProductConfig[] = [
   },
   {
     id: 6, name: 'Dri-FIT Athletic Jersey', category: 'Sports wear', brand: 'Adidas', sku: 'SSX-JRS-006',
-    price: 1200, originalPrice: 1600, rating: 4.6, reviews: 156,
+    price: 1200, originalPrice: 1600, rating: 4.6, reviews: 156, stock: 75,
     image: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=600&q=80',
     gallery: [
       'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=600&q=80'
@@ -351,7 +399,7 @@ const DEFAULT_PRODUCTS: ProductConfig[] = [
   },
   {
     id: 7, name: 'Non-Slip 8mm Yoga Mat', category: 'Fitness Item', brand: 'FlexiFit', sku: 'SSX-YOG-007',
-    price: 950, originalPrice: 1500, rating: 4.7, reviews: 112,
+    price: 950, originalPrice: 1500, rating: 4.7, reviews: 112, stock: 65,
     image: 'https://images.unsplash.com/photo-1601925260368-ae2f83cf8b7f?auto=format&fit=crop&w=600&q=80',
     gallery: ['https://images.unsplash.com/photo-1601925260368-ae2f83cf8b7f?auto=format&fit=crop&w=600&q=80'],
     badge: 'sale', inStock: true, published: true,
@@ -363,7 +411,7 @@ const DEFAULT_PRODUCTS: ProductConfig[] = [
   },
   {
     id: 8, name: 'Kids Adjustable Basketball Hoop Set', category: 'Sports Game', brand: 'KidSports', sku: 'SSX-BBH-008',
-    price: 3200, originalPrice: 4500, rating: 4.5, reviews: 89,
+    price: 3200, originalPrice: 4500, rating: 4.5, reviews: 89, stock: 25,
     image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=600&q=80',
     gallery: ['https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=600&q=80'],
     badge: 'sale', inStock: true, published: true,
@@ -388,6 +436,37 @@ const STORAGE_KEY = 'storefront_config';
 let _config: StorefrontConfig | null = null;
 let _listeners: Array<() => void> = [];
 
+export const DEFAULT_BRANDS: BrandItem[] = [
+  { id: 'b1', name: 'PowerGym', category: 'Gym Equipment' },
+  { id: 'b2', name: 'AeroStep', category: 'Footwear & Shoes' },
+  { id: 'b3', name: 'Adidas', category: 'Sports Apparel' },
+  { id: 'b4', name: 'KidSports', category: 'Kids Items' },
+  { id: 'b5', name: 'FlexiFit', category: 'Yoga & Wellness' },
+  { id: 'b6', name: 'Yonex', category: 'Sports Games' },
+  { id: 'b7', name: 'FitMax', category: 'Fitness Items' },
+  { id: 'b8', name: 'Nike', category: 'Athletic Footwear' },
+];
+
+const DEFAULT_CAMPAIGNS: CampaignConfig[] = [
+  {
+    id: 'CMP-001',
+    name: 'Grand Sports Festival',
+    status: 'active',
+    heroBannerImage: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1400&q=80',
+    heroBannerTitle: 'Grand Sports Festival',
+    heroBannerSubtitle: 'Exclusive deals on top sports gear & fitness essentials. Limited time offers!',
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0],
+    productOffers: [
+      { productId: 1, discountType: 'percentage', discountValue: 20, offerEndDate: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString() },
+      { productId: 2, discountType: 'percentage', discountValue: 15, offerEndDate: new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString() },
+      { productId: 3, discountType: 'percentage', discountValue: 25, offerEndDate: new Date(Date.now() + 1 * 24 * 3600 * 1000).toISOString() },
+      { productId: 4, discountType: 'fixed', discountValue: 500, offerEndDate: new Date(Date.now() + 4 * 24 * 3600 * 1000).toISOString() },
+      { productId: 5, discountType: 'percentage', discountValue: 30, offerEndDate: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString() },
+    ]
+  }
+];
+
 function getDefaultConfig(): StorefrontConfig {
   return {
     banners: DEFAULT_BANNERS,
@@ -401,8 +480,17 @@ function getDefaultConfig(): StorefrontConfig {
     delivery: { ...DEFAULT_DELIVERY },
     newsletter: { ...DEFAULT_NEWSLETTER },
     products: DEFAULT_PRODUCTS,
+    brands: DEFAULT_BRANDS,
     mostSellingProductIds: [1, 2, 3],
     trendingProductIds: [4, 5, 6],
+    liveViewConfig: {
+      enabled: true,
+      presetRange: '30-50',
+      customMin: 30,
+      customMax: 85,
+      updateIntervalSeconds: 4,
+    },
+    campaigns: DEFAULT_CAMPAIGNS,
   };
 }
 
@@ -537,6 +625,8 @@ function loadConfig(): StorefrontConfig {
         newsletter: { ...defaults.newsletter, ...parsed.newsletter },
         mostSellingProductIds: parsed.mostSellingProductIds !== undefined ? parsed.mostSellingProductIds : defaults.mostSellingProductIds,
         trendingProductIds: parsed.trendingProductIds !== undefined ? parsed.trendingProductIds : defaults.trendingProductIds,
+        liveViewConfig: parsed.liveViewConfig !== undefined ? { ...defaults.liveViewConfig, ...parsed.liveViewConfig } : defaults.liveViewConfig,
+        campaigns: parsed.campaigns !== undefined ? parsed.campaigns : defaults.campaigns,
       };
       return _config as StorefrontConfig;
     }

@@ -682,6 +682,11 @@ export default function Orders() {
     await updateOrderStatusInBackend(orderId, newStatus);
     updateOrderStatus(orderId, newStatus);
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+
+    const freshProducts = await fetchProductsFromBackend();
+    if (freshProducts && freshProducts.length > 0) {
+      setProducts(freshProducts);
+    }
   };
 
   const addProductToOrder = (prod: typeof DEMO_PRODUCTS[0]) => {
@@ -894,6 +899,11 @@ export default function Orders() {
     });
     setOrders(prev => prev.map(o => selectedIds.includes(o.id) ? { ...o, status: newStatus } : o));
     setSelectedIds([]);
+
+    const freshProducts = await fetchProductsFromBackend();
+    if (freshProducts && freshProducts.length > 0) {
+      setProducts(freshProducts);
+    }
   };
 
   return (
