@@ -477,7 +477,28 @@ export default function CollectionPage() {
         </p>
       </div>
 
-
+      {/* ── Category Pills Filter Row (New & Popular Replica) ── */}
+      <div className="new-popular-tabs-row" style={{ margin: '0 0 24px 0' }}>
+        {['ALL', 'SNEAKERS', 'PANJABI', 'SHIRTS', 'PERFUMES', 'PANTS', 'SPORTS SHOES', 'SPORTS WEAR', 'FITNESS ITEM'].map((tab) => {
+          const isActive = (selectedCategory === 'All' && tab === 'ALL') || (selectedCategory.toUpperCase() === tab);
+          return (
+            <button
+              key={tab}
+              type="button"
+              className={`new-popular-tab-btn ${isActive ? 'active' : ''}`}
+              onClick={() => {
+                if (tab === 'ALL') {
+                  setSelectedCategory('All');
+                } else {
+                  setSelectedCategory(tab);
+                }
+              }}
+            >
+              {tab}
+            </button>
+          );
+        })}
+      </div>
 
       {/* ── Main Layout: Left Filter + Right Products ── */}
       <div className="collection-main-layout" id="collection-products-section">
@@ -534,9 +555,9 @@ export default function CollectionPage() {
             </div>
           </div>
 
-          {/* In Stock */}
-          <div className="filter-group">
-            <label className="filter-checkbox-label" style={{ fontWeight: 700, color: '#18181b' }}>
+          {/* In Stock Only */}
+          <div className="filter-group" style={{ borderBottom: 'none' }}>
+            <label className="filter-checkbox-label" style={{ fontWeight: 700 }}>
               <input type="checkbox" checked={inStockOnly} onChange={e => setInStockOnly(e.target.checked)} />
               <span>In Stock Only</span>
             </label>
@@ -548,11 +569,11 @@ export default function CollectionPage() {
 
           {/* Toolbar */}
           <div className="collection-toolbar">
+            {/* Left side: Filter button */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              {/* Mobile Filter Button */}
               <button
                 type="button"
-                className="mobile-filter-open-btn"
+                className="filter-drawer-trigger-btn"
                 onClick={() => setIsFilterDrawerOpen(true)}
               >
                 <Filter size={14} />
@@ -565,9 +586,9 @@ export default function CollectionPage() {
                 <strong>{filteredProducts.length}</strong> products
               </span>
             </div>
+
+            {/* Right side: Featured dropdown */}
             <div className="sort-control">
-              <SlidersHorizontal size={13} />
-              <span>Sort:</span>
               <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="sort-select">
                 <option value="default">Featured</option>
                 <option value="price-low">Price: Low to High</option>

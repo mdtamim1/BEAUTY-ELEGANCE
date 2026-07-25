@@ -1038,16 +1038,7 @@ export default function ProductDetails() {
             );
           })()}
 
-          {/* Payment Trust Icons Strip */}
-          <div className="splayd-pdp-payments-strip">
-            <span className="splayd-payment-badge">VISA</span>
-            <span className="splayd-payment-badge">MasterCard</span>
-            <span className="splayd-payment-badge">SSLCommerz</span>
-            <span className="splayd-payment-badge">Cash on Delivery</span>
-            <span className="splayd-payment-badge">Fast Delivery</span>
-            <span className="splayd-payment-badge">bKash</span>
-            <span className="splayd-payment-badge">Nagad</span>
-          </div>
+
 
           {/* Expandable Accordion Cards (Description & Additional Information) */}
           <div className="splayd-pdp-accordions">

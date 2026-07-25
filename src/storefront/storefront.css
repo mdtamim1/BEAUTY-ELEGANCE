@@ -5886,81 +5886,84 @@
 
 @media (max-width: 768px) {
   .splayd-footer-section {
-    padding: 20px 8px 16px 8px !important;
+    padding: 32px 18px 24px 18px !important;
   }
   .splayd-footer-grid {
-    grid-template-columns: repeat(5, 1fr) !important;
-    gap: 8px 6px !important;
-    margin-bottom: 20px !important;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 24px 16px !important;
+    margin-bottom: 28px !important;
   }
   .splayd-footer-col-title {
-    font-size: 0.65rem !important;
-    margin: 0 0 6px 0 !important;
-    white-space: nowrap;
+    font-size: 0.88rem !important;
+    margin: 0 0 10px 0 !important;
+    white-space: normal !important;
+    font-weight: 800 !important;
   }
   .splayd-footer-link-list {
-    gap: 4px !important;
+    gap: 6px !important;
   }
   .splayd-footer-link-list a {
-    font-size: 0.58rem !important;
-    line-height: 1.25 !important;
+    font-size: 0.8rem !important;
+    line-height: 1.4 !important;
+    color: #52525b !important;
   }
   .splayd-footer-newsletter-text {
-    font-size: 0.56rem !important;
-    margin-bottom: 6px !important;
-    line-height: 1.2 !important;
+    font-size: 0.8rem !important;
+    margin-bottom: 10px !important;
+    line-height: 1.4 !important;
   }
   .splayd-footer-newsletter-form {
-    gap: 4px !important;
+    gap: 8px !important;
   }
   .splayd-footer-newsletter-input {
-    height: 26px !important;
-    font-size: 0.56rem !important;
-    padding: 0 4px !important;
-    border-radius: 4px !important;
+    height: 38px !important;
+    font-size: 0.8rem !important;
+    padding: 0 12px !important;
+    border-radius: 8px !important;
   }
   .splayd-footer-newsletter-btn {
-    height: 26px !important;
-    font-size: 0.55rem !important;
-    padding: 0 4px !important;
-    border-radius: 4px !important;
-    letter-spacing: 0 !important;
+    height: 38px !important;
+    font-size: 0.8rem !important;
+    padding: 0 16px !important;
+    border-radius: 8px !important;
+    letter-spacing: 0.05em !important;
+    font-weight: 800 !important;
   }
   .splayd-footer-brand-title {
-    font-size: 0.68rem !important;
+    font-size: 0.9rem !important;
   }
   .splayd-footer-contact-info {
-    gap: 4px !important;
-    font-size: 0.56rem !important;
-    margin-bottom: 8px !important;
+    gap: 6px !important;
+    font-size: 0.8rem !important;
+    margin-bottom: 12px !important;
   }
   .splayd-footer-contact-item svg {
-    width: 10px !important;
-    height: 10px !important;
-    min-width: 10px !important;
+    width: 14px !important;
+    height: 14px !important;
+    min-width: 14px !important;
   }
   .splayd-footer-socials {
-    margin-top: 6px !important;
-    gap: 4px !important;
+    margin-top: 10px !important;
+    gap: 8px !important;
   }
   .splayd-social-btn {
-    width: 22px !important;
-    height: 22px !important;
+    width: 32px !important;
+    height: 32px !important;
   }
   .splayd-social-btn svg {
-    width: 11px !important;
-    height: 11px !important;
+    width: 16px !important;
+    height: 16px !important;
   }
   .splayd-footer-grid > div:nth-child(4),
   .splayd-footer-grid > div:nth-child(5) {
-    grid-column: span 1 !important;
+    grid-column: span 2 !important;
   }
   .splayd-footer-bottom-bar {
-    font-size: 0.58rem !important;
-    gap: 8px !important;
-    padding-top: 14px !important;
+    font-size: 0.75rem !important;
+    gap: 12px !important;
+    padding-top: 18px !important;
+    flex-direction: column !important;
+    text-align: center !important;
   }
 }
 
@@ -6734,17 +6737,26 @@
   position: relative;
 }
 
-.mobile-filter-open-btn:hover,
-.mobile-filter-open-btn:active {
+.filter-drawer-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: #ffffff;
+  color: #18181b;
+  border: 1.5px solid #e4e4e7;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-drawer-trigger-btn:hover,
+.filter-drawer-trigger-btn:active {
   background: #18181b;
   color: #ffffff;
   border-color: #18181b;
-}
-
-@media (max-width: 900px) {
-  .mobile-filter-open-btn {
-    display: inline-flex;
-  }
 }
 
 .filter-active-dot {
