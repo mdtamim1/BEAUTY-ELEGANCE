@@ -310,15 +310,21 @@ export default function CollectionPage() {
 
   // Active Category Name / Collection Title
   const activeCategoryTitle = useMemo(() => {
-    if (slug && SPECIAL_COLLECTION_SLUGS[slug.toLowerCase()]) {
-      return SPECIAL_COLLECTION_SLUGS[slug.toLowerCase()];
+    if (slug) {
+      const slugLower = slug.toLowerCase().trim();
+      const matchedBrand = availableBrands.find(b => b.toLowerCase().replace(/[^a-z0-9]/g, '-') === slugLower || b.toLowerCase() === slugLower);
+      if (matchedBrand) return matchedBrand.toUpperCase();
+
+      if (SPECIAL_COLLECTION_SLUGS[slugLower]) {
+        return SPECIAL_COLLECTION_SLUGS[slugLower];
+      }
     }
-    if (isAllCategoriesPage) return selectedCategory;
+    if (isAllCategoriesPage) return selectedCategory === 'All' ? 'All Products' : selectedCategory;
     const matched = dynamicCategories.find(c => c.slug === slug);
     if (matched) return matched.name;
     if (navLink) return navLink.label;
-    return slug ? slug.replace(/-/g, ' ').toUpperCase() : 'All';
-  }, [isAllCategoriesPage, selectedCategory, slug, navLink, dynamicCategories]);
+    return slug ? slug.replace(/-/g, ' ').toUpperCase() : 'All Products';
+  }, [slug, availableBrands, isAllCategoriesPage, selectedCategory, dynamicCategories, navLink]);
 
   useEffect(() => {
     if (slug && !isAllCategoriesPage && !isSpecialCollection) {
@@ -356,9 +362,14 @@ export default function CollectionPage() {
   // Filter Products
   const filteredProducts = useMemo(() => {
     let result = [...products];
-    const slugLower = (slug || '').toLowerCase();
+    const slugLower = (slug || '').toLowerCase().trim();
 
-    if (slugLower === 'most-selling') {
+    // 1. Check if slug matches a Brand directly
+    const matchedBrand = availableBrands.find(b => b.toLowerCase().replace(/[^a-z0-9]/g, '-') === slugLower || b.toLowerCase() === slugLower);
+
+    if (matchedBrand) {
+      result = result.filter(p => p.brand && matchesCategory(p.brand, matchedBrand));
+    } else if (slugLower === 'most-selling') {
       if (config.mostSellingProductIds && config.mostSellingProductIds.length > 0) {
         const setIds = new Set(config.mostSellingProductIds.map(id => Number(id)));
         result = result.filter(p => setIds.has(Number(p.id)));
@@ -380,7 +391,7 @@ export default function CollectionPage() {
       result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
     } else if (!isAllCategoriesPage && !isSpecialCollection) {
       const currentCat = activeCategoryTitle;
-      if (currentCat && currentCat !== 'All') {
+      if (currentCat && currentCat !== 'All' && currentCat !== 'All Products') {
         result = result.filter(p => {
           const catName = p.category || (p as any).categoryName || '';
           return matchesCategory(catName, currentCat);
@@ -466,34 +477,7 @@ export default function CollectionPage() {
         </p>
       </div>
 
-      {/* Category Cards Grid - only on /categories page */}
-      {isAllCategoriesPage && (
-        <div className="category-cards-section">
-          <div className="category-cards-grid">
-            {dynamicCategories.map(cat => (
-              <div
-                key={cat.slug}
-                className={`category-card-item ${selectedCategory.toLowerCase() === cat.name.toLowerCase() ? 'active' : ''}`}
-                onClick={() => handleCategoryCardClick(cat)}
-              >
-                <div className="category-card-img-wrap">
-                  <img src={cat.image} alt={cat.name} />
-                </div>
-                <h3 className="category-card-title">{cat.name}</h3>
-                <span className="category-card-count">{cat.count} Products</span>
-                <button
-                  type="button"
-                  className="category-card-btn"
-                  onClick={(e) => { e.stopPropagation(); handleCategoryCardClick(cat); }}
-                >
-                  <span>Shop Now</span>
-                  <ArrowRight size={12} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+
 
       {/* ── Main Layout: Left Filter + Right Products ── */}
       <div className="collection-main-layout" id="collection-products-section">

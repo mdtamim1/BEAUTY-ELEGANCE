@@ -49,42 +49,42 @@ const TOP_BRANDS_LIST = [
     brandName: "NIKE",
     categoryName: "Sports Shoes & Footwear",
     img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80",
-    link: "/collection/sports-shoes"
+    link: "/collection/nike"
   },
   {
     id: 2,
     brandName: "FITMAX",
     categoryName: "Gym & Core Fitness",
     img: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=600&q=80",
-    link: "/collection/fitness-item"
+    link: "/collection/fitmax"
   },
   {
     id: 3,
     brandName: "PUMA",
     categoryName: "Activewear & Sports Apparels",
     img: "https://images.unsplash.com/photo-1519415943484-9fa1873496d4?auto=format&fit=crop&w=600&q=80",
-    link: "/collection/sports-wear"
+    link: "/collection/puma"
   },
   {
     id: 4,
     brandName: "YONEX",
     categoryName: "Sports Games & Racquets",
     img: "https://images.unsplash.com/photo-1687360441372-757f8b2b6835?auto=format&fit=crop&w=600&q=80",
-    link: "/collection/sports-game"
+    link: "/collection/yonex"
   },
   {
     id: 5,
     brandName: "THE ORDINARY",
     categoryName: "Skincare & Clinical Wellness",
     img: "https://images.unsplash.com/photo-1608248597369-234667e4526d?auto=format&fit=crop&w=600&q=80",
-    link: "/collection/skincare"
+    link: "/collection/the-ordinary"
   },
   {
     id: 6,
     brandName: "AEROSTEP",
     categoryName: "Sneakers & Streetwear",
     img: "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?auto=format&fit=crop&w=600&q=80",
-    link: "/collection/sneakers"
+    link: "/collection/aerostep"
   }
 ];
 

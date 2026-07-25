@@ -4915,6 +4915,37 @@
   transform: scale(1.08);
 }
 
+@media (max-width: 768px) {
+  .new-popular-card-body {
+    padding: 10px 4px 6px 4px;
+    gap: 2px;
+  }
+  .new-popular-card-title {
+    font-size: 0.74rem;
+    line-height: 1.25;
+    margin-bottom: 2px;
+    height: 2.5em;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .new-popular-card-price {
+    font-size: 0.8rem;
+    font-weight: 800;
+  }
+  .new-popular-cart-icon-btn {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+  }
+  .new-popular-cart-icon-btn svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
 /* ==========================================================================
    PURE TEXT LOGO STYLING (ULTRA-LUXURY FASHION TYPOGRAPHY)
    ========================================================================== */
@@ -6337,13 +6368,20 @@
 }
 
 .collection-products-grid {
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
-  gap: 28px !important;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
 }
 
 @media (max-width: 900px) {
   .collection-main-layout {
     grid-template-columns: 1fr;
+  }
+  .collection-products-grid,
+  .products-grid,
+  .new-popular-grid,
+  .promo-products-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px 10px !important;
   }
   .filter-sidebar-card {
     position: static;
