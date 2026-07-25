@@ -387,6 +387,14 @@ export default function StorefrontLayout() {
                   <ShoppingCart size={20} />
                   {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
                 </button>
+
+                <button 
+                  className="store-header-btn" 
+                  title="My Account" 
+                  onClick={() => navigate('/account')}
+                >
+                  <User size={20} />
+                </button>
               </div>
             </div>
           ) : (

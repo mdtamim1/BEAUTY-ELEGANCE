@@ -132,38 +132,23 @@ function CampaignProductCard({
       </div>
 
       {/* Card Body */}
-      <div className="cmp-card-body">
-        <div className="cmp-card-brand">{product.brand || 'Tamim Global'}</div>
+      <div className="new-popular-card-body" style={{ padding: '12px 10px 10px' }}>
         <Link to={`/product/${product.id}`} style={{ textDecoration: 'none' }}>
-          <h3 className="cmp-card-name">{product.name}</h3>
+          <h3 className="new-popular-card-title">{product.name}</h3>
         </Link>
 
-        {/* Stars */}
-        <div className="cmp-card-stars">
-          {[1, 2, 3, 4, 5].map(i => (
-            <Star key={i} size={12} fill={i <= Math.round(product.rating || 5) ? '#fbbf24' : 'none'} color="#fbbf24" />
-          ))}
-          <span className="cmp-card-reviews">({product.reviews || 0})</span>
-        </div>
-
         {/* Price + Cart */}
-        <div className="cmp-card-price-row">
-          <div className="cmp-card-price-block">
-            <div className="cmp-price-new">৳{offerPrice.toLocaleString()}</div>
-            {product.price !== offerPrice && (
-              <div className="cmp-price-old">৳{product.price.toLocaleString()}</div>
-            )}
-            {saving > 0 && (
-              <div className="cmp-price-saving">Save ৳{saving.toLocaleString()} ({savingPct}%)</div>
-            )}
-          </div>
+        <div className="new-popular-card-footer" style={{ marginTop: '8px' }}>
+          <span className="new-popular-card-price">
+            Tk {Number(offerPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
           <button
-            className="cmp-add-btn"
+            className="new-popular-cart-icon-btn"
             onClick={() => addToCart && addToCart(productWithOffer)}
             disabled={!product.inStock}
+            title="Add to Cart"
           >
-            <ShoppingCart size={14} />
-            {product.inStock ? 'Add' : 'Sold'}
+            <ShoppingCart size={18} />
           </button>
         </div>
       </div>

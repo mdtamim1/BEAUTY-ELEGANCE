@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useOutletContext, Link, useLocation } from 'react-router-dom';
 import { Truck, Shield, RotateCcw, Headphones, Star, Heart, ShoppingCart, Zap,
   Smartphone, Shirt, Home as HomeIcon, Dumbbell, Sparkles, BookOpen,
   Monitor, Camera, Watch, Car, Baby, Flower, Palette, Music, Gamepad, Gift,
-  Grid3X3, ArrowRight, CheckCircle, AlertCircle, X, Maximize2
+  Grid3X3, ArrowRight, CheckCircle, AlertCircle, X, Maximize2, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import { CountdownTimer } from './CollectionPage';
@@ -438,42 +438,41 @@ export default function StorefrontHome() {
                 className={`fullscreen-slide ${banner.image ? 'has-image' : ''}`} 
                 style={{ 
                   background: banner.image 
-                    ? `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.75)), url(${banner.image}) center/cover no-repeat`
-                    : banner.gradient 
+                    ? `url(${banner.image}) center/cover no-repeat`
+                    : banner.gradient,
+                  cursor: banner.buttonLink ? 'pointer' : 'default'
+                }}
+                onClick={() => {
+                  if (banner.buttonLink) {
+                    if (banner.buttonLink.startsWith('#')) {
+                      document.getElementById(banner.buttonLink.slice(1))?.scrollIntoView({ behavior: 'smooth' });
+                    } else {
+                      window.location.href = banner.buttonLink;
+                    }
+                  }
                 }}
               >
-                <div className="fullscreen-slide-inner">
-                  <div className="slide-content-left" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
-                    <span className="slide-badge">
-                      <Zap size={14} /> {banner.tag}
-                    </span>
-                    <h1>{banner.title}</h1>
-                    <p>{banner.subtitle}</p>
-                    <div className="slide-action-row">
-                      <span className="slide-offer-highlight">{banner.offer}</span>
-                      <button 
-                        className="store-btn store-btn-white"
-                        onClick={() => {
-                          if (banner.buttonLink.startsWith('#')) {
-                            document.getElementById(banner.buttonLink.slice(1))?.scrollIntoView({ behavior: 'smooth' });
-                          } else {
-                            window.location.href = banner.buttonLink;
-                          }
-                        }}
-                      >
-                        {banner.buttonText}
-                      </button>
+                {!banner.image && (
+                  <div className="fullscreen-slide-inner">
+                    <div className="slide-content-left" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
+                      <span className="slide-badge">
+                        <Zap size={14} /> {banner.tag}
+                      </span>
+                      <h1>{banner.title}</h1>
+                      <p>{banner.subtitle}</p>
+                      <div className="slide-action-row">
+                        <span className="slide-offer-highlight">{banner.offer}</span>
+                        <button className="store-btn store-btn-white">
+                          {banner.buttonText}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="slide-visual-right">
+                      <div className="slide-glowing-circle" />
+                      <div className="slide-visual-badge">{banner.offer}</div>
                     </div>
                   </div>
-                  <div className="slide-visual-right">
-                    {!banner.image && (
-                      <>
-                        <div className="slide-glowing-circle" />
-                        <div className="slide-visual-badge">{banner.offer}</div>
-                      </>
-                    )}
-                  </div>
-                </div>
+                )}
               </div>
             ))}
           </div>
@@ -548,60 +547,73 @@ export default function StorefrontHome() {
         </div>
       </section>
 
-      {/* ---- TOP BRANDS Section ---- */}
-      <section className="top-brands-section">
-        <div className="top-brands-header">
-          <div className="top-brands-line" />
-          <h2 className="top-brands-title">TOP BRANDS</h2>
-          <div className="top-brands-line" />
-        </div>
-        <div className="top-brands-grid">
-          {dynamicTopBrands.map((item, idx) => (
-            <Link to={item.link} key={idx} className="top-brand-card">
-              <div className="top-brand-card-bg">
-                <img src={item.img} alt={item.brandName} />
+      {/* ---- TOP BRANDS Section (1-Line Slider with Touch & Scroll Buttons) ---- */}
+      {(() => {
+        const topBrandsRef = useRef<HTMLDivElement>(null);
+
+        const scrollBrands = (direction: 'left' | 'right') => {
+          if (topBrandsRef.current) {
+            const scrollAmount = direction === 'left' ? -280 : 280;
+            topBrandsRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+          }
+        };
+
+        return (
+          <section className="top-brands-section">
+            <div className="top-brands-header">
+              <div className="top-brands-line" />
+              <h2 className="top-brands-title">TOP BRANDS</h2>
+              <div className="top-brands-line" />
+            </div>
+
+            <div className="top-brands-slider-wrapper">
+              <button 
+                type="button" 
+                className="brands-scroll-btn prev"
+                onClick={() => scrollBrands('left')}
+                title="Scroll Left"
+              >
+                <ChevronLeft size={20} />
+              </button>
+
+              <div className="top-brands-grid horizontal-row-scroll" ref={topBrandsRef}>
+                {dynamicTopBrands.map((item, idx) => (
+                  <Link to={item.link} key={idx} className="top-brand-card">
+                    <div className="top-brand-card-bg">
+                      <img src={item.img} alt={item.brandName} />
+                    </div>
+                    <div className="top-brand-card-overlay" />
+                    <div className="top-brand-card-content">
+                      <h3 className="top-brand-name">{item.brandName}</h3>
+                    </div>
+                  </Link>
+                ))}
               </div>
-              <div className="top-brand-card-overlay" />
-              <div className="top-brand-card-content">
-                <span className="top-brand-category-label">{item.categoryName}</span>
-                <h3 className="top-brand-name">{item.brandName}</h3>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
+
+              <button 
+                type="button" 
+                className="brands-scroll-btn next"
+                onClick={() => scrollBrands('right')}
+                title="Scroll Right"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          </section>
+        );
+      })()}
 
       {/* ---- Most Selling & Trending 3D Banners ---- */}
       <section className="homepage-3d-banners-section">
         <Link to="/collection/most-selling" className="banner-3d-card banner-3d-most-selling" style={{ textDecoration: 'none' }}>
           <div className="banner-3d-card-inner">
-            <span className="banner-3d-badge">
-              <Zap size={13} /> Hot Deals
-            </span>
-            <div className="banner-3d-title-group">
-              <h2 className="banner-3d-title">Most Selling</h2>
-              <p className="banner-3d-subtitle">Our top selling products</p>
-            </div>
-            <span className="banner-3d-btn">
-              Explore Collection &rarr;
-            </span>
-            <div className="banner-3d-shape" />
+            <h2 className="banner-3d-title">Most Selling</h2>
           </div>
         </Link>
 
         <Link to="/collection/trending" className="banner-3d-card banner-3d-trending" style={{ textDecoration: 'none' }}>
           <div className="banner-3d-card-inner">
-            <span className="banner-3d-badge">
-              <Sparkles size={13} /> Popular
-            </span>
-            <div className="banner-3d-title-group">
-              <h2 className="banner-3d-title">Trending</h2>
-              <p className="banner-3d-subtitle">Trending collections of the season</p>
-            </div>
-            <span className="banner-3d-btn">
-              Explore Collection &rarr;
-            </span>
-            <div className="banner-3d-shape" />
+            <h2 className="banner-3d-title">Trending</h2>
           </div>
         </Link>
       </section>
@@ -816,13 +828,14 @@ export default function StorefrontHome() {
                   height={400}
                 />
                 <button
-                  className="new-popular-expand-btn"
+                  className={`product-card-wishlist ${wishlist?.includes(product.id) ? 'active' : ''}`}
                   onClick={(e) => {
                     e.preventDefault();
+                    toggleWishlist(product.id);
                   }}
-                  title="Quick View"
+                  title="Wishlist"
                 >
-                  <Maximize2 size={14} />
+                  <Heart size={16} fill={wishlist?.includes(product.id) ? 'currentColor' : 'none'} />
                 </button>
               </div>
               <div className="new-popular-card-body">

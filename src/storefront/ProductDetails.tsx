@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useOutletContext } from 'react-router-dom';
-import { ShoppingCart, Heart, Share2, Star, CheckCircle, Shield, Truck, RotateCcw, ChevronRight, Smartphone, Phone, MessageCircle, X, User, MapPin, Package, CreditCard, ArrowRight, Minus, Plus, Headphones, Store, Send, Eye } from 'lucide-react';
+import { ShoppingCart, Heart, Share2, Star, CheckCircle, Shield, Truck, RotateCcw, ChevronLeft, ChevronRight, Smartphone, Phone, MessageCircle, X, User, MapPin, Package, CreditCard, ArrowRight, Minus, Plus, Headphones, Store, Send, Eye } from 'lucide-react';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import { addOrder } from '../mock/data';
 import { sendOrderToBackend, fetchProductByIdFromBackend, fetchChatHistory, validateCouponCode, fetchCampaignsFromBackend } from '../services/api';
@@ -832,22 +832,71 @@ export default function ProductDetails() {
       {/* Main Grid */}
       <div className="splayd-pdp-grid">
         {/* Gallery */}
-        <div className="splayd-pdp-gallery-wrap">
-          <div className="splayd-pdp-thumbnails-strip">
-            {(product.gallery && product.gallery.length > 0 ? product.gallery : [product.image]).map((img: string, i: number) => (
-              <button 
-                key={i} 
-                className={`splayd-pdp-thumb-btn ${activeImage === img ? 'active' : ''}`}
-                onClick={() => setActiveImage(img)}
-              >
-                <img src={img} alt={`Thumbnail ${i+1}`} />
-              </button>
-            ))}
-          </div>
-          <div className="splayd-pdp-main-img-box">
-            <img src={activeImage || product.image} alt={product.name} />
-          </div>
-        </div>
+        {(() => {
+          const galleryList = product.gallery && product.gallery.length > 0 ? product.gallery : [product.image];
+          const activeIdx = galleryList.findIndex((img: string) => img === activeImage);
+          const currentIdx = activeIdx >= 0 ? activeIdx : 0;
+
+          const handlePrevImg = (e: React.MouseEvent) => {
+            e.stopPropagation();
+            const prevIndex = (currentIdx - 1 + galleryList.length) % galleryList.length;
+            setActiveImage(galleryList[prevIndex]);
+          };
+
+          const handleNextImg = (e: React.MouseEvent) => {
+            e.stopPropagation();
+            const nextIndex = (currentIdx + 1) % galleryList.length;
+            setActiveImage(galleryList[nextIndex]);
+          };
+
+          return (
+            <div className="splayd-pdp-gallery-wrap">
+              <div className="splayd-pdp-main-img-box">
+                {/* 3D Image Flip Container */}
+                <div key={activeImage || product.image} className="pdp-3d-img-container">
+                  <img src={activeImage || product.image} alt={product.name} className="pdp-3d-main-image" />
+                </div>
+
+                {/* Left & Right Product Image Scroll Navigation Arrow Buttons */}
+                {galleryList.length > 1 && (
+                  <>
+                    <button 
+                      type="button" 
+                      className="pdp-img-nav-btn prev" 
+                      onClick={handlePrevImg}
+                      title="Previous Image"
+                    >
+                      <ChevronLeft size={22} />
+                    </button>
+                    <button 
+                      type="button" 
+                      className="pdp-img-nav-btn next" 
+                      onClick={handleNextImg}
+                      title="Next Image"
+                    >
+                      <ChevronRight size={22} />
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Horizontal Side-Scroll Thumbnail Strip */}
+              {galleryList.length > 1 && (
+                <div className="splayd-pdp-thumbnails-strip">
+                  {galleryList.map((img: string, i: number) => (
+                    <button 
+                      key={i} 
+                      className={`splayd-pdp-thumb-btn ${activeImage === img ? 'active' : ''}`}
+                      onClick={() => setActiveImage(img)}
+                    >
+                      <img src={img} alt={`Thumbnail ${i+1}`} />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Right Product Details Info */}
         <div className="splayd-pdp-info-col">

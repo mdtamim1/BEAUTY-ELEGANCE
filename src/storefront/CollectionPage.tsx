@@ -121,7 +121,7 @@ function matchesCategory(productCategory: string, targetCategory: string): boole
   const tNorm = t.replace(/[^a-z0-9]/g, '');
   if (pNorm === tNorm) return true;
 
-  // Singular / Plural handling (e.g. "shoes" vs "shoe", "pants" vs "pant", "perfumes" vs "perfume")
+  // Singular / Plural handling
   const pSingular = pNorm.endsWith('s') ? pNorm.slice(0, -1) : pNorm;
   const tSingular = tNorm.endsWith('s') ? tNorm.slice(0, -1) : tNorm;
   if (pSingular === tSingular && pSingular.length > 2) return true;
@@ -130,16 +130,16 @@ function matchesCategory(productCategory: string, targetCategory: string): boole
   if (pSingular.includes(tSingular) || tSingular.includes(pSingular)) return true;
 
   // Synonyms & Aliases
-  if ((tNorm.includes('shoe') || tNorm.includes('sneaker') || tNorm.includes('footwear')) && 
+  if ((tNorm.includes('shoe') || tNorm.includes('sneaker') || tNorm.includes('footwear')) &&
       (pNorm.includes('shoe') || pNorm.includes('sneaker') || pNorm.includes('footwear'))) return true;
   
-  if ((tNorm.includes('fitness') || tNorm.includes('dumb') || tNorm.includes('gym') || tNorm.includes('equip')) && 
+  if ((tNorm.includes('fitness') || tNorm.includes('dumb') || tNorm.includes('gym') || tNorm.includes('equip')) &&
       (pNorm.includes('fit') || pNorm.includes('gym') || pNorm.includes('dumb') || pNorm.includes('equip'))) return true;
   
-  if ((tNorm.includes('wear') || tNorm.includes('cloth') || tNorm.includes('shirt') || tNorm.includes('pant') || tNorm.includes('dress') || tNorm.includes('panjabi')) && 
+  if ((tNorm.includes('wear') || tNorm.includes('cloth') || tNorm.includes('shirt') || tNorm.includes('pant') || tNorm.includes('dress') || tNorm.includes('panjabi')) &&
       (pNorm.includes('wear') || pNorm.includes('cloth') || pNorm.includes('shirt') || pNorm.includes('pant') || pNorm.includes('dress') || pNorm.includes('panjabi') || pNorm.includes('jersey'))) return true;
   
-  if ((tNorm.includes('ball') || tNorm.includes('game') || tNorm.includes('footbal') || tNorm.includes('basket')) && 
+  if ((tNorm.includes('ball') || tNorm.includes('game') || tNorm.includes('footbal') || tNorm.includes('basket')) &&
       (pNorm.includes('ball') || pNorm.includes('game') || pNorm.includes('footbal') || pNorm.includes('basket'))) return true;
 
   return false;
@@ -199,7 +199,7 @@ export default function CollectionPage() {
   const isAllCategoriesPage = !slug || slug === 'all' || slug === 'categories';
   const isSpecialCollection = slug ? Boolean(SPECIAL_COLLECTION_SLUGS[slug.toLowerCase()]) : false;
 
-  // Dynamic Category list combining storefront config categories and product categories
+  // Dynamic Category list
   const dynamicCategories = useMemo(() => {
     const publishedProducts = config.products.filter(p => p.published);
     const catMap = new Map<string, { id: number | string; name: string; count: number; image: string; slug: string }>();
@@ -353,13 +353,11 @@ export default function CollectionPage() {
     window.scrollTo(0, 0);
   }, [slug, navLink, isAllCategoriesPage, isSpecialCollection, dynamicCategories, searchParams]);
 
-  // Filter Products by Active Category / Special Collection + Sidebar Options
+  // Filter Products
   const filteredProducts = useMemo(() => {
     let result = [...products];
-
     const slugLower = (slug || '').toLowerCase();
 
-    // Special collections handling
     if (slugLower === 'most-selling') {
       if (config.mostSellingProductIds && config.mostSellingProductIds.length > 0) {
         const setIds = new Set(config.mostSellingProductIds.map(id => Number(id)));
@@ -381,7 +379,6 @@ export default function CollectionPage() {
     } else if (slugLower === 'popular-order') {
       result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
     } else if (!isAllCategoriesPage && !isSpecialCollection) {
-      // Real Category filtering
       const currentCat = activeCategoryTitle;
       if (currentCat && currentCat !== 'All') {
         result = result.filter(p => {
@@ -396,17 +393,9 @@ export default function CollectionPage() {
       });
     }
 
-    // Min Price Filter
-    if (minPrice && !isNaN(Number(minPrice))) {
-      result = result.filter(p => p.price >= Number(minPrice));
-    }
+    if (minPrice && !isNaN(Number(minPrice))) result = result.filter(p => p.price >= Number(minPrice));
+    if (maxPrice && !isNaN(Number(maxPrice))) result = result.filter(p => p.price <= Number(maxPrice));
 
-    // Max Price Filter
-    if (maxPrice && !isNaN(Number(maxPrice))) {
-      result = result.filter(p => p.price <= Number(maxPrice));
-    }
-
-    // Size Filter
     if (selectedSizes.length > 0) {
       result = result.filter(p => {
         if (!p.sizes || !Array.isArray(p.sizes)) return true;
@@ -417,20 +406,12 @@ export default function CollectionPage() {
       });
     }
 
-    // Brand Filter
-    if (selectedBrands.length > 0) {
-      result = result.filter(p => p.brand && selectedBrands.includes(p.brand));
-    }
+    if (selectedBrands.length > 0) result = result.filter(p => p.brand && selectedBrands.includes(p.brand));
+    if (inStockOnly) result = result.filter(p => p.inStock !== false && (p.stock === undefined || p.stock > 0));
 
-    // Stock Filter
-    if (inStockOnly) {
-      result = result.filter(p => p.inStock !== false && (p.stock === undefined || p.stock > 0));
-    }
-
-    // Global Search Bar Query
     if (searchQuery && searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
-      result = result.filter(p => 
+      result = result.filter(p =>
         (p.name && p.name.toLowerCase().includes(q)) ||
         (p.category && p.category.toLowerCase().includes(q)) ||
         (p.brand && p.brand.toLowerCase().includes(q)) ||
@@ -438,14 +419,9 @@ export default function CollectionPage() {
       );
     }
 
-    // Sorting
-    if (sortBy === 'price-low') {
-      result.sort((a, b) => a.price - b.price);
-    } else if (sortBy === 'price-high') {
-      result.sort((a, b) => b.price - a.price);
-    } else if (sortBy === 'rating') {
-      result.sort((a, b) => (b.rating || 5) - (a.rating || 5));
-    }
+    if (sortBy === 'price-low') result.sort((a, b) => a.price - b.price);
+    else if (sortBy === 'price-high') result.sort((a, b) => b.price - a.price);
+    else if (sortBy === 'rating') result.sort((a, b) => (b.rating || 5) - (a.rating || 5));
 
     return result;
   }, [products, isAllCategoriesPage, isSpecialCollection, selectedCategory, activeCategoryTitle, slug, config.mostSellingProductIds, config.trendingProductIds, minPrice, maxPrice, selectedSizes, selectedBrands, inStockOnly, searchQuery, sortBy]);
@@ -456,15 +432,11 @@ export default function CollectionPage() {
   };
 
   const toggleSize = (size: string) => {
-    setSelectedSizes(prev => 
-      prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]
-    );
+    setSelectedSizes(prev => prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]);
   };
 
   const toggleBrand = (brand: string) => {
-    setSelectedBrands(prev => 
-      prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]
-    );
+    setSelectedBrands(prev => prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]);
   };
 
   const resetFilters = () => {
@@ -485,219 +457,133 @@ export default function CollectionPage() {
         slug={slug ? `collection/${slug}` : 'categories'}
         keywords={`${activeCategoryTitle}, Tamim Global ${activeCategoryTitle}, Buy ${activeCategoryTitle} Bangladesh, Sports Equipment, Fitness Gear BD`}
       />
-      {/* Breadcrumb Navigation */}
-      <nav className="collection-breadcrumb">
-        <Link to="/">Home</Link>
-        <ChevronRight size={14} />
-        <Link to="/categories">Categories</Link>
-        {!isAllCategoriesPage && (
-          <>
-            <ChevronRight size={14} />
-            <span>{activeCategoryTitle}</span>
-          </>
-        )}
-      </nav>
 
-      {/* Conditionally Render Top Category Banner & Grid ON /categories ONLY */}
-      {isAllCategoriesPage ? (
-        <>
-          {/* Top Banner */}
-          <div className="category-page-hero">
-            <div className="category-hero-content">
-              <span className="category-hero-badge">BROWSE CATEGORIES</span>
-              <h1 className="category-hero-title">Shop By Category</h1>
-              <p className="category-hero-subtitle">
-                Find the perfect items for your lifestyle from our wide range of store categories.
-              </p>
-            </div>
-            <div className="category-hero-media">
-              <img 
-                src="https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80" 
-                alt="Shop By Category" 
-              />
-            </div>
-          </div>
+      {/* ── Clean Centered Page Title Hero ── */}
+      <div className="col-page-hero">
+        <h1 className="col-page-title">{activeCategoryTitle}</h1>
+        <p className="col-page-meta">
+          {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'} available
+        </p>
+      </div>
 
-          {/* Dynamic Category Cards Grid */}
-          <div className="category-cards-section">
-            <div className="category-cards-grid">
-              {dynamicCategories.map(cat => (
-                <div
-                  key={cat.slug}
-                  className={`category-card-item ${selectedCategory.toLowerCase() === cat.name.toLowerCase() ? 'active' : ''}`}
-                  onClick={() => handleCategoryCardClick(cat)}
-                >
-                  <div className="category-card-img-wrap">
-                    <img src={cat.image} alt={cat.name} />
-                  </div>
-                  <h3 className="category-card-title">{cat.name}</h3>
-                  <span className="category-card-count">{cat.count} Products</span>
-                  <button
-                    type="button"
-                    className="category-card-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCategoryCardClick(cat);
-                    }}
-                  >
-                    <span>Shop Now</span>
-                    <ArrowRight size={12} />
-                  </button>
+      {/* Category Cards Grid - only on /categories page */}
+      {isAllCategoriesPage && (
+        <div className="category-cards-section">
+          <div className="category-cards-grid">
+            {dynamicCategories.map(cat => (
+              <div
+                key={cat.slug}
+                className={`category-card-item ${selectedCategory.toLowerCase() === cat.name.toLowerCase() ? 'active' : ''}`}
+                onClick={() => handleCategoryCardClick(cat)}
+              >
+                <div className="category-card-img-wrap">
+                  <img src={cat.image} alt={cat.name} />
                 </div>
-              ))}
-            </div>
-          </div>
-        </>
-      ) : (
-        /* Dedicated Category Header for specific Category Product Page */
-        <div className="collection-header" style={{ marginBottom: '24px' }}>
-          <div className="collection-header-text">
-            <h1 className="collection-title" style={{ textTransform: 'capitalize' }}>{activeCategoryTitle}</h1>
-            <p className="collection-subtitle">
-              Explore our premium {activeCategoryTitle.toLowerCase()} collection — {filteredProducts.length} products available
-            </p>
+                <h3 className="category-card-title">{cat.name}</h3>
+                <span className="category-card-count">{cat.count} Products</span>
+                <button
+                  type="button"
+                  className="category-card-btn"
+                  onClick={(e) => { e.stopPropagation(); handleCategoryCardClick(cat); }}
+                >
+                  <span>Shop Now</span>
+                  <ArrowRight size={12} />
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Main Layout: Left Filter Sidebar + Right Products Grid */}
+      {/* ── Main Layout: Left Filter + Right Products ── */}
       <div className="collection-main-layout" id="collection-products-section">
-        {/* ---- LEFT FILTER SIDEBAR (Desktop) ---- */}
+
+        {/* ── LEFT FILTER SIDEBAR ── */}
         <aside className="filter-sidebar-card">
           <div className="filter-sidebar-header">
             <h3 className="filter-sidebar-title">
-              <Filter size={18} /> Filter Options
+              <Filter size={16} /> Filters
             </h3>
             {(selectedCategory !== 'All' || minPrice || maxPrice || selectedSizes.length > 0 || selectedBrands.length > 0 || inStockOnly) && (
-              <button className="filter-clear-btn" onClick={resetFilters}>
-                Clear All
-              </button>
+              <button className="filter-clear-btn" onClick={resetFilters}>Clear All</button>
             )}
           </div>
 
-          {/* Pricing Filter */}
+          {/* Price */}
           <div className="filter-group">
-            <h4 className="filter-group-title">Pricing (Tk)</h4>
+            <h4 className="filter-group-title">Price (৳)</h4>
             <div className="filter-price-inputs">
-              <input
-                type="number"
-                placeholder="Min Price"
-                value={minPrice}
-                onChange={e => setMinPrice(e.target.value)}
-                className="filter-price-input"
-              />
-              <span>-</span>
-              <input
-                type="number"
-                placeholder="Max Price"
-                value={maxPrice}
-                onChange={e => setMaxPrice(e.target.value)}
-                className="filter-price-input"
-              />
+              <input type="number" placeholder="Min" value={minPrice} onChange={e => setMinPrice(e.target.value)} className="filter-price-input" />
+              <span>—</span>
+              <input type="number" placeholder="Max" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} className="filter-price-input" />
             </div>
             <div className="filter-price-presets">
-              <button
-                type="button"
-                className={`filter-price-preset-btn ${maxPrice === '1000' && !minPrice ? 'active' : ''}`}
-                onClick={() => { setMinPrice(''); setMaxPrice('1000'); }}
-              >
-                Under ৳1,000
-              </button>
-              <button
-                type="button"
-                className={`filter-price-preset-btn ${minPrice === '1000' && maxPrice === '3000' ? 'active' : ''}`}
-                onClick={() => { setMinPrice('1000'); setMaxPrice('3000'); }}
-              >
-                ৳1,000 - ৳3,000
-              </button>
-              <button
-                type="button"
-                className={`filter-price-preset-btn ${minPrice === '3000' && maxPrice === '5000' ? 'active' : ''}`}
-                onClick={() => { setMinPrice('3000'); setMaxPrice('5000'); }}
-              >
-                ৳3,000 - ৳5,000
-              </button>
-              <button
-                type="button"
-                className={`filter-price-preset-btn ${minPrice === '5000' && !maxPrice ? 'active' : ''}`}
-                onClick={() => { setMinPrice('5000'); setMaxPrice(''); }}
-              >
-                Above ৳5,000
-              </button>
+              <button type="button" className={`filter-price-preset-btn ${maxPrice === '1000' && !minPrice ? 'active' : ''}`} onClick={() => { setMinPrice(''); setMaxPrice('1000'); }}>Under ৳1,000</button>
+              <button type="button" className={`filter-price-preset-btn ${minPrice === '1000' && maxPrice === '3000' ? 'active' : ''}`} onClick={() => { setMinPrice('1000'); setMaxPrice('3000'); }}>৳1,000 – ৳3,000</button>
+              <button type="button" className={`filter-price-preset-btn ${minPrice === '3000' && maxPrice === '5000' ? 'active' : ''}`} onClick={() => { setMinPrice('3000'); setMaxPrice('5000'); }}>৳3,000 – ৳5,000</button>
+              <button type="button" className={`filter-price-preset-btn ${minPrice === '5000' && !maxPrice ? 'active' : ''}`} onClick={() => { setMinPrice('5000'); setMaxPrice(''); }}>Above ৳5,000</button>
             </div>
           </div>
 
-          {/* Size Filter */}
+          {/* Size */}
           <div className="filter-group">
             <h4 className="filter-group-title">Size</h4>
             <div className="filter-size-grid">
               {availableSizes.map(size => (
-                <button
-                  type="button"
-                  key={size}
-                  className={`filter-size-pill ${selectedSizes.includes(size) ? 'active' : ''}`}
-                  onClick={() => toggleSize(size)}
-                >
+                <button type="button" key={size} className={`filter-size-pill ${selectedSizes.includes(size) ? 'active' : ''}`} onClick={() => toggleSize(size)}>
                   {size}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Brand Filter */}
+          {/* Brand */}
           <div className="filter-group">
-            <h4 className="filter-group-title">Brands</h4>
+            <h4 className="filter-group-title">Brand</h4>
             <div className="filter-brand-list">
               {availableBrands.map(brand => (
                 <label key={brand} className="filter-checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={selectedBrands.includes(brand)}
-                    onChange={() => toggleBrand(brand)}
-                  />
+                  <input type="checkbox" checked={selectedBrands.includes(brand)} onChange={() => toggleBrand(brand)} />
                   <span>{brand}</span>
                 </label>
               ))}
             </div>
           </div>
 
-          {/* Stock Filter */}
+          {/* In Stock */}
           <div className="filter-group">
             <label className="filter-checkbox-label" style={{ fontWeight: 700, color: '#18181b' }}>
-              <input
-                type="checkbox"
-                checked={inStockOnly}
-                onChange={e => setInStockOnly(e.target.checked)}
-              />
+              <input type="checkbox" checked={inStockOnly} onChange={e => setInStockOnly(e.target.checked)} />
               <span>In Stock Only</span>
             </label>
           </div>
         </aside>
 
-        {/* ---- RIGHT PRODUCTS COLUMN ---- */}
+        {/* ── RIGHT PRODUCTS COLUMN ── */}
         <div className="collection-products-column">
-          {/* Top Control Bar */}
-          <div className="collection-toolbar" style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <button 
-                type="button" 
-                className="filter-drawer-trigger-btn"
+
+          {/* Toolbar */}
+          <div className="collection-toolbar">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {/* Mobile Filter Button */}
+              <button
+                type="button"
+                className="mobile-filter-open-btn"
                 onClick={() => setIsFilterDrawerOpen(true)}
               >
-                <Filter size={16} />
-                <span>Filter Options</span>
+                <Filter size={14} />
+                <span>Filter</span>
                 {(selectedCategory !== 'All' || minPrice || maxPrice || selectedSizes.length > 0 || selectedBrands.length > 0 || inStockOnly) && (
-                  <span className="filter-active-badge">Active</span>
+                  <span className="filter-active-dot" />
                 )}
               </button>
-              <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#71717a' }}>
-                Showing <strong>{filteredProducts.length}</strong> products
+              <span className="collection-product-count">
+                <strong>{filteredProducts.length}</strong> products
               </span>
             </div>
-
             <div className="sort-control">
-              <SlidersHorizontal size={14} />
-              <span>Sort by:</span>
+              <SlidersHorizontal size={13} />
+              <span>Sort:</span>
               <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="sort-select">
                 <option value="default">Featured</option>
                 <option value="price-low">Price: Low to High</option>
@@ -707,18 +593,13 @@ export default function CollectionPage() {
             </div>
           </div>
 
-          {/* Unified Ultra-Premium Product Grid */}
+          {/* Product Grid */}
           {filteredProducts.length > 0 ? (
             <div className="products-grid collection-products-grid">
               {filteredProducts.map((product: any) => (
-                <Link to={`/product/${product.id}`} key={product.id} className="product-card" style={{ textDecoration: 'none' }}>
-                  <div className="product-card-image-container">
-                    <img src={product.image || product.imageUrl} alt={product.name || product.title} className="product-card-image" />
-                    {product.badge && (
-                      <span className="product-card-badge sale">
-                        {product.badge === 'sale' ? `Sale! -${Math.round((1 - product.price / (product.originalPrice || product.price)) * 100)}%` : product.badge}
-                      </span>
-                    )}
+                <Link to={`/product/${product.id}`} key={product.id} className="new-popular-card">
+                  <div className="new-popular-img-box">
+                    <img src={product.image || product.imageUrl} alt={product.name || product.title} className="new-popular-img" />
                     <button
                       className={`product-card-wishlist ${wishlist.includes(product.id) ? 'active' : ''}`}
                       onClick={(e) => { e.preventDefault(); toggleWishlist(product.id); }}
@@ -727,25 +608,14 @@ export default function CollectionPage() {
                       <Heart size={16} fill={wishlist.includes(product.id) ? 'currentColor' : 'none'} />
                     </button>
                   </div>
-
-                  <div className="product-card-body">
-                    <div className="product-card-category">{product.category || product.categoryName}</div>
-                    <div className="product-card-name">{product.name || product.title}</div>
-                    
-                    <div className="product-card-rating">
-                      <StarRating rating={product.rating || 5} />
-                      <span className="product-card-reviews">({product.reviews || 12})</span>
-                    </div>
-
-                    <div className="product-card-footer">
-                      <div className="product-card-price-group">
-                        <span className="product-card-price">৳{product.price.toLocaleString()}</span>
-                        {product.originalPrice && product.originalPrice > product.price && (
-                          <span className="product-card-original-price">৳{product.originalPrice.toLocaleString()}</span>
-                        )}
-                      </div>
+                  <div className="new-popular-card-body">
+                    <h3 className="new-popular-card-title">{product.name || product.title}</h3>
+                    <div className="new-popular-card-footer">
+                      <span className="new-popular-card-price">
+                        Tk {Number(product.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
                       <button
-                        className="product-card-cart-btn"
+                        className="new-popular-cart-icon-btn"
                         onClick={(e) => { e.preventDefault(); addToCart(product); }}
                         title="Add to Cart"
                       >
@@ -757,28 +627,25 @@ export default function CollectionPage() {
               ))}
             </div>
           ) : (
-            <div className="collection-empty" style={{ padding: '80px 24px' }}>
-              <ShoppingCart size={48} style={{ opacity: 0.2, marginBottom: 16 }} />
+            <div className="collection-empty">
+              <ShoppingCart size={48} style={{ opacity: 0.18, marginBottom: 16 }} />
               <h3>No products found</h3>
-              <p>No products currently available in this category.</p>
+              <p>No products currently available in this collection.</p>
               <button className="store-btn store-btn-primary" onClick={resetFilters} style={{ background: '#18181b', color: '#ffffff' }}>
-                <RotateCcw size={14} /> Reset All Filters
+                <RotateCcw size={14} /> Reset Filters
               </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Slide-Over Off-Canvas Filter Sidebar Drawer */}
-      <div 
-        className={`filter-drawer-overlay ${isFilterDrawerOpen ? 'open' : ''}`} 
-        onClick={() => setIsFilterDrawerOpen(false)}
-      >
+      {/* ── Mobile Off-Canvas Filter Drawer ── */}
+      <div className={`filter-drawer-overlay ${isFilterDrawerOpen ? 'open' : ''}`} onClick={() => setIsFilterDrawerOpen(false)}>
         <div className="filter-drawer-sidebar" onClick={(e) => e.stopPropagation()}>
           <div className="filter-drawer-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Filter size={20} />
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>Filter Options</h3>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>Filters</h3>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               {(selectedCategory !== 'All' || minPrice || maxPrice || selectedSizes.length > 0 || selectedBrands.length > 0 || inStockOnly) && (
@@ -789,113 +656,49 @@ export default function CollectionPage() {
               </button>
             </div>
           </div>
-
           <div className="filter-drawer-body">
-            {/* Pricing Filter */}
             <div className="filter-group">
-              <h4 className="filter-group-title">Pricing (Tk)</h4>
+              <h4 className="filter-group-title">Price (৳)</h4>
               <div className="filter-price-inputs">
-                <input
-                  type="number"
-                  placeholder="Min Price"
-                  value={minPrice}
-                  onChange={e => setMinPrice(e.target.value)}
-                  className="filter-price-input"
-                />
-                <span>-</span>
-                <input
-                  type="number"
-                  placeholder="Max Price"
-                  value={maxPrice}
-                  onChange={e => setMaxPrice(e.target.value)}
-                  className="filter-price-input"
-                />
+                <input type="number" placeholder="Min" value={minPrice} onChange={e => setMinPrice(e.target.value)} className="filter-price-input" />
+                <span>—</span>
+                <input type="number" placeholder="Max" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} className="filter-price-input" />
               </div>
               <div className="filter-price-presets">
-                <button
-                  type="button"
-                  className={`filter-price-preset-btn ${maxPrice === '1000' && !minPrice ? 'active' : ''}`}
-                  onClick={() => { setMinPrice(''); setMaxPrice('1000'); }}
-                >
-                  Under ৳1,000
-                </button>
-                <button
-                  type="button"
-                  className={`filter-price-preset-btn ${minPrice === '1000' && maxPrice === '3000' ? 'active' : ''}`}
-                  onClick={() => { setMinPrice('1000'); setMaxPrice('3000'); }}
-                >
-                  ৳1,000 - ৳3,000
-                </button>
-                <button
-                  type="button"
-                  className={`filter-price-preset-btn ${minPrice === '3000' && maxPrice === '5000' ? 'active' : ''}`}
-                  onClick={() => { setMinPrice('3000'); setMaxPrice('5000'); }}
-                >
-                  ৳3,000 - ৳5,000
-                </button>
-                <button
-                  type="button"
-                  className={`filter-price-preset-btn ${minPrice === '5000' && !maxPrice ? 'active' : ''}`}
-                  onClick={() => { setMinPrice('5000'); setMaxPrice(''); }}
-                >
-                  Above ৳5,000
-                </button>
+                <button type="button" className={`filter-price-preset-btn ${maxPrice === '1000' && !minPrice ? 'active' : ''}`} onClick={() => { setMinPrice(''); setMaxPrice('1000'); }}>Under ৳1,000</button>
+                <button type="button" className={`filter-price-preset-btn ${minPrice === '1000' && maxPrice === '3000' ? 'active' : ''}`} onClick={() => { setMinPrice('1000'); setMaxPrice('3000'); }}>৳1,000 – ৳3,000</button>
+                <button type="button" className={`filter-price-preset-btn ${minPrice === '3000' && maxPrice === '5000' ? 'active' : ''}`} onClick={() => { setMinPrice('3000'); setMaxPrice('5000'); }}>৳3,000 – ৳5,000</button>
+                <button type="button" className={`filter-price-preset-btn ${minPrice === '5000' && !maxPrice ? 'active' : ''}`} onClick={() => { setMinPrice('5000'); setMaxPrice(''); }}>Above ৳5,000</button>
               </div>
             </div>
-
-            {/* Size Filter */}
             <div className="filter-group">
               <h4 className="filter-group-title">Size</h4>
               <div className="filter-size-grid">
                 {availableSizes.map(size => (
-                  <button
-                    type="button"
-                    key={size}
-                    className={`filter-size-pill ${selectedSizes.includes(size) ? 'active' : ''}`}
-                    onClick={() => toggleSize(size)}
-                  >
-                    {size}
-                  </button>
+                  <button type="button" key={size} className={`filter-size-pill ${selectedSizes.includes(size) ? 'active' : ''}`} onClick={() => toggleSize(size)}>{size}</button>
                 ))}
               </div>
             </div>
-
-            {/* Brand Filter */}
             <div className="filter-group">
-              <h4 className="filter-group-title">Brands</h4>
+              <h4 className="filter-group-title">Brand</h4>
               <div className="filter-brand-list">
                 {availableBrands.map(brand => (
                   <label key={brand} className="filter-checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={selectedBrands.includes(brand)}
-                      onChange={() => toggleBrand(brand)}
-                    />
+                    <input type="checkbox" checked={selectedBrands.includes(brand)} onChange={() => toggleBrand(brand)} />
                     <span>{brand}</span>
                   </label>
                 ))}
               </div>
             </div>
-
-            {/* Stock Filter */}
             <div className="filter-group">
               <label className="filter-checkbox-label" style={{ fontWeight: 700, color: '#18181b' }}>
-                <input
-                  type="checkbox"
-                  checked={inStockOnly}
-                  onChange={e => setInStockOnly(e.target.checked)}
-                />
+                <input type="checkbox" checked={inStockOnly} onChange={e => setInStockOnly(e.target.checked)} />
                 <span>In Stock Only</span>
               </label>
             </div>
           </div>
-
           <div className="filter-drawer-footer">
-            <button 
-              type="button" 
-              className="filter-apply-btn" 
-              onClick={() => setIsFilterDrawerOpen(false)}
-            >
+            <button type="button" className="filter-apply-btn" onClick={() => setIsFilterDrawerOpen(false)}>
               Show {filteredProducts.length} Results
             </button>
           </div>
