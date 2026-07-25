@@ -560,16 +560,6 @@ export default function CollectionPage() {
         </div>
       )}
 
-      {/* Filter Trigger Button for Mobile & Quick Access */}
-      <button
-        type="button"
-        className="mobile-filter-toggle-btn"
-        onClick={() => setIsFilterDrawerOpen(true)}
-      >
-        <span><Filter size={16} /> Filter Products & Options</span>
-        <span>Open Sidebar ❯</span>
-      </button>
-
       {/* Main Layout: Left Filter Sidebar + Right Products Grid */}
       <div className="collection-main-layout" id="collection-products-section">
         {/* ---- LEFT FILTER SIDEBAR (Desktop) ---- */}

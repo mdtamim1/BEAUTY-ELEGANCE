@@ -5449,14 +5449,26 @@
 @media (max-width: 992px) {
   .top-brands-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
+    gap: 12px;
   }
 }
 
 @media (max-width: 580px) {
   .top-brands-grid {
-    grid-template-columns: 1fr;
-    gap: 14px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .top-brand-card {
+    height: 120px !important;
+    padding: 12px 14px !important;
+    border-radius: 10px !important;
+  }
+  .top-brand-name {
+    font-size: 1.05rem !important;
+  }
+  .top-brand-category-label {
+    font-size: 0.62rem !important;
+    padding: 2px 6px !important;
   }
 }
 
@@ -6423,6 +6435,28 @@
   padding: 2px 6px;
   border-radius: 99px;
   text-transform: uppercase;
+}
+
+@media (max-width: 768px) {
+  .collection-page {
+    padding: 12px 12px 60px !important;
+  }
+  .collection-toolbar {
+    margin-bottom: 16px !important;
+    gap: 8px !important;
+  }
+  .filter-drawer-trigger-btn {
+    padding: 8px 12px !important;
+    font-size: 0.8rem !important;
+    border-radius: 8px !important;
+  }
+  .sort-control {
+    font-size: 0.8rem !important;
+  }
+  .sort-select {
+    padding: 4px 8px !important;
+    font-size: 0.8rem !important;
+  }
 }
 
 
