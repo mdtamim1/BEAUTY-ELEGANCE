@@ -245,36 +245,6 @@ export default function ProductDetails() {
     }
   }, [isChatDrawerOpen, customer]);
 
-  // Initialize and render Google Identity Services Button in Checkout Modal
-  useEffect(() => {
-    if (isCheckoutOpen && !customer) {
-      const initGsi = () => {
-        // @ts-ignore
-        if (window.google?.accounts?.id) {
-          // @ts-ignore
-          window.google.accounts.id.initialize({
-            client_id: "284151905011-fs0mh1j6rdug41p2hk882bjl1vq9nmb2.apps.googleusercontent.com",
-            callback: (response: any) => {
-              loginWithGmail(response.credential);
-            }
-          });
-          const btnElem = document.getElementById("google-checkout-signin-btn");
-          if (btnElem) {
-            // @ts-ignore
-            window.google.accounts.id.renderButton(
-              btnElem,
-              { theme: "outline", size: "large", width: btnElem.clientWidth || 300 }
-            );
-          }
-        }
-      };
-
-      initGsi();
-      const timer = setTimeout(initGsi, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [isCheckoutOpen, customer]);
-
   // Sync local storage & local state
   const syncChatData = (updated: any[]) => {
     localStorage.setItem('storefront_chats', JSON.stringify(updated));
@@ -1679,27 +1649,10 @@ export default function ProductDetails() {
                   </div>
                 </div>
 
-                {/* ── OPTIONAL GOOGLE SIGN-IN ── */}
-                {!customer && (
-                  <div className="pco-section">
-                    <div className="pco-section-label">
-                      <span className="pco-step-badge">২</span>
-                      দ্রুত লগইন (ঐচ্ছিক)
-                    </div>
-                    <div className="pco-google-block">
-                      <div className="pco-google-info">
-                        <div className="pco-google-title">Google দিয়ে লগইন করুন</div>
-                        <div className="pco-google-sub">লগইন করলে আপনার তথ্য স্বয়ংক্রিয়ভাবে পূরণ হবে এবং অর্ডার ট্র্যাক করতে পারবেন</div>
-                      </div>
-                      <div id="google-checkout-signin-btn" style={{ marginTop: '10px' }}></div>
-                    </div>
-                  </div>
-                )}
-
                 {/* ── CUSTOMER INFO ── */}
                 <div className="pco-section">
                   <div className="pco-section-label">
-                    <span className="pco-step-badge">{!customer ? '৩' : '২'}</span>
+                    <span className="pco-step-badge">২</span>
                     আপনার তথ্য
                   </div>
 
@@ -1790,7 +1743,7 @@ export default function ProductDetails() {
                 {/* ── DELIVERY ZONE ── */}
                 <div className="pco-section">
                   <div className="pco-section-label">
-                    <span className="pco-step-badge">{!customer ? '৪' : '৩'}</span>
+                    <span className="pco-step-badge">৩</span>
                     ডেলিভারি এলাকা
                   </div>
                   <div className="pco-delivery-grid">
@@ -1822,7 +1775,7 @@ export default function ProductDetails() {
                 {/* ── PAYMENT METHOD ── */}
                 <div className="pco-section">
                   <div className="pco-section-label">
-                    <span className="pco-step-badge">{!customer ? '৫' : '৪'}</span>
+                    <span className="pco-step-badge">৪</span>
                     পেমেন্ট পদ্ধতি
                   </div>
                   <div className="pco-payment-grid">
