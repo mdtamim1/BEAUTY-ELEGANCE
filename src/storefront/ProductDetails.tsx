@@ -47,6 +47,7 @@ export default function ProductDetails() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
   const [customerNote, setCustomerNote] = useState('');
   const [shippingLocation, setShippingLocation] = useState<'dhaka' | 'outside'>('dhaka');
   const [buyNowQty, setBuyNowQty] = useState<number>(1);
@@ -57,6 +58,7 @@ export default function ProductDetails() {
   const [nameEdited, setNameEdited] = useState(false);
   const [phoneEdited, setPhoneEdited] = useState(false);
   const [addressEdited, setAddressEdited] = useState(false);
+  const [emailEdited, setEmailEdited] = useState(false);
 
   // Coupon states
   const [promoCodeInput, setPromoCodeInput] = useState('');
@@ -242,6 +244,36 @@ export default function ProductDetails() {
       return () => clearTimeout(timer);
     }
   }, [isChatDrawerOpen, customer]);
+
+  // Initialize and render Google Identity Services Button in Checkout Modal
+  useEffect(() => {
+    if (isCheckoutOpen && !customer) {
+      const initGsi = () => {
+        // @ts-ignore
+        if (window.google?.accounts?.id) {
+          // @ts-ignore
+          window.google.accounts.id.initialize({
+            client_id: "284151905011-fs0mh1j6rdug41p2hk882bjl1vq9nmb2.apps.googleusercontent.com",
+            callback: (response: any) => {
+              loginWithGmail(response.credential);
+            }
+          });
+          const btnElem = document.getElementById("google-checkout-signin-btn");
+          if (btnElem) {
+            // @ts-ignore
+            window.google.accounts.id.renderButton(
+              btnElem,
+              { theme: "outline", size: "large", width: btnElem.clientWidth || 300 }
+            );
+          }
+        }
+      };
+
+      initGsi();
+      const timer = setTimeout(initGsi, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isCheckoutOpen, customer]);
 
   // Sync local storage & local state
   const syncChatData = (updated: any[]) => {
@@ -501,7 +533,7 @@ export default function ProductDetails() {
 
     const orderData = {
       customer: customerName,
-      email: customer?.email || customerPhone,
+      email: customerEmail || customer?.email || customerPhone,
       amount: total,
       items: buyNowQty,
       paymentMethod: paymentMethod === 'bkash' ? 'bKash (Send Money)' : paymentMethod === 'nagad' ? 'Nagad (Send Money)' : 'Cash on Delivery',
@@ -559,6 +591,7 @@ export default function ProductDetails() {
     setCustomerName('');
     setCustomerPhone('');
     setCustomerAddress('');
+    setCustomerEmail('');
     setCustomerNote('');
     setPaymentMethod('cod');
     setSenderNumber('');
@@ -569,6 +602,7 @@ export default function ProductDetails() {
     setNameEdited(false);
     setPhoneEdited(false);
     setAddressEdited(false);
+    setEmailEdited(false);
     setPromoCodeInput('');
     setAppliedCoupon(null);
     setCouponSuccess('');
@@ -587,6 +621,7 @@ export default function ProductDetails() {
           if (!nameEdited) setCustomerName(defaultAddr.name);
           if (!phoneEdited) setCustomerPhone(defaultAddr.phone);
           if (!addressEdited) setCustomerAddress(defaultAddr.address);
+          if (!emailEdited) setCustomerEmail(customer.email || '');
           return;
         }
       }
@@ -595,6 +630,7 @@ export default function ProductDetails() {
       if (!nameEdited) setCustomerName(customer.name || '');
       if (!phoneEdited) setCustomerPhone(customer.phone || '');
       if (!addressEdited) setCustomerAddress(customer.address || '');
+      if (!emailEdited) setCustomerEmail(customer.email || '');
     }
   }, [isCheckoutOpen, customer, nameEdited, phoneEdited, addressEdited]);
 
@@ -1516,161 +1552,177 @@ export default function ProductDetails() {
           </div>
         );
       })()}
+
       {/* Premium Checkout Modal Overlay */}
       {isCheckoutOpen && (
         <div className="pdp-checkout-overlay" onClick={closeCheckoutModal}>
           <div className="pdp-checkout-modal" onClick={e => e.stopPropagation()}>
-            <button className="pdp-checkout-close" onClick={closeCheckoutModal} aria-label="Close modal">
-              <X size={20} />
-            </button>
+            {/* Modal Header */}
+            <div className="pco-header">
+              <div className="pco-header-left">
+                <div className="pco-header-icon">
+                  <Shield size={18} />
+                </div>
+                <div>
+                  <div className="pco-header-title">Secure Order Form</div>
+                  <div className="pco-header-sub">SSL সুরক্ষিত · নিরাপদ পেমেন্ট</div>
+                </div>
+              </div>
+              <button className="pco-close-btn" onClick={closeCheckoutModal} aria-label="Close">
+                <X size={20} />
+              </button>
+            </div>
 
             {!checkoutSuccess ? (
-              <>
-                <div className="pdp-checkout-header">
-                  <h3>নিরাপদ অর্ডার ফরম (Secure Order Form)</h3>
-                  <p>অর্ডারটি সম্পন্ন করতে আপনার সঠিক তথ্য দিয়ে ফরমটি পূরণ করুন</p>
-                </div>
+              <form className="pco-form" onSubmit={handleCheckoutSubmit}>
 
-                <form className="pdp-checkout-form" onSubmit={handleCheckoutSubmit}>
-                  
-                  {/* Step 1: Order Summary */}
-                  <div className="pdp-checkout-summary">
-                    <div className="pdp-checkout-item">
-                      <img src={product.image} alt={product.name} className="pdp-checkout-item-img" />
-                      <div className="pdp-checkout-item-details">
-                        <div className="pdp-checkout-item-name">{product.name}</div>
-                        <div className="pdp-checkout-item-variant">রঙ: ডিফল্ট | সাইজ: {selectedSize || 'ফ্রি সাইজ'}</div>
-                        <div className="pdp-checkout-item-row">
-                          <div className="pdp-checkout-item-price">৳{product.price}</div>
-                          <div className="qty-control">
-                            <button type="button" className="qty-btn" onClick={() => setBuyNowQty(prev => Math.max(1, prev - 1))}>
-                              <Minus size={12} />
-                            </button>
-                            <div className="qty-val">{buyNowQty}</div>
-                            <button type="button" className="qty-btn" onClick={() => setBuyNowQty(prev => prev + 1)}>
-                              <Plus size={12} />
-                            </button>
-                          </div>
-                        </div>
+                {/* ── PRODUCT SUMMARY CARD ── */}
+                <div className="pco-section">
+                  <div className="pco-section-label">
+                    <span className="pco-step-badge">১</span>
+                    অর্ডার সামারি
+                  </div>
+                  <div className="pco-product-card">
+                    <img src={product.image} alt={product.name} className="pco-product-img" />
+                    <div className="pco-product-info">
+                      <div className="pco-product-name">{product.name}</div>
+                      <div className="pco-product-variant">সাইজ: {selectedSize || 'ফ্রি সাইজ'}</div>
+                      <div className="pco-product-price-row">
+                        <span className="pco-product-price">৳{Number(effectivePrice).toLocaleString('en-US')}</span>
+                        {product.originalPrice && Number(product.originalPrice) > Number(product.price) && (
+                          <span className="pco-product-old-price">৳{Number(product.originalPrice).toLocaleString('en-US')}</span>
+                        )}
                       </div>
                     </div>
-
-                    {(() => {
-                      const subtotal = product.price * buyNowQty;
-                      const deliveryCharge = shippingLocation === 'dhaka' 
-                        ? config.delivery.insideDhakaPrice 
-                        : config.delivery.outsideDhakaPrice;
-                      let discount = 0;
-                      if (appliedCoupon) {
-                        if (appliedCoupon.type === 'percentage') {
-                          discount = (subtotal * appliedCoupon.value) / 100;
-                        } else {
-                          discount = appliedCoupon.value;
-                        }
-                      }
-                      const checkoutTotal = subtotal + deliveryCharge - discount;
-
-                      return (
-                        <>
-                          <div className="pdp-checkout-totals">
-                            <div className="pdp-checkout-row">
-                              <span>পণ্যের মূল্য (Subtotal)</span>
-                              <span>৳{subtotal.toFixed(2)}</span>
-                            </div>
-                            <div className="pdp-checkout-row">
-                              <span>ডেলিভারি চার্জ (Shipping)</span>
-                              <span>৳{deliveryCharge.toFixed(2)}</span>
-                            </div>
-                            {discount > 0 && (
-                              <div className="pdp-checkout-row" style={{ color: '#16a34a', fontWeight: 600 }}>
-                                <span>ছাড় (Discount)</span>
-                                <span>-৳{discount.toFixed(2)}</span>
-                              </div>
-                            )}
-                            <div className="pdp-checkout-row total">
-                              <span>সর্বমোট (Total)</span>
-                              <span>৳{checkoutTotal.toFixed(2)}</span>
-                            </div>
-                          </div>
-
-                          {/* Coupon / Promo Code Form */}
-                          <div style={{ padding: '12px 14px', background: '#fafafa', borderTop: '1px dashed #e5e5e5', borderBottom: '1px dashed #e5e5e5', margin: '12px 0' }}>
-                            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--sf-text-secondary)', marginBottom: '8px' }}>প্রোমো কোড (Promo Code)</div>
-                            {appliedCoupon ? (
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '6px 10px', borderRadius: '6px' }}>
-                                <span style={{ fontSize: '0.78rem', color: '#16a34a', fontWeight: 600 }}>
-                                  '{appliedCoupon.code}' প্রয়োগ করা হয়েছে ({appliedCoupon.type === 'percentage' ? `${appliedCoupon.value}%` : `৳${appliedCoupon.value}`} ছাড়)
-                                </span>
-                                <button type="button" onClick={() => { setAppliedCoupon(null); setPromoCodeInput(''); setCouponSuccess(''); setCouponError(''); }} style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 700 }}>সরিয়ে ফেলুন</button>
-                              </div>
-                            ) : (
-                              <div style={{ display: 'flex', gap: '8px' }}>
-                                <input
-                                  type="text"
-                                  placeholder="কোড লিখুন (যেমন: SUMMER20)"
-                                  className="pdp-checkout-input"
-                                  style={{ height: '36px', fontSize: '0.8rem', textTransform: 'uppercase', flex: 1, padding: '0 10px', backgroundColor: '#ffffff', color: '#0f172a' }}
-                                  value={promoCodeInput}
-                                  onChange={(e) => setPromoCodeInput(e.target.value)}
-                                />
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    setCouponError('');
-                                    setCouponSuccess('');
-                                    if (!promoCodeInput.trim()) return;
-                                    setIsValidating(true);
-                                    const res = await validateCouponCode(promoCodeInput.trim());
-                                    setIsValidating(false);
-                                    if (res.status === 'success') {
-                                      setAppliedCoupon(res.data);
-                                      setCouponSuccess(`কুপন কোড '${res.data.code}' সফলভাবে যুক্ত হয়েছে!`);
-                                    } else {
-                                      setCouponError(res.message || 'কুপনটি প্রযোজ্য নয়।');
-                                      setAppliedCoupon(null);
-                                    }
-                                  }}
-                                  disabled={isValidating}
-                                  style={{ height: '36px', padding: '0 12px', background: '#000000', color: '#ffffff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700 }}
-                                >
-                                  {isValidating ? '...' : 'প্রয়োগ'}
-                                </button>
-                              </div>
-                            )}
-                            {couponError && <div style={{ color: '#ef4444', fontSize: '0.72rem', marginTop: '6px' }}>{couponError}</div>}
-                            {couponSuccess && <div style={{ color: '#16a34a', fontSize: '0.72rem', marginTop: '6px' }}>{couponSuccess}</div>}
-                          </div>
-                        </>
-                      );
-                    })()}
+                    <div className="pco-qty-block">
+                      <button type="button" className="pco-qty-btn" onClick={() => setBuyNowQty(p => Math.max(1, p - 1))}>−</button>
+                      <span className="pco-qty-val">{buyNowQty}</span>
+                      <button type="button" className="pco-qty-btn" onClick={() => setBuyNowQty(p => p + 1)}>+</button>
+                    </div>
                   </div>
 
-                  {/* Step 2: Customer details */}
-                  {customer && customer.addresses && customer.addresses.length > 0 && (
-                    <div className="checkout-saved-addresses-container" style={{ gridColumn: '1 / -1', marginBottom: '16px' }}>
-                      <div className="checkout-saved-addresses-title">
-                        <MapPin size={16} /> সংরক্ষিত ঠিকানা থেকে সিলেক্ট করুন (Quick Fill)
+                  {/* Price Breakdown */}
+                  {(() => {
+                    const subtotal = effectivePrice * buyNowQty;
+                    const deliveryCharge = shippingLocation === 'dhaka'
+                      ? config.delivery.insideDhakaPrice
+                      : config.delivery.outsideDhakaPrice;
+                    let discount = 0;
+                    if (appliedCoupon) {
+                      discount = appliedCoupon.type === 'percentage'
+                        ? (subtotal * appliedCoupon.value) / 100
+                        : appliedCoupon.value;
+                    }
+                    const total = subtotal + deliveryCharge - discount;
+                    return (
+                      <div className="pco-price-breakdown">
+                        <div className="pco-price-row">
+                          <span>পণ্যের মূল্য ({buyNowQty}টি)</span>
+                          <span>৳{subtotal.toFixed(2)}</span>
+                        </div>
+                        <div className="pco-price-row">
+                          <span>ডেলিভারি চার্জ</span>
+                          <span>৳{deliveryCharge.toFixed(2)}</span>
+                        </div>
+                        {discount > 0 && (
+                          <div className="pco-price-row discount">
+                            <span>🎟 কুপন ছাড়</span>
+                            <span>-৳{discount.toFixed(2)}</span>
+                          </div>
+                        )}
+                        <div className="pco-price-row total">
+                          <span>সর্বমোট</span>
+                          <span className="pco-total-amount">৳{total.toFixed(2)}</span>
+                        </div>
                       </div>
-                      <div className="checkout-address-list">
+                    );
+                  })()}
+
+                  {/* Coupon Block */}
+                  <div className="pco-coupon-block">
+                    <div className="pco-coupon-label">🎟 প্রোমো কোড</div>
+                    {appliedCoupon ? (
+                      <div className="pco-coupon-applied">
+                        <span>✅ '{appliedCoupon.code}' ({appliedCoupon.type === 'percentage' ? `${appliedCoupon.value}%` : `৳${appliedCoupon.value}`} ছাড়)</span>
+                        <button type="button" onClick={() => { setAppliedCoupon(null); setPromoCodeInput(''); setCouponSuccess(''); setCouponError(''); }}>✕ সরান</button>
+                      </div>
+                    ) : (
+                      <div className="pco-coupon-input-row">
+                        <input
+                          type="text"
+                          placeholder="কোড লিখুন (যেমন: SAVE20)"
+                          value={promoCodeInput}
+                          onChange={e => setPromoCodeInput(e.target.value)}
+                          className="pco-input"
+                          style={{ textTransform: 'uppercase' }}
+                        />
+                        <button
+                          type="button"
+                          className="pco-coupon-apply-btn"
+                          disabled={isValidating}
+                          onClick={async () => {
+                            setCouponError(''); setCouponSuccess('');
+                            if (!promoCodeInput.trim()) return;
+                            setIsValidating(true);
+                            const res = await validateCouponCode(promoCodeInput.trim());
+                            setIsValidating(false);
+                            if (res.status === 'success') { setAppliedCoupon(res.data); setCouponSuccess(`✅ কোড '${res.data.code}' প্রয়োগ হয়েছে!`); }
+                            else { setCouponError(res.message || 'কোডটি বৈধ নয়।'); setAppliedCoupon(null); }
+                          }}
+                        >
+                          {isValidating ? '...' : 'প্রয়োগ'}
+                        </button>
+                      </div>
+                    )}
+                    {couponError && <div className="pco-coupon-error">{couponError}</div>}
+                    {couponSuccess && <div className="pco-coupon-success">{couponSuccess}</div>}
+                  </div>
+                </div>
+
+                {/* ── OPTIONAL GOOGLE SIGN-IN ── */}
+                {!customer && (
+                  <div className="pco-section">
+                    <div className="pco-section-label">
+                      <span className="pco-step-badge">২</span>
+                      দ্রুত লগইন (ঐচ্ছিক)
+                    </div>
+                    <div className="pco-google-block">
+                      <div className="pco-google-info">
+                        <div className="pco-google-title">Google দিয়ে লগইন করুন</div>
+                        <div className="pco-google-sub">লগইন করলে আপনার তথ্য স্বয়ংক্রিয়ভাবে পূরণ হবে এবং অর্ডার ট্র্যাক করতে পারবেন</div>
+                      </div>
+                      <div id="google-checkout-signin-btn" style={{ marginTop: '10px' }}></div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── CUSTOMER INFO ── */}
+                <div className="pco-section">
+                  <div className="pco-section-label">
+                    <span className="pco-step-badge">{!customer ? '৩' : '২'}</span>
+                    আপনার তথ্য
+                  </div>
+
+                  {/* Saved Address Quick Fill */}
+                  {customer && customer.addresses && customer.addresses.length > 0 && (
+                    <div className="pco-saved-addresses">
+                      <div className="pco-saved-addr-title">
+                        <MapPin size={14} /> সংরক্ষিত ঠিকানা
+                      </div>
+                      <div className="pco-addr-list">
                         {customer.addresses.map((addr) => {
                           const isSelected = selectedAddressId === addr.id;
                           return (
-                            <div 
-                              key={addr.id} 
-                              className={`checkout-address-card ${isSelected ? 'selected' : ''}`}
+                            <div
+                              key={addr.id}
+                              className={`pco-addr-card ${isSelected ? 'selected' : ''}`}
                               onClick={() => handleSelectAddress(addr)}
                             >
-                              <div className="checkout-address-card-header">
-                                <span className="checkout-address-label">{addr.label}</span>
-                                {isSelected && (
-                                  <span className="checkout-address-check">
-                                    <CheckCircle size={14} />
-                                  </span>
-                                )}
-                              </div>
-                              <div className="checkout-address-name">{addr.name}</div>
-                              <div className="checkout-address-phone">{addr.phone}</div>
-                              <div className="checkout-address-details">{addr.address}</div>
+                              <div className="pco-addr-label">{addr.label}</div>
+                              <div className="pco-addr-name">{addr.name}</div>
+                              <div className="pco-addr-phone">{addr.phone}</div>
+                              <div className="pco-addr-detail">{addr.address}</div>
+                              {isSelected && <div className="pco-addr-check"><CheckCircle size={14} /></div>}
                             </div>
                           );
                         })}
@@ -1678,179 +1730,232 @@ export default function ProductDetails() {
                     </div>
                   )}
 
-                  <div className="pdp-checkout-group">
-                    <label className="pdp-checkout-label">আপনার নাম (Full Name) <span>*</span></label>
-                    <input 
-                      type="text" 
-                      className="pdp-checkout-input" 
-                      placeholder="আপনার নাম লিখুন" 
-                      required 
-                      value={customerName} 
-                      onChange={e => { setCustomerName(e.target.value); setNameEdited(true); setSelectedAddressId(''); }} 
-                    />
-                  </div>
-
-                  <div className="pdp-checkout-group">
-                    <label className="pdp-checkout-label">মোবাইল নম্বর (Phone Number) <span>*</span></label>
-                    <input 
-                      type="tel" 
-                      className="pdp-checkout-input" 
-                      placeholder="যেমন: ০১৭XXXXXXXX" 
-                      required 
-                      value={customerPhone} 
-                      onChange={e => { setCustomerPhone(e.target.value); setPhoneEdited(true); setSelectedAddressId(''); }} 
-                    />
-                  </div>
-
-                  <div className="pdp-checkout-group">
-                    <label className="pdp-checkout-label">সম্পূর্ণ ডেলিভারি ঠিকানা (Detailed Address) <span>*</span></label>
-                    <input 
-                      type="text" 
-                      className="pdp-checkout-input" 
-                      placeholder="বাসা/হোল্ডিং নং, রোড নং, এলাকা, থানা ও জেলা লিখুন" 
-                      required 
-                      value={customerAddress} 
-                      onChange={e => { setCustomerAddress(e.target.value); setAddressEdited(true); setSelectedAddressId(''); }} 
-                    />
-                  </div>
-
-                  <div className="pdp-checkout-group">
-                    <label className="pdp-checkout-label">অর্ডার সংক্রান্ত নোট (Optional Note)</label>
-                    <input 
-                      type="text" 
-                      className="pdp-checkout-input" 
-                      placeholder="অর্ডার সংক্রান্ত অতিরিক্ত তথ্য বা নির্দেশনা" 
-                      value={customerNote} 
-                      onChange={e => setCustomerNote(e.target.value)} 
-                    />
-                  </div>
-
-                  {/* Step 3: Shipping & Payment */}
-                  <div className="pdp-checkout-group">
-                    <label className="pdp-checkout-label">ডেলিভারি চার্জ (Shipping Rate)</label>
-                    <div className="pdp-checkout-shipping">
-                      <div 
-                        className={`pdp-checkout-card ${shippingLocation === 'dhaka' ? 'active' : ''}`}
-                        onClick={() => setShippingLocation('dhaka')}
-                      >
-                        <div>
-                          <div className="pdp-checkout-card-title">ঢাকার ভেতরে</div>
-                          <div className="pdp-checkout-card-desc">৳{config.delivery.insideDhakaPrice} ({config.delivery.insideDhakaTimeline})</div>
-                        </div>
-                        {shippingLocation === 'dhaka' && <CheckCircle size={18} color="var(--sf-accent)" />}
-                      </div>
-
-                      <div 
-                        className={`pdp-checkout-card ${shippingLocation === 'outside' ? 'active' : ''}`}
-                        onClick={() => setShippingLocation('outside')}
-                      >
-                        <div>
-                          <div className="pdp-checkout-card-title">ঢাকার বাইরে</div>
-                          <div className="pdp-checkout-card-desc">৳{config.delivery.outsideDhakaPrice} ({config.delivery.outsideDhakaTimeline})</div>
-                        </div>
-                        {shippingLocation === 'outside' && <CheckCircle size={18} color="var(--sf-accent)" />}
-                      </div>
+                  <div className="pco-fields-grid">
+                    <div className="pco-field">
+                      <label className="pco-label">পূর্ণ নাম <span>*</span></label>
+                      <input
+                        type="text"
+                        className="pco-input"
+                        placeholder="আপনার পূর্ণ নাম লিখুন"
+                        required
+                        value={customerName}
+                        onChange={e => { setCustomerName(e.target.value); setNameEdited(true); setSelectedAddressId(''); }}
+                      />
+                    </div>
+                    <div className="pco-field">
+                      <label className="pco-label">মোবাইল নম্বর <span>*</span></label>
+                      <input
+                        type="tel"
+                        className="pco-input"
+                        placeholder="০১৭XXXXXXXX"
+                        required
+                        value={customerPhone}
+                        onChange={e => { setCustomerPhone(e.target.value); setPhoneEdited(true); setSelectedAddressId(''); }}
+                      />
+                    </div>
+                    <div className="pco-field pco-field-full">
+                      <label className="pco-label">সম্পূর্ণ ঠিকানা <span>*</span></label>
+                      <input
+                        type="text"
+                        className="pco-input"
+                        placeholder="বাসা, রোড, এলাকা, থানা, জেলা"
+                        required
+                        value={customerAddress}
+                        onChange={e => { setCustomerAddress(e.target.value); setAddressEdited(true); setSelectedAddressId(''); }}
+                      />
+                    </div>
+                    <div className="pco-field pco-field-full">
+                      <label className="pco-label">ইমেইল ঠিকানা <span style={{ color: '#a1a1aa', fontWeight: 500 }}>(ঐচ্ছিক - Gmail/Email)</span></label>
+                      <input
+                        type="email"
+                        className="pco-input"
+                        placeholder="আপনার ইমেইল অ্যাড্রেস লিখুন"
+                        value={customerEmail}
+                        onChange={e => { setCustomerEmail(e.target.value); setEmailEdited(true); }}
+                      />
+                    </div>
+                    <div className="pco-field pco-field-full">
+                      <label className="pco-label">অর্ডার নোট <span style={{ color: '#a1a1aa', fontWeight: 500 }}>(ঐচ্ছিক)</span></label>
+                      <input
+                        type="text"
+                        className="pco-input"
+                        placeholder="বিশেষ নির্দেশনা বা মন্তব্য..."
+                        value={customerNote}
+                        onChange={e => setCustomerNote(e.target.value)}
+                      />
                     </div>
                   </div>
-
-                  <div className="pdp-checkout-group">
-                    <label className="pdp-checkout-label">পেমেন্ট পদ্ধতি (Payment Method)</label>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px', marginTop: '6px' }}>
-                      {/* COD */}
-                      <div 
-                        className={`pdp-checkout-card ${paymentMethod === 'cod' ? 'active' : ''}`}
-                        onClick={() => setPaymentMethod('cod')}
-                        style={{ cursor: 'pointer', padding: '10px', borderRadius: '8px', border: paymentMethod === 'cod' ? '2px solid var(--sf-accent)' : '1px solid var(--sf-border)', background: paymentMethod === 'cod' ? 'var(--sf-bg-light)' : 'white', display: 'flex', alignItems: 'center', gap: '6px' }}
-                      >
-                        <Package size={18} />
-                        <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>ক্যাশ অন ডেলিভারি</span>
-                      </div>
-
-                      {/* bKash */}
-                      <div 
-                        className={`pdp-checkout-card ${paymentMethod === 'bkash' ? 'active' : ''}`}
-                        onClick={() => setPaymentMethod('bkash')}
-                        style={{ cursor: 'pointer', padding: '10px', borderRadius: '8px', border: paymentMethod === 'bkash' ? '2px solid #e11d48' : '1px solid var(--sf-border)', background: paymentMethod === 'bkash' ? 'rgba(225, 29, 72, 0.06)' : 'white', display: 'flex', alignItems: 'center', gap: '6px' }}
-                      >
-                        <div style={{ background: '#e11d48', color: 'white', fontWeight: 800, fontSize: '9px', padding: '2px 5px', borderRadius: '3px' }}>bKash</div>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#e11d48' }}>বিকাশ</span>
-                      </div>
-
-                      {/* Nagad */}
-                      <div 
-                        className={`pdp-checkout-card ${paymentMethod === 'nagad' ? 'active' : ''}`}
-                        onClick={() => setPaymentMethod('nagad')}
-                        style={{ cursor: 'pointer', padding: '10px', borderRadius: '8px', border: paymentMethod === 'nagad' ? '2px solid #ea580c' : '1px solid var(--sf-border)', background: paymentMethod === 'nagad' ? 'rgba(234, 88, 12, 0.06)' : 'white', display: 'flex', alignItems: 'center', gap: '6px' }}
-                      >
-                        <div style={{ background: '#ea580c', color: 'white', fontWeight: 800, fontSize: '9px', padding: '2px 5px', borderRadius: '3px' }}>NAGAD</div>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#ea580c' }}>নগদ</span>
-                      </div>
-                    </div>
-
-                    {/* bKash / Nagad Instructions & Inputs */}
-                    {(paymentMethod === 'bkash' || paymentMethod === 'nagad') && (
-                      <div style={{ marginTop: '12px', padding: '12px', background: paymentMethod === 'bkash' ? 'rgba(225, 29, 72, 0.04)' : 'rgba(234, 88, 12, 0.04)', border: `1.5px dashed ${paymentMethod === 'bkash' ? '#e11d48' : '#ea580c'}`, borderRadius: '10px' }}>
-                        <div style={{ fontWeight: 800, fontSize: '0.85rem', color: paymentMethod === 'bkash' ? '#e11d48' : '#ea580c', marginBottom: '6px' }}>
-                          {paymentMethod === 'bkash' ? 'bKash (বিকাশ)' : 'Nagad (নগদ)'} টাকা পাঠানোর নিয়ম:
-                        </div>
-                        <ol style={{ paddingLeft: '18px', fontSize: '0.78rem', lineHeight: 1.5, color: 'var(--sf-text-secondary)', margin: '0 0 10px 0' }}>
-                          <li>নম্বর: <b style={{ color: paymentMethod === 'bkash' ? '#e11d48' : '#ea580c', background: 'white', padding: '1px 6px', borderRadius: '4px', border: '1px solid var(--sf-border)' }}>{paymentMethod === 'bkash' ? '01700000000' : '01800000000'}</b> (Personal Send Money)</li>
-                          <li>পরিমাণ: <b>৳{(product.price * buyNowQty + (shippingLocation === 'dhaka' ? config.delivery.insideDhakaPrice : config.delivery.outsideDhakaPrice) - (appliedCoupon ? (appliedCoupon.type === 'percentage' ? (product.price * buyNowQty * appliedCoupon.value / 100) : appliedCoupon.value) : 0)).toFixed(2)}</b></li>
-                        </ol>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                          <div>
-                            <label style={{ fontSize: '0.73rem', fontWeight: 700, color: 'var(--sf-text-primary)', display: 'block', marginBottom: '3px' }}>
-                              প্রেরকের নম্বর <span style={{ color: '#ef4444' }}>*</span>
-                            </label>
-                            <input 
-                              type="tel" 
-                              placeholder="০১৭XXXXXXXX" 
-                              required 
-                              value={senderNumber} 
-                              onChange={e => setSenderNumber(e.target.value)} 
-                              style={{ width: '100%', height: '36px', border: '1.5px solid #cbd5e1', borderRadius: '6px', padding: '0 8px', fontSize: '0.8rem', color: '#0f172a', backgroundColor: '#ffffff', fontWeight: 600 }}
-                            />
-                          </div>
-
-                          <div>
-                            <label style={{ fontSize: '0.73rem', fontWeight: 700, color: 'var(--sf-text-primary)', display: 'block', marginBottom: '3px' }}>
-                              TrxID কোড <span style={{ color: '#ef4444' }}>*</span>
-                            </label>
-                            <input 
-                              type="text" 
-                              placeholder="8N7X9K2L1" 
-                              required 
-                              value={trxId} 
-                              onChange={e => setTrxId(e.target.value.toUpperCase())} 
-                              style={{ width: '100%', height: '36px', border: '1.5px solid #cbd5e1', borderRadius: '6px', padding: '0 8px', fontSize: '0.8rem', textTransform: 'uppercase', color: '#0f172a', backgroundColor: '#ffffff', fontWeight: 700 }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <button type="submit" className="pdp-checkout-btn-confirm">
-                    অর্ডার নিশ্চিত করুন (Confirm Order) <ArrowRight size={18} />
-                  </button>
-                </form>
-              </>
-            ) : (
-              <div className="pdp-checkout-success">
-                <div className="pdp-checkout-success-icon">
-                  <CheckCircle size={40} />
                 </div>
-                <h2>অর্ডার সফল হয়েছে!</h2>
-                <p>ধন্যবাদ! আপনার অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে। খুব শীঘ্রই আমাদের প্রতিনিধি আপনার সাথে যোগাযোগ করে অর্ডারটি কনফার্ম করবে।</p>
-                <button className="pdp-checkout-btn-confirm" onClick={closeCheckoutModal}>
-                  ঠিক আছে (OK)
+
+                {/* ── DELIVERY ZONE ── */}
+                <div className="pco-section">
+                  <div className="pco-section-label">
+                    <span className="pco-step-badge">{!customer ? '৪' : '৩'}</span>
+                    ডেলিভারি এলাকা
+                  </div>
+                  <div className="pco-delivery-grid">
+                    <div
+                      className={`pco-delivery-card ${shippingLocation === 'dhaka' ? 'active' : ''}`}
+                      onClick={() => setShippingLocation('dhaka')}
+                    >
+                      <div className="pco-delivery-icon">🏙️</div>
+                      <div className="pco-delivery-info">
+                        <div className="pco-delivery-title">ঢাকার ভেতরে</div>
+                        <div className="pco-delivery-detail">৳{config.delivery.insideDhakaPrice} · {config.delivery.insideDhakaTimeline}</div>
+                      </div>
+                      {shippingLocation === 'dhaka' && <CheckCircle size={18} className="pco-delivery-check" />}
+                    </div>
+                    <div
+                      className={`pco-delivery-card ${shippingLocation === 'outside' ? 'active' : ''}`}
+                      onClick={() => setShippingLocation('outside')}
+                    >
+                      <div className="pco-delivery-icon">🚚</div>
+                      <div className="pco-delivery-info">
+                        <div className="pco-delivery-title">ঢাকার বাইরে</div>
+                        <div className="pco-delivery-detail">৳{config.delivery.outsideDhakaPrice} · {config.delivery.outsideDhakaTimeline}</div>
+                      </div>
+                      {shippingLocation === 'outside' && <CheckCircle size={18} className="pco-delivery-check" />}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── PAYMENT METHOD ── */}
+                <div className="pco-section">
+                  <div className="pco-section-label">
+                    <span className="pco-step-badge">{!customer ? '৫' : '৪'}</span>
+                    পেমেন্ট পদ্ধতি
+                  </div>
+                  <div className="pco-payment-grid">
+                    {/* COD */}
+                    <div
+                      className={`pco-payment-card ${paymentMethod === 'cod' ? 'active' : ''}`}
+                      onClick={() => setPaymentMethod('cod')}
+                    >
+                      <div className="pco-payment-icon cod">📦</div>
+                      <div className="pco-payment-info">
+                        <div className="pco-payment-title">ক্যাশ অন ডেলিভারি</div>
+                        <div className="pco-payment-sub">পণ্য পেয়ে টাকা দিন</div>
+                      </div>
+                      {paymentMethod === 'cod' && <div className="pco-payment-radio active" />}
+                    </div>
+
+                    {/* bKash */}
+                    <div
+                      className={`pco-payment-card ${paymentMethod === 'bkash' ? 'active bkash-active' : ''}`}
+                      onClick={() => setPaymentMethod('bkash')}
+                    >
+                      <div className="pco-payment-icon bkash">
+                        <span style={{ background: '#e11d48', color: 'white', fontWeight: 900, fontSize: '11px', padding: '3px 6px', borderRadius: '4px', letterSpacing: '0.5px' }}>bKash</span>
+                      </div>
+                      <div className="pco-payment-info">
+                        <div className="pco-payment-title" style={{ color: '#e11d48' }}>বিকাশ</div>
+                        <div className="pco-payment-sub">Send Money করুন</div>
+                      </div>
+                      {paymentMethod === 'bkash' && <div className="pco-payment-radio active bkash-radio" />}
+                    </div>
+
+                    {/* Nagad */}
+                    <div
+                      className={`pco-payment-card ${paymentMethod === 'nagad' ? 'active nagad-active' : ''}`}
+                      onClick={() => setPaymentMethod('nagad')}
+                    >
+                      <div className="pco-payment-icon nagad">
+                        <span style={{ background: '#ea580c', color: 'white', fontWeight: 900, fontSize: '11px', padding: '3px 6px', borderRadius: '4px', letterSpacing: '0.5px' }}>NAGAD</span>
+                      </div>
+                      <div className="pco-payment-info">
+                        <div className="pco-payment-title" style={{ color: '#ea580c' }}>নগদ</div>
+                        <div className="pco-payment-sub">Send Money করুন</div>
+                      </div>
+                      {paymentMethod === 'nagad' && <div className="pco-payment-radio active nagad-radio" />}
+                    </div>
+                  </div>
+
+                  {/* bKash / Nagad Instructions */}
+                  {(paymentMethod === 'bkash' || paymentMethod === 'nagad') && (
+                    <div className={`pco-mobile-banking-panel ${paymentMethod}`}>
+                      <div className="pco-mb-header">
+                        <span className="pco-mb-brand-tag" style={{ background: paymentMethod === 'bkash' ? '#e11d48' : '#ea580c' }}>
+                          {paymentMethod === 'bkash' ? 'bKash' : 'NAGAD'}
+                        </span>
+                        <span className="pco-mb-title">পেমেন্ট নির্দেশিকা</span>
+                      </div>
+                      <div className="pco-mb-steps">
+                        <div className="pco-mb-step">
+                          <span className="pco-mb-step-num" style={{ background: paymentMethod === 'bkash' ? '#e11d48' : '#ea580c' }}>১</span>
+                          <span>নম্বরে Send Money করুন: <strong style={{ color: paymentMethod === 'bkash' ? '#e11d48' : '#ea580c' }}>{paymentMethod === 'bkash' ? '01700000000' : '01800000000'}</strong></span>
+                        </div>
+                        <div className="pco-mb-step">
+                          <span className="pco-mb-step-num" style={{ background: paymentMethod === 'bkash' ? '#e11d48' : '#ea580c' }}>২</span>
+                          <span>পরিমাণ: <strong>৳{(effectivePrice * buyNowQty + (shippingLocation === 'dhaka' ? config.delivery.insideDhakaPrice : config.delivery.outsideDhakaPrice) - (appliedCoupon ? (appliedCoupon.type === 'percentage' ? (effectivePrice * buyNowQty * appliedCoupon.value / 100) : appliedCoupon.value) : 0)).toFixed(2)}</strong></span>
+                        </div>
+                        <div className="pco-mb-step">
+                          <span className="pco-mb-step-num" style={{ background: paymentMethod === 'bkash' ? '#e11d48' : '#ea580c' }}>৩</span>
+                          <span>পেমেন্টের পরে নিচে TrxID ও নম্বর দিন</span>
+                        </div>
+                      </div>
+                      <div className="pco-fields-grid" style={{ marginTop: '12px' }}>
+                        <div className="pco-field">
+                          <label className="pco-label">প্রেরকের নম্বর <span>*</span></label>
+                          <input
+                            type="tel"
+                            className="pco-input"
+                            placeholder="০১৭XXXXXXXX"
+                            required
+                            value={senderNumber}
+                            onChange={e => setSenderNumber(e.target.value)}
+                          />
+                        </div>
+                        <div className="pco-field">
+                          <label className="pco-label">TrxID কোড <span>*</span></label>
+                          <input
+                            type="text"
+                            className="pco-input"
+                            placeholder="8N7X9K2L1"
+                            required
+                            value={trxId}
+                            onChange={e => setTrxId(e.target.value.toUpperCase())}
+                            style={{ textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700 }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── SUBMIT BUTTON ── */}
+                <div className="pco-submit-section">
+                  <div className="pco-trust-strip">
+                    <span>🔒 SSL সুরক্ষিত</span>
+                    <span>✅ ১০০% নিরাপদ</span>
+                    <span>📦 দ্রুত ডেলিভারি</span>
+                  </div>
+                  <button type="submit" className="pco-submit-btn">
+                    <span>⚡ অর্ডার নিশ্চিত করুন</span>
+                    <ArrowRight size={18} />
+                  </button>
+                </div>
+
+              </form>
+            ) : (
+              /* ── SUCCESS STATE ── */
+              <div className="pco-success">
+                <div className="pco-success-animation">
+                  <div className="pco-success-ring"></div>
+                  <CheckCircle size={48} className="pco-success-icon" />
+                </div>
+                <h2 className="pco-success-title">অর্ডার সফল হয়েছে! 🎉</h2>
+                <p className="pco-success-msg">ধন্যবাদ! আপনার অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে। শীঘ্রই আমাদের প্রতিনিধি আপনার সাথে যোগাযোগ করবে।</p>
+                <div className="pco-success-detail">অর্ডার নম্বর: <strong>#{Date.now().toString().slice(-8)}</strong></div>
+                <button className="pco-submit-btn" onClick={closeCheckoutModal}>
+                  ✓ ঠিক আছে
                 </button>
               </div>
             )}
           </div>
         </div>
       )}
+
+
 
 
 

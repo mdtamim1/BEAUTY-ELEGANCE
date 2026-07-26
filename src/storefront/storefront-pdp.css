@@ -1004,6 +1004,763 @@
   }
 }
 
+/* ==========================================================================
+   PREMIUM CHECKOUT FORM — PCO (Premium Checkout Order)
+   ========================================================================== */
+
+.pdp-checkout-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.pdp-checkout-modal {
+  background: #f8fafc;
+  width: 100%;
+  max-width: 560px;
+  max-height: 92vh;
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.22);
+  animation: pcoSlideUp 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+@keyframes pcoSlideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Modal Header */
+.pco-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: #111;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.pco-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pco-header-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pco-header-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.pco-header-sub {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.6);
+  margin-top: 1px;
+}
+
+.pco-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.pco-close-btn:hover {
+  background: rgba(255,255,255,0.25);
+  transform: scale(1.1);
+}
+
+/* Form — scrollable body */
+.pco-form {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 0 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #ddd transparent;
+}
+
+.pco-form::-webkit-scrollbar { width: 4px; }
+.pco-form::-webkit-scrollbar-track { background: transparent; }
+.pco-form::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+
+/* Section blocks */
+.pco-section {
+  padding: 18px 20px 0 20px;
+}
+
+.pco-section-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #71717a;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 12px;
+}
+
+.pco-step-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #111;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Product Card */
+.pco-product-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #fff;
+  border: 1px solid #ececec;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.pco-product-img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #ececec;
+  flex-shrink: 0;
+}
+
+.pco-product-info {
+  flex: 1;
+}
+
+.pco-product-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #111;
+  line-height: 1.3;
+  margin-bottom: 3px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pco-product-variant {
+  font-size: 0.72rem;
+  color: #a1a1aa;
+  margin-bottom: 5px;
+}
+
+.pco-product-price-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pco-product-price {
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #111;
+}
+
+.pco-product-old-price {
+  font-size: 0.82rem;
+  color: #a1a1aa;
+  text-decoration: line-through;
+  font-weight: 500;
+}
+
+/* Qty Stepper inside product card */
+.pco-qty-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.pco-qty-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #f4f4f5;
+  border: 1px solid #e4e4e7;
+  color: #111;
+  font-weight: 800;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.pco-qty-btn:hover { background: #e4e4e7; }
+
+.pco-qty-val {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #111;
+  min-width: 24px;
+  text-align: center;
+}
+
+/* Price Breakdown */
+.pco-price-breakdown {
+  background: #fff;
+  border: 1px solid #ececec;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.pco-price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 14px;
+  font-size: 0.83rem;
+  color: #3f3f46;
+  border-bottom: 1px solid #f4f4f5;
+}
+
+.pco-price-row:last-child { border-bottom: none; }
+
+.pco-price-row.discount {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.pco-price-row.total {
+  font-weight: 800;
+  color: #111;
+  background: #f9fafb;
+  font-size: 0.9rem;
+}
+
+.pco-total-amount {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--sf-accent, #e11d48);
+}
+
+/* Coupon Block */
+.pco-coupon-block {
+  background: #fff;
+  border: 1.5px dashed #d4d4d8;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 6px;
+}
+
+.pco-coupon-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #52525b;
+  margin-bottom: 8px;
+}
+
+.pco-coupon-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.pco-coupon-apply-btn {
+  height: 42px;
+  padding: 0 16px;
+  background: #111;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.pco-coupon-apply-btn:hover { background: #27272a; }
+.pco-coupon-apply-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.pco-coupon-applied {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.pco-coupon-applied button {
+  background: none;
+  border: none;
+  color: #dc2626;
+  font-weight: 700;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.pco-coupon-error {
+  color: #ef4444;
+  font-size: 0.72rem;
+  margin-top: 6px;
+  font-weight: 600;
+}
+
+.pco-coupon-success {
+  color: #16a34a;
+  font-size: 0.72rem;
+  margin-top: 6px;
+  font-weight: 600;
+}
+
+/* Google Sign-in Block */
+.pco-google-block {
+  background: #fff;
+  border: 1.5px solid #ececec;
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.pco-google-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #111;
+  margin-bottom: 3px;
+}
+
+.pco-google-sub {
+  font-size: 0.75rem;
+  color: #71717a;
+  line-height: 1.5;
+}
+
+/* Saved Addresses */
+.pco-saved-addresses {
+  margin-bottom: 14px;
+}
+
+.pco-saved-addr-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #52525b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.pco-addr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pco-addr-card {
+  padding: 12px 14px;
+  border: 1.5px solid #e4e4e7;
+  border-radius: 10px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+  background: #fff;
+}
+
+.pco-addr-card:hover { border-color: #a1a1aa; background: #fafafa; }
+.pco-addr-card.selected { border-color: #111; background: #f9fafb; }
+
+.pco-addr-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #71717a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.pco-addr-name { font-size: 0.86rem; font-weight: 700; color: #111; }
+.pco-addr-phone { font-size: 0.76rem; color: #52525b; margin-top: 1px; }
+.pco-addr-detail { font-size: 0.75rem; color: #71717a; margin-top: 2px; }
+
+.pco-addr-check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: #111;
+}
+
+/* Input Grid */
+.pco-fields-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.pco-field { display: flex; flex-direction: column; }
+.pco-field-full { grid-column: 1 / -1; }
+
+.pco-label {
+  font-size: 0.73rem;
+  font-weight: 700;
+  color: #3f3f46;
+  margin-bottom: 5px;
+}
+
+.pco-label span { color: #ef4444; }
+
+.pco-input {
+  height: 42px;
+  border: 1.5px solid #e4e4e7;
+  border-radius: 9px;
+  padding: 0 12px;
+  font-size: 0.87rem;
+  color: #111 !important;
+  background: #fff !important;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pco-input:focus { border-color: #111; box-shadow: 0 0 0 3px rgba(17,17,17,0.06); }
+.pco-input::placeholder { color: #a1a1aa; }
+
+/* Delivery Grid */
+.pco-delivery-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.pco-delivery-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1.5px solid #e4e4e7;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pco-delivery-card:hover { border-color: #a1a1aa; background: #fafafa; }
+
+.pco-delivery-card.active {
+  border-color: #111;
+  background: #f9fafb;
+  box-shadow: 0 0 0 1px #111;
+}
+
+.pco-delivery-icon { font-size: 1.4rem; flex-shrink: 0; }
+
+.pco-delivery-info { flex: 1; }
+
+.pco-delivery-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #111;
+  margin-bottom: 2px;
+}
+
+.pco-delivery-detail {
+  font-size: 0.73rem;
+  color: #71717a;
+}
+
+.pco-delivery-check { color: #16a34a; flex-shrink: 0; }
+
+/* Payment Grid */
+.pco-payment-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.pco-payment-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 10px;
+  background: #fff;
+  border: 1.5px solid #e4e4e7;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  position: relative;
+}
+
+.pco-payment-card:hover { border-color: #a1a1aa; transform: translateY(-1px); }
+
+.pco-payment-card.active {
+  border-color: #111;
+  background: #f9fafb;
+  box-shadow: 0 0 0 1px #111;
+}
+
+.pco-payment-card.bkash-active { border-color: #e11d48; box-shadow: 0 0 0 1px #e11d48; background: rgba(225,29,72,0.04); }
+.pco-payment-card.nagad-active { border-color: #ea580c; box-shadow: 0 0 0 1px #ea580c; background: rgba(234,88,12,0.04); }
+
+.pco-payment-icon { font-size: 1.5rem; }
+
+.pco-payment-title { font-size: 0.8rem; font-weight: 700; color: #111; margin-bottom: 1px; }
+.pco-payment-sub { font-size: 0.68rem; color: #71717a; }
+
+.pco-payment-radio {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #111;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.pco-payment-radio.active {
+  background: #111;
+  box-shadow: inset 0 0 0 3px #fff;
+}
+
+.pco-payment-radio.bkash-radio { border-color: #e11d48; background: #e11d48; }
+.pco-payment-radio.nagad-radio { border-color: #ea580c; background: #ea580c; }
+
+/* Mobile Banking Panel */
+.pco-mobile-banking-panel {
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 2px;
+  border: 1.5px dashed #e4e4e7;
+  background: #fff;
+}
+
+.pco-mobile-banking-panel.bkash { border-color: rgba(225,29,72,0.3); background: rgba(225,29,72,0.02); }
+.pco-mobile-banking-panel.nagad { border-color: rgba(234,88,12,0.3); background: rgba(234,88,12,0.02); }
+
+.pco-mb-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.pco-mb-brand-tag {
+  color: #fff;
+  font-weight: 900;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.pco-mb-title {
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: #111;
+}
+
+.pco-mb-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 6px;
+}
+
+.pco-mb-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: #3f3f46;
+  line-height: 1.4;
+}
+
+.pco-mb-step-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Submit Section */
+.pco-submit-section {
+  padding: 16px 20px 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pco-trust-strip {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: #52525b;
+}
+
+.pco-submit-btn {
+  width: 100%;
+  height: 52px;
+  background: linear-gradient(135deg, #111 0%, #27272a 100%);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s;
+  letter-spacing: 0.3px;
+}
+
+.pco-submit-btn:hover {
+  background: linear-gradient(135deg, #27272a 0%, #111 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(17,17,17,0.25);
+}
+
+/* Success State */
+.pco-success {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  text-align: center;
+  gap: 14px;
+}
+
+.pco-success-animation {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pco-success-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid #16a34a;
+  animation: pcoRingPulse 1.5s ease-out forwards;
+}
+
+@keyframes pcoRingPulse {
+  from { transform: scale(0.6); opacity: 1; }
+  to { transform: scale(1.4); opacity: 0; }
+}
+
+.pco-success-icon { color: #16a34a; animation: pcoCheckIn 0.4s ease-out; }
+
+@keyframes pcoCheckIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.pco-success-title {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: #111;
+  margin: 0;
+}
+
+.pco-success-msg {
+  font-size: 0.87rem;
+  color: #52525b;
+  line-height: 1.6;
+  max-width: 380px;
+  margin: 0;
+}
+
+.pco-success-detail {
+  background: #f9fafb;
+  border: 1px solid #e4e4e7;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.82rem;
+  color: #3f3f46;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .pdp-checkout-modal {
+    max-height: 96vh;
+    border-radius: 16px 16px 0 0;
+    max-width: 100%;
+  }
+  .pco-fields-grid {
+    grid-template-columns: 1fr;
+  }
+  .pco-delivery-grid {
+    grid-template-columns: 1fr;
+  }
+  .pco-payment-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  .pco-trust-strip { gap: 10px; }
+}
+
 /* Sticky Bottom Action Bar like Daraz */
 .pdp-mobile-sticky-bar {
   position: fixed;
