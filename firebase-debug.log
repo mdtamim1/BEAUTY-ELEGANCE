@@ -1,0 +1,21 @@
+[debug] [2026-07-26T14:41:54.766Z] ----------------------------------------------------------------------
+[debug] [2026-07-26T14:41:54.770Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\World\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting
+[debug] [2026-07-26T14:41:54.771Z] CLI Version:   15.20.0
+[debug] [2026-07-26T14:41:54.772Z] Platform:      win32
+[debug] [2026-07-26T14:41:54.772Z] Node Version:  v26.3.0
+[debug] [2026-07-26T14:41:54.772Z] Time:          Sun Jul 26 2026 20:41:54 GMT+0600 (Bangladesh Standard Time)
+[debug] [2026-07-26T14:41:54.772Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-07-26T14:41:59.155Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-07-26T14:41:59.157Z] > authorizing via signed-in user (rjtamim154@gmail.com)
+[debug] [2026-07-26T14:41:59.157Z] [iam] checking project beauty-elegance-ec88f for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-07-26T14:41:59.159Z] Checked if tokens are valid: false, expires at: 1785065371657
+[debug] [2026-07-26T14:41:59.160Z] Checked if tokens are valid: false, expires at: 1785065371657
+[debug] [2026-07-26T14:41:59.160Z] > refreshing access token with scopes: []
+[debug] [2026-07-26T14:41:59.162Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-07-26T14:41:59.162Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-07-26T14:41:59.373Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-07-26T14:41:59.374Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-07-26T14:41:59.404Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/beauty-elegance-ec88f:testIamPermissions [none]
+[debug] [2026-07-26T14:41:59.404Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/beauty-elegance-ec88f:testIamPermissions  x-goog-user-project=beauty-elegance-ec88f
+[debug] [2026-07-26T14:41:59.405Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/beauty-elegance-ec88f:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}

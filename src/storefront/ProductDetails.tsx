@@ -996,18 +996,55 @@ export default function ProductDetails() {
                 }
               }}
             >
-              Ask a Question
+              💬 Ask a Question
             </span>
           </div>
 
+          {/* Product Title */}
           <h1 className="splayd-pdp-title">{product.name}</h1>
-          <div className="splayd-pdp-price">Tk {Number(product.price).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+
+          {/* Rating Row */}
+          {(product.rating || product.reviews) && (
+            <div className="splayd-pdp-rating-row">
+              <StarRating rating={product.rating || 5} />
+              <span className="splayd-pdp-rating-count">
+                {product.rating ? `${product.rating} / 5` : '5.0 / 5'}
+                {product.reviews ? ` · ${product.reviews.toLocaleString()} রিভিউ` : ''}
+              </span>
+              {product.sku && (
+                <>
+                  <span style={{ color: '#d4d4d8', fontSize: '0.8rem' }}>|</span>
+                  <span style={{ fontSize: '0.75rem', color: '#a1a1aa', fontFamily: 'monospace' }}>SKU: {product.sku}</span>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Pricing Block */}
+          <div className="splayd-pdp-pricing-block">
+            <div>
+              {product.originalPrice && Number(product.originalPrice) > Number(product.price) && (
+                <div className="splayd-pdp-original-price">৳{Number(product.originalPrice).toLocaleString('en-US')}</div>
+              )}
+              {product.campaignOfferPrice && product.campaignOfferPrice < product.price && (
+                <div className="splayd-pdp-campaign-badge">🎉 Campaign Price</div>
+              )}
+            </div>
+            <div className="splayd-pdp-price">
+              ৳{Number(effectivePrice).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            </div>
+            {product.originalPrice && Number(product.originalPrice) > Number(product.price) && (
+              <div style={{ fontSize: '0.82rem', color: '#16a34a', fontWeight: 700 }}>
+                Save ৳{(Number(product.originalPrice) - Number(product.price)).toLocaleString('en-US')}
+              </div>
+            )}
+          </div>
 
           {/* Size Selector */}
           {product.sizes && product.sizes.filter((s: any) => s.enabled).length > 0 && (
-            <div style={{ marginBottom: '24px' }}>
+            <div>
               <div className="splayd-pdp-size-title">
-                SHOE SIZE: {selectedSize || (product.sizes.filter((s: any) => s.enabled)[0]?.label || '')}
+                SIZE: <strong>{selectedSize || 'SELECT SIZE'}</strong>
               </div>
               <div className="splayd-pdp-size-pills">
                 {product.sizes.filter((s: any) => s.enabled).map((size: any, idx: number) => (
@@ -1036,14 +1073,14 @@ export default function ProductDetails() {
               <>
                 <div className="splayd-pdp-cart-row">
                   <div className="splayd-pdp-qty-stepper">
-                    <button type="button" onClick={() => setBuyNowQty(Math.max(1, buyNowQty - 1))} disabled={isOutOfStock}>-</button>
+                    <button type="button" onClick={() => setBuyNowQty(Math.max(1, buyNowQty - 1))} disabled={isOutOfStock}>−</button>
                     <span>{buyNowQty}</span>
                     <button type="button" onClick={() => setBuyNowQty(buyNowQty + 1)} disabled={isOutOfStock}>+</button>
                   </div>
                   <button 
                     className="splayd-pdp-add-btn" 
                     disabled={isOutOfStock}
-                    style={isOutOfStock ? { opacity: 0.5, cursor: 'not-allowed', background: '#475569' } : {}}
+                    style={isOutOfStock ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                     onClick={() => {
                       if (isOutOfStock) return;
                       const hasSizes = product.sizes && product.sizes.filter((s: any) => s.enabled).length > 0;
@@ -1054,6 +1091,7 @@ export default function ProductDetails() {
                       addToCart({ ...product, selectedSize: selectedSize || 'Free Size' });
                     }}
                   >
+                    <ShoppingCart size={16} />
                     {isOutOfStock ? 'OUT OF STOCK' : 'ADD TO CART'}
                   </button>
                 </div>
@@ -1062,7 +1100,7 @@ export default function ProductDetails() {
                 <button 
                   className="splayd-pdp-buy-btn"
                   disabled={isOutOfStock}
-                  style={isOutOfStock ? { opacity: 0.5, cursor: 'not-allowed', background: '#334155' } : {}}
+                  style={isOutOfStock ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                   onClick={() => {
                     if (isOutOfStock) return;
                     const hasSizes = product.sizes && product.sizes.filter((s: any) => s.enabled).length > 0;
@@ -1074,7 +1112,7 @@ export default function ProductDetails() {
                     setIsCheckoutOpen(true);
                   }}
                 >
-                  {isOutOfStock ? 'PRODUCT UNAVAILABLE' : 'BUY IT NOW'}
+                  ⚡ {isOutOfStock ? 'PRODUCT UNAVAILABLE' : 'BUY IT NOW'}
                 </button>
 
                 {/* Scarcity / Stock Bar */}
@@ -1082,9 +1120,9 @@ export default function ProductDetails() {
                   className="splayd-pdp-scarcity" 
                   style={
                     isOutOfStock 
-                      ? { background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)' } 
+                      ? { background: '#fef2f2', borderColor: '#fecaca' } 
                       : !isLowStock 
-                        ? { background: 'rgba(16, 185, 129, 0.08)', borderColor: 'rgba(16, 185, 129, 0.25)' }
+                        ? { background: '#f0fdf4', borderColor: '#bbf7d0' }
                         : {}
                   }
                 >
@@ -1094,15 +1132,15 @@ export default function ProductDetails() {
                       isOutOfStock 
                         ? { color: '#ef4444' } 
                         : !isLowStock 
-                          ? { color: '#10b981' } 
-                          : {}
+                          ? { color: '#16a34a' } 
+                          : { color: '#92400e' }
                     }
                   >
                     {isOutOfStock 
-                      ? '⚠️ OUT OF STOCK - PRODUCT CURRENTLY UNAVAILABLE' 
+                      ? '⚠️ Stock শেষ — পণ্যটি বর্তমানে অনুপলব্ধ' 
                       : isLowStock
-                        ? `🔥 HURRY! ONLY ${realStockCount} LEFT IN STOCK.`
-                        : `✔ IN STOCK (${realStockCount} UNITS AVAILABLE)`
+                        ? `🔥 দ্রুত! মাত্র ${realStockCount}টি বাকি আছে`
+                        : `✅ স্টকে আছে (${realStockCount} পিস উপলব্ধ)`
                     }
                   </div>
                   {!isOutOfStock && (
@@ -1115,15 +1153,117 @@ export default function ProductDetails() {
                 {/* Live Viewers */}
                 {liveViewConfig.enabled !== false && (
                   <div className="splayd-pdp-viewers">
-                    <Eye size={18} />
-                    <span>{liveViewersCount} People viewing this right now</span>
+                    <Eye size={16} />
+                    <span>{liveViewersCount} জন এখন এই পণ্যটি দেখছেন</span>
                   </div>
                 )}
               </>
             );
           })()}
 
+          {/* Contact Buttons */}
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+            {config.contactInfo?.whatsappNumber && (
+              <a
+                href={`https://wa.me/${config.contactInfo.whatsappNumber.replace(/[^0-9]/g, '')}?text=Hi, I want to order: ${encodeURIComponent(product.name)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  flex: 1,
+                  height: '44px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #16a34a',
+                  background: 'transparent',
+                  color: '#16a34a',
+                  fontWeight: 700,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '7px',
+                  textDecoration: 'none',
+                  transition: 'background 0.2s',
+                }}
+                onMouseOver={e => (e.currentTarget.style.background = '#f0fdf4')}
+                onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <Phone size={15} /> WhatsApp
+              </a>
+            )}
+            {config.contactInfo?.phoneNumber && (
+              <a
+                href={`tel:${config.contactInfo.phoneNumber}`}
+                style={{
+                  flex: 1,
+                  height: '44px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #0066cc',
+                  background: 'transparent',
+                  color: '#0066cc',
+                  fontWeight: 700,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '7px',
+                  textDecoration: 'none',
+                  transition: 'background 0.2s',
+                }}
+                onMouseOver={e => (e.currentTarget.style.background = '#eff6ff')}
+                onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <Phone size={15} /> Call Us
+              </a>
+            )}
+          </div>
 
+          {/* Payment Methods Strip */}
+          <div className="splayd-pdp-payments-strip">
+            <span style={{ fontSize: '0.72rem', color: '#71717a', fontWeight: 600, marginRight: '4px' }}>পেমেন্ট:</span>
+            {['Cash on Delivery', 'bKash', 'Nagad', 'Card'].map(m => (
+              <span key={m} className="splayd-payment-badge">{m}</span>
+            ))}
+          </div>
+
+          {/* Trust Badges Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+            {[
+              { icon: <Truck size={18} />, label: 'দ্রুত ডেলিভারি', sub: 'ঢাকা: ২৪-৪৮ ঘণ্টা' },
+              { icon: <Shield size={18} />, label: '১০০% আসল পণ্য', sub: 'গুণমান নিশ্চিত' },
+              { icon: <RotateCcw size={18} />, label: '৭-দিন রিটার্ন', sub: 'সহজ রিটার্ন নীতি' },
+              { icon: <CheckCircle size={18} />, label: 'নিরাপদ পেমেন্ট', sub: 'SSL সুরক্ষিত' },
+            ].map((item, i) => (
+              <div key={i} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '12px 14px',
+                background: '#f9fafb',
+                border: '1px solid #ececec',
+                borderRadius: '12px',
+              }}>
+                <div style={{
+                  width: '34px',
+                  height: '34px',
+                  borderRadius: '8px',
+                  background: '#111',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  {item.icon}
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#111', lineHeight: 1.2 }}>{item.label}</div>
+                  <div style={{ fontSize: '0.7rem', color: '#71717a', marginTop: '2px' }}>{item.sub}</div>
+                </div>
+              </div>
+            ))}
+          </div>
 
           {/* Expandable Accordion Cards (Description & Additional Information) */}
           <div className="splayd-pdp-accordions">
