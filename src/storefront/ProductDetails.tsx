@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useOutletContext } from 'react-router-dom';
-import { ShoppingCart, Heart, Share2, Star, CheckCircle, Shield, Truck, RotateCcw, ChevronLeft, ChevronRight, Smartphone, Phone, MessageCircle, X, User, MapPin, Package, CreditCard, ArrowRight, Minus, Plus, Headphones, Store, Send, Eye } from 'lucide-react';
+import { ShoppingCart, Heart, Share2, Star, CheckCircle, Shield, Truck, RotateCcw, ChevronLeft, ChevronRight, Smartphone, Phone, MessageCircle, X, User, MapPin, Package, CreditCard, ArrowRight, Minus, Plus, Headphones, Store, Send, Eye, Maximize2, ZoomIn } from 'lucide-react';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import { addOrder } from '../mock/data';
 import { sendOrderToBackend, fetchProductByIdFromBackend, fetchChatHistory, validateCouponCode, fetchCampaignsFromBackend } from '../services/api';
@@ -35,6 +35,7 @@ export default function ProductDetails() {
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState('');
   const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'reviews'>('description');
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   
   const { customer, login, register, loginWithGmail, updateCustomerProfile } = useCustomerAuth();
   
@@ -831,70 +832,154 @@ export default function ProductDetails() {
 
       {/* Main Grid */}
       <div className="splayd-pdp-grid">
-        {/* Gallery */}
+        {/* Modern Clean Product Gallery */}
         {(() => {
           const galleryList = product.gallery && product.gallery.length > 0 ? product.gallery : [product.image];
           const activeIdx = galleryList.findIndex((img: string) => img === activeImage);
           const currentIdx = activeIdx >= 0 ? activeIdx : 0;
+          const displayImg = activeImage || product.image;
 
-          const handlePrevImg = (e: React.MouseEvent) => {
-            e.stopPropagation();
+          const handlePrevImg = (e?: React.MouseEvent) => {
+            e?.stopPropagation();
             const prevIndex = (currentIdx - 1 + galleryList.length) % galleryList.length;
             setActiveImage(galleryList[prevIndex]);
           };
 
-          const handleNextImg = (e: React.MouseEvent) => {
-            e.stopPropagation();
+          const handleNextImg = (e?: React.MouseEvent) => {
+            e?.stopPropagation();
             const nextIndex = (currentIdx + 1) % galleryList.length;
             setActiveImage(galleryList[nextIndex]);
           };
 
+          const discountPct = product.originalPrice && Number(product.originalPrice) > Number(product.price)
+            ? Math.round(((Number(product.originalPrice) - Number(product.price)) / Number(product.originalPrice)) * 100)
+            : 0;
+
           return (
-            <div className="splayd-pdp-gallery-wrap">
-              <div className="splayd-pdp-main-img-box">
-                {/* 3D Image Flip Container */}
-                <div key={activeImage || product.image} className="pdp-3d-img-container">
-                  <img src={activeImage || product.image} alt={product.name} className="pdp-3d-main-image" />
+            <>
+              <div className="splayd-pdp-gallery-wrap clean-pdp-gallery">
+                {/* Featured Main Image Box (Top) */}
+                <div className="splayd-pdp-main-img-box clean-main-box" onClick={() => setLightboxOpen(true)}>
+                  {/* Image Container with Fade Animation */}
+                  <div key={displayImg} className="pdp-clean-img-container">
+                    <img src={displayImg} alt={product.name} className="pdp-clean-main-image" />
+                  </div>
+
+                  {/* Top Floating Badges */}
+                  <div className="pdp-gallery-top-badges">
+                    {discountPct > 0 && (
+                      <span className="pdp-badge-discount">-{discountPct}% OFF</span>
+                    )}
+                    {product.isNew && (
+                      <span className="pdp-badge-new">NEW</span>
+                    )}
+                  </div>
+
+                  {/* Fullscreen Zoom Trigger Button */}
+                  <button 
+                    type="button" 
+                    className="pdp-zoom-trigger-btn"
+                    onClick={(e) => { e.stopPropagation(); setLightboxOpen(true); }}
+                    title="Fullscreen Lightbox View"
+                  >
+                    <Maximize2 size={16} />
+                  </button>
+
+                  {/* Image Counter Pill */}
+                  {galleryList.length > 1 && (
+                    <div className="pdp-img-counter-pill">
+                      {currentIdx + 1} / {galleryList.length}
+                    </div>
+                  )}
+
+                  {/* Left & Right Image Navigation Arrows */}
+                  {galleryList.length > 1 && (
+                    <>
+                      <button 
+                        type="button" 
+                        className="pdp-img-nav-btn prev" 
+                        onClick={handlePrevImg}
+                        title="Previous Image"
+                      >
+                        <ChevronLeft size={20} />
+                      </button>
+                      <button 
+                        type="button" 
+                        className="pdp-img-nav-btn next" 
+                        onClick={handleNextImg}
+                        title="Next Image"
+                      >
+                        <ChevronRight size={20} />
+                      </button>
+                    </>
+                  )}
                 </div>
 
-                {/* Left & Right Product Image Scroll Navigation Arrow Buttons */}
+                {/* Horizontal Thumbnails Strip (Neatly Underneath Main Image) */}
                 {galleryList.length > 1 && (
-                  <>
-                    <button 
-                      type="button" 
-                      className="pdp-img-nav-btn prev" 
-                      onClick={handlePrevImg}
-                      title="Previous Image"
-                    >
-                      <ChevronLeft size={22} />
-                    </button>
-                    <button 
-                      type="button" 
-                      className="pdp-img-nav-btn next" 
-                      onClick={handleNextImg}
-                      title="Next Image"
-                    >
-                      <ChevronRight size={22} />
-                    </button>
-                  </>
+                  <div className="splayd-pdp-thumbnails-strip clean-thumbs-strip">
+                    {galleryList.map((img: string, i: number) => (
+                      <button 
+                        key={i} 
+                        type="button"
+                        className={`splayd-pdp-thumb-btn ${displayImg === img ? 'active' : ''}`}
+                        onClick={() => setActiveImage(img)}
+                        title={`View photo ${i + 1}`}
+                      >
+                        <img src={img} alt={`Thumbnail ${i+1}`} />
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
 
-              {/* Horizontal Side-Scroll Thumbnail Strip */}
-              {galleryList.length > 1 && (
-                <div className="splayd-pdp-thumbnails-strip">
-                  {galleryList.map((img: string, i: number) => (
+              {/* Fullscreen Lightbox Modal */}
+              {lightboxOpen && (
+                <div className="pdp-lightbox-overlay" onClick={() => setLightboxOpen(false)}>
+                  <div className="pdp-lightbox-content" onClick={(e) => e.stopPropagation()}>
                     <button 
-                      key={i} 
-                      className={`splayd-pdp-thumb-btn ${activeImage === img ? 'active' : ''}`}
-                      onClick={() => setActiveImage(img)}
+                      type="button" 
+                      className="pdp-lightbox-close" 
+                      onClick={() => setLightboxOpen(false)}
+                      title="Close Lightbox"
                     >
-                      <img src={img} alt={`Thumbnail ${i+1}`} />
+                      <X size={26} />
                     </button>
-                  ))}
+
+                    <div className="pdp-lightbox-main">
+                      {galleryList.length > 1 && (
+                        <button type="button" className="pdp-lightbox-nav prev" onClick={handlePrevImg}>
+                          <ChevronLeft size={28} />
+                        </button>
+                      )}
+                      
+                      <img src={displayImg} alt={product.name} className="pdp-lightbox-img" />
+
+                      {galleryList.length > 1 && (
+                        <button type="button" className="pdp-lightbox-nav next" onClick={handleNextImg}>
+                          <ChevronRight size={28} />
+                        </button>
+                      )}
+                    </div>
+
+                    {galleryList.length > 1 && (
+                      <div className="pdp-lightbox-thumbs">
+                        {galleryList.map((img: string, i: number) => (
+                          <button 
+                            key={i} 
+                            type="button"
+                            className={`pdp-lightbox-thumb ${displayImg === img ? 'active' : ''}`}
+                            onClick={() => setActiveImage(img)}
+                          >
+                            <img src={img} alt={`Light ${i+1}`} />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
-            </div>
+            </>
           );
         })()}
 
@@ -1175,14 +1260,14 @@ export default function ProductDetails() {
       </div>
 
       {/* Video & Photo Reviews Section */}
-      <div className="pdp-tabs-container pdp-media-section" style={{ padding: '30px', background: 'white', marginTop: '40px' }}>
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--sf-text-primary)', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <MessageCircle size={22} color="var(--sf-accent)" />
-          ভিডিও ও ছবি রিভিউ (Video & Photo Reviews)
-        </h3>
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {(product.videoUrl || product.video_url || product.photoContent || product.photo_content) ? (
+      {Boolean((product.videoUrl && String(product.videoUrl).trim()) || (product.video_url && String(product.video_url).trim()) || (product.photoContent && String(product.photoContent).trim()) || (product.photo_content && String(product.photo_content).trim())) && (
+        <div className="pdp-tabs-container pdp-media-section" style={{ padding: '30px', background: 'white', marginTop: '40px' }}>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--sf-text-primary)', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <MessageCircle size={22} color="var(--sf-accent)" />
+            ভিডিও ও ছবি রিভিউ (Video & Photo Reviews)
+          </h3>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <div className="pdp-media-grid">
               {(product.videoUrl || product.video_url) && (
                 <div style={{ background: 'var(--sf-bg-light)', padding: '20px', borderRadius: '12px', border: '1px solid var(--sf-border)' }}>
@@ -1223,30 +1308,9 @@ export default function ProductDetails() {
                 </div>
               )}
             </div>
-          ) : (
-            <div style={{ background: 'var(--sf-bg-light)', padding: '36px 20px', borderRadius: '16px', border: '1px dashed var(--sf-border)', textAlign: 'center' }}>
-              <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(24, 24, 27, 0.06)', color: 'var(--sf-text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
-                <Headphones size={28} />
-              </div>
-              <h4 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--sf-text-primary)', marginBottom: '8px' }}>ভিডিও ও ছবি রিভিউ চান?</h4>
-              <p style={{ fontSize: '0.9rem', color: 'var(--sf-text-secondary)', maxWidth: '480px', margin: '0 auto 20px auto', lineHeight: 1.6 }}>
-                এই প্রোডাক্টটির রিয়েল ফটো বা ভিডিও দেখতে সরাসরি হোয়াটসঅ্যাপ বা হেল্পলাইনে নক দিন।
-              </p>
-              {config.contactInfo.whatsappNumber && (
-                <a 
-                  href={`https://wa.me/${config.contactInfo.whatsappNumber.replace(/[^0-9]/g, '')}`} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="store-btn store-btn-primary" 
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 24px', borderRadius: '24px', fontWeight: 700, cursor: 'pointer', textDecoration: 'none' }}
-                >
-                  <Smartphone size={18} /> WhatsApp এ নক দিন
-                </a>
-              )}
-            </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Related / Suggested Products */}
       {product && (() => {

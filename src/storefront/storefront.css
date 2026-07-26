@@ -2,6 +2,26 @@
    STOREFRONT — CUSTOMER-FACING DESIGN SYSTEM
    ============================================ */
 
+/* ---- High Performance & High FPS Optimization ---- */
+*, *::before, *::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.storefront-container {
+  will-change: scroll-position;
+}
+
+.product-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 340px;
+}
+
+.category-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 160px;
+}
+
 /* ---- Storefront Variables ---- */
 :root {
   --sf-bg: #FAFAFA;
@@ -6683,39 +6703,35 @@
   background: #000000;
 }
 
-/* ---- Sticky Header Bar for Collection & Category Pages ---- */
-/* Desktop header height = 100px (--sf-header-height), Mobile = 72px */
+/* ---- Toolbar for Collection & Category Pages ---- */
 .collection-sticky-header-bar {
-  position: -webkit-sticky;
-  position: sticky;
-  top: 100px !important;
-  z-index: 90;
-  background: rgba(255, 255, 255, 0.65) !important;
-  backdrop-filter: blur(18px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
-  border-top: none;
-  border-bottom: none !important;
-  padding: 8px 24px 6px 24px;
-  margin-left: -24px;
-  margin-right: -24px;
-  width: calc(100% + 48px);
-  margin-bottom: 20px;
-  box-shadow:
-    0 1px 0 0 rgba(255, 255, 255, 0.6),
-    0 4px 16px -2px rgba(0, 0, 0, 0.08),
-    0 1px 3px 0 rgba(0, 0, 0, 0.04),
-    inset 0 -1px 0 0 rgba(0, 0, 0, 0.05);
-  box-sizing: border-box;
+  position: relative !important;
+  top: auto !important;
+  z-index: 10 !important;
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid #e4e4e7 !important;
+  border-radius: 14px !important;
+  padding: 10px 16px !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  width: 100% !important;
+  margin-bottom: 24px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+  box-sizing: border-box !important;
 }
 
 .collection-sticky-header-bar.no-pills-bar {
+  position: relative !important;
+  top: auto !important;
   background: transparent !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   border: none !important;
   box-shadow: none !important;
-  padding-top: 4px !important;
-  padding-bottom: 4px !important;
+  padding: 4px 0 !important;
+  margin-bottom: 16px !important;
 }
 
 .cat-bar-fixed-wrapper {
@@ -7000,6 +7016,8 @@ select option {
       inset 0 -1px 0 0 rgba(0, 0, 0, 0.05) !important;
   }
   .collection-sticky-header-bar.no-pills-bar {
+    position: relative !important;
+    top: auto !important;
     background: transparent !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;

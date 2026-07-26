@@ -332,19 +332,21 @@ export default function StorefrontHome() {
     return matched.length > 0 ? matched : resolved;
   }, [config.products, config.newPopularProductIds, activeNpTab, activeCampaigns]);
 
-  const filteredProducts = shuffledProducts.filter(p => {
-    if (selectedCategory !== 'All' && p.category !== selectedCategory) return false;
-    if (searchQuery && searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      return (
-        p.name.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        (p.brand && p.brand.toLowerCase().includes(q)) ||
-        (p.description && p.description.toLowerCase().includes(q))
-      );
-    }
-    return true;
-  });
+  const filteredProducts = useMemo(() => {
+    return shuffledProducts.filter(p => {
+      if (selectedCategory !== 'All' && p.category !== selectedCategory) return false;
+      if (searchQuery && searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        return (
+          p.name.toLowerCase().includes(q) ||
+          p.category.toLowerCase().includes(q) ||
+          (p.brand && p.brand.toLowerCase().includes(q)) ||
+          (p.description && p.description.toLowerCase().includes(q))
+        );
+      }
+      return true;
+    });
+  }, [shuffledProducts, selectedCategory, searchQuery]);
 
   useEffect(() => {
     if (location.hash) {
@@ -357,32 +359,38 @@ export default function StorefrontHome() {
   }, [location.hash]);
 
   // Filter enabled banners
-  const banners = config.banners.filter(b => b.enabled);
-  // Filter published categories
-  let categories = config.categories.filter(c => c.published).sort((a, b) => a.sortOrder - b.sortOrder);
-  if (categories.length === 0) {
-    const uniqueCategoryNames = Array.from(new Set(config.products.filter(p => p.published).map(p => p.category)));
-    const iconMap: Record<string, string> = {
-      'Electronics': 'Smartphone',
-      'Fashion': 'Shirt',
-      'Home & Garden': 'Home',
-      'Sports': 'Dumbbell',
-      'Beauty': 'Sparkles',
-      'Books': 'BookOpen',
-    };
-    categories = uniqueCategoryNames.map((name, index) => ({
-      id: index + 1,
-      name,
-      icon: iconMap[name] || 'Grid3X3',
-      count: config.products.filter(p => p.published && p.category === name).length,
-      published: true,
-      sortOrder: index + 1
-    }));
-  }
+  const banners = useMemo(() => (config.banners || []).filter(b => b.enabled), [config.banners]);
 
+  // Filter published categories
+  const categories = useMemo(() => {
+    let cats = (config.categories || []).filter(c => c.published).sort((a, b) => a.sortOrder - b.sortOrder);
+    if (cats.length === 0) {
+      const published = (config.products || []).filter(p => p.published);
+      const uniqueCategoryNames = Array.from(new Set(published.map(p => p.category)));
+      const iconMap: Record<string, string> = {
+        'Electronics': 'Smartphone',
+        'Fashion': 'Shirt',
+        'Home & Garden': 'Home',
+        'Sports': 'Dumbbell',
+        'Beauty': 'Sparkles',
+        'Books': 'BookOpen',
+      };
+      cats = uniqueCategoryNames.map((name, index) => ({
+        id: index + 1,
+        name,
+        icon: iconMap[name] || 'Grid3X3',
+        count: published.filter(p => p.category === name).length,
+        published: true,
+        sortOrder: index + 1
+      }));
+    }
+    return cats;
+  }, [config.categories, config.products]);
 
   // Find if there is an active timed campaign
-  const activePromoSection = config.navLinks.find(n => n.enabled && n.timerEnabled && n.timerEndDate);
+  const activePromoSection = useMemo(() => {
+    return (config.navLinks || []).find(n => n.enabled && n.timerEnabled && n.timerEndDate);
+  }, [config.navLinks]);
 
   useEffect(() => {
     if (banners.length === 0) return;

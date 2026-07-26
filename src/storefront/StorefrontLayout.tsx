@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Search, ShoppingCart, Heart, User, Zap, X, Minus, Plus, Phone, Mail, Menu, Home, MoreVertical, ArrowRight, Shield, Truck, RotateCcw, MapPin, Sparkles } from 'lucide-react';
 import { useStorefrontConfig } from '../store/storefrontConfig';
@@ -29,72 +29,77 @@ export default function StorefrontLayout() {
   const { customer } = useCustomerAuth();
 
   // Filter enabled announcements
-  const announcements = config.announcements.filter(a => a.enabled);
+  const announcements = useMemo(() => config.announcements.filter(a => a.enabled), [config.announcements]);
+  
   // Filter enabled nav links and dynamically normalize collection links
-  const navLinks = config.navLinks
-    .filter(n => n.enabled)
-    .map(link => {
-      if (link.customPageContent) {
-        return { ...link, url: `/page/${link.id}` };
-      }
-      let url = link.url;
-      if (url.startsWith('/store/')) {
-        url = url.replace('/store/', '/');
-      } else if (url === '/store' || url === '') {
-        url = '/';
-      }
-      const labelLower = (link.label || '').toLowerCase();
-      if (labelLower === 'home') {
-        url = '/';
-      } else if (labelLower === 'offers' || labelLower === 'offer') {
-        url = '/collection/offers';
-      } else if (labelLower === 'new arrivals' || labelLower === 'new arrival') {
-        url = '/collection/new-arrivals';
-      } else if (labelLower === 'popular order' || labelLower === 'popular') {
-        url = '/collection/popular-order';
-      }
-      return { ...link, url };
-    });
+  const navLinks = useMemo(() => {
+    return config.navLinks
+      .filter(n => n.enabled)
+      .map(link => {
+        if (link.customPageContent) {
+          return { ...link, url: `/page/${link.id}` };
+        }
+        let url = link.url;
+        if (url.startsWith('/store/')) {
+          url = url.replace('/store/', '/');
+        } else if (url === '/store' || url === '') {
+          url = '/';
+        }
+        const labelLower = (link.label || '').toLowerCase();
+        if (labelLower === 'home') {
+          url = '/';
+        } else if (labelLower === 'offers' || labelLower === 'offer') {
+          url = '/collection/offers';
+        } else if (labelLower === 'new arrivals' || labelLower === 'new arrival') {
+          url = '/collection/new-arrivals';
+        } else if (labelLower === 'popular order' || labelLower === 'popular') {
+          url = '/collection/popular-order';
+        }
+        return { ...link, url };
+      });
+  }, [config.navLinks]);
 
   // Branding
   const branding = config.branding;
 
   // Footer columns (with normalized links, excluding Quick Links)
-  const footerColumns = config.footerColumns
-    .filter(col => col.title !== 'Quick Links')
-    .map(col => ({
-      ...col,
-      links: col.links.filter(l => l.enabled).map(link => {
-      if (link.customPageContent) {
-        const labelLower = (link.label || '').toLowerCase();
-        if (labelLower === 'privacy policy') {
-          return { ...link, url: '/privacy-policy' };
-        } else if (labelLower === 'terms of service' || labelLower === 'terms and service') {
-          return { ...link, url: '/terms-of-service' };
-        } else if (labelLower === 'about us' || labelLower === 'about') {
-          return { ...link, url: '/about-us' };
-        }
-        return { ...link, url: `/page/${link.id}` };
-      }
-      let url = link.url;
-      if (url.startsWith('/store/')) {
-        url = url.replace('/store/', '/');
-      } else if (url === '/store' || url === '') {
-        url = '/';
-      }
-      const labelLower = (link.label || '').toLowerCase();
-      if (labelLower === 'home' || labelLower === 'shop all') {
-        url = '/';
-      } else if (labelLower === 'new arrivals' || labelLower === 'new arrival') {
-        url = '/collection/new-arrivals';
-      } else if (labelLower === 'offers' || labelLower === 'offer' || labelLower === 'sale') {
-        url = '/collection/offers';
-      } else if (labelLower === 'popular order' || labelLower === 'popular') {
-        url = '/collection/popular-order';
-      }
-      return { ...link, url };
-    }),
-  }));
+  const footerColumns = useMemo(() => {
+    return config.footerColumns
+      .filter(col => col.title !== 'Quick Links')
+      .map(col => ({
+        ...col,
+        links: col.links.filter(l => l.enabled).map(link => {
+          if (link.customPageContent) {
+            const labelLower = (link.label || '').toLowerCase();
+            if (labelLower === 'privacy policy') {
+              return { ...link, url: '/privacy-policy' };
+            } else if (labelLower === 'terms of service' || labelLower === 'terms and service') {
+              return { ...link, url: '/terms-of-service' };
+            } else if (labelLower === 'about us' || labelLower === 'about') {
+              return { ...link, url: '/about-us' };
+            }
+            return { ...link, url: `/page/${link.id}` };
+          }
+          let url = link.url;
+          if (url.startsWith('/store/')) {
+            url = url.replace('/store/', '/');
+          } else if (url === '/store' || url === '') {
+            url = '/';
+          }
+          const labelLower = (link.label || '').toLowerCase();
+          if (labelLower === 'home' || labelLower === 'shop all') {
+            url = '/';
+          } else if (labelLower === 'new arrivals' || labelLower === 'new arrival') {
+            url = '/collection/new-arrivals';
+          } else if (labelLower === 'offers' || labelLower === 'offer' || labelLower === 'sale') {
+            url = '/collection/offers';
+          } else if (labelLower === 'popular order' || labelLower === 'popular') {
+            url = '/collection/popular-order';
+          }
+          return { ...link, url };
+        }),
+      }));
+  }, [config.footerColumns]);
 
   const [cartOpen, setCartOpen] = useState(false);
   const [wishlistOpen, setWishlistOpen] = useState(false);
@@ -132,33 +137,32 @@ export default function StorefrontLayout() {
     const container = containerRef.current;
     if (!container) return;
 
-    const handleScroll = () => {
-      const st = container.scrollTop;
-      
-      // Update scrolled state for transparent header
-      if (isHome) {
-        setScrolled(st > 50);
-      } else {
-        setScrolled(true);
-      }
+    let ticking = false;
 
-      // Hide/Show bottom navigation based on scroll direction
-      const diff = st - lastScrollTopRef.current;
-      if (diff > 15 && st > 100) {
-        // Scrolling down -> hide bottom nav
-        setBottomNavVisible(false);
-      } else if (diff < -15 || st <= 20) {
-        // Scrolling up or near top -> show bottom nav
-        setBottomNavVisible(true);
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const st = container.scrollTop;
+          
+          // Update scrolled state for header
+          const nextScrolled = !isHome || st > 50;
+          setScrolled(prev => (prev !== nextScrolled ? nextScrolled : prev));
+
+          // Hide/Show bottom navigation based on scroll direction
+          const diff = st - lastScrollTopRef.current;
+          if (diff > 15 && st > 100) {
+            setBottomNavVisible(prev => (prev ? false : prev));
+          } else if (diff < -15 || st <= 20) {
+            setBottomNavVisible(prev => (!prev ? true : prev));
+          }
+          lastScrollTopRef.current = st;
+          ticking = false;
+        });
+        ticking = true;
       }
-      lastScrollTopRef.current = st;
     };
 
-    if (!isHome) {
-      setScrolled(true);
-    } else {
-      setScrolled(container.scrollTop > 50);
-    }
+    setScrolled(!isHome || container.scrollTop > 50);
 
     container.addEventListener('scroll', handleScroll, { passive: true });
     return () => container.removeEventListener('scroll', handleScroll);
@@ -486,25 +490,12 @@ export default function StorefrontLayout() {
           <Outlet context={{ addToCart, toggleWishlist, wishlist, cart, cartTotal, clearCart, updateQuantity, searchQuery, setSearchQuery }} />
         </main>
 
-        {/* ---- SPLAYD Replica 5-Column Footer ---- */}
+        {/* ---- SPLAYD Replica 4-Column Footer ---- */}
         <footer className="splayd-footer-section">
           <div className="splayd-footer-container">
             <div className="splayd-footer-grid">
               
-              {/* Column 1: Top Categories */}
-              <div>
-                <h4 className="splayd-footer-col-title">Top Categories</h4>
-                <ul className="splayd-footer-link-list">
-                  <li><Link to="/collection/hot-deals" onClick={() => window.scrollTo(0,0)}>DEAL OF THE DAY</Link></li>
-                  <li><Link to="/collection/shirts" onClick={() => window.scrollTo(0,0)}>SHIRTS</Link></li>
-                  <li><Link to="/collection/t-shirts" onClick={() => window.scrollTo(0,0)}>T-SHIRTS</Link></li>
-                  <li><Link to="/collection/pants" onClick={() => window.scrollTo(0,0)}>PANTS</Link></li>
-                  <li><Link to="/collection/sports-shoes" onClick={() => window.scrollTo(0,0)}>SNEACARE</Link></li>
-                  <li><Link to="/collection/accessories" onClick={() => window.scrollTo(0,0)}>ACCESSORIES</Link></li>
-                </ul>
-              </div>
-
-              {/* Column 2: Information */}
+              {/* Column 1: Information */}
               <div>
                 <h4 className="splayd-footer-col-title">Information</h4>
                 <ul className="splayd-footer-link-list">
