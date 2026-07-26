@@ -199,14 +199,6 @@ export default function CollectionPage() {
   const isAllCategoriesPage = !slug || slug === 'all' || slug === 'categories';
   const isSpecialCollection = slug ? Boolean(SPECIAL_COLLECTION_SLUGS[slug.toLowerCase()]) : false;
 
-  const pillTabs = useMemo(() => {
-    const defaults = ['ALL', 'SNEAKERS', 'PANJABI', 'SHIRTS', 'PERFUMES', 'PANTS', 'SPORTS SHOES', 'SPORTS WEAR', 'FITNESS ITEM'];
-    const customCats = (config.categories || [])
-      .filter(c => c.published)
-      .map(c => c.name.toUpperCase());
-    return Array.from(new Set([...defaults, ...customCats]));
-  }, [config.categories]);
-
   // Dynamic Category list
   const dynamicCategories = useMemo(() => {
     const publishedProducts = config.products.filter(p => p.published);
@@ -482,9 +474,9 @@ export default function CollectionPage() {
         <h1 className="col-page-title">{activeCategoryTitle}</h1>
       </div>
 
-      {/* ── Sticky Control Bar (Filter Button Left & Featured/Sort Button Right) ── */}
+      {/* ── Sticky Bar (Filter Button Left & Featured/Sort Button Right) ── */}
       <div className="collection-sticky-header-bar">
-        <div className="cat-bar-fixed-wrapper" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="cat-bar-fixed-wrapper" style={{ justifyContent: 'space-between' }}>
           {/* Fixed Left: Filter Icon Button */}
           <button
             type="button"
