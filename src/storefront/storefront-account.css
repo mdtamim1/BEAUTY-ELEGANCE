@@ -84,7 +84,7 @@
 
 .addresses-section-title {
   font-size: 1.15rem;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--sf-text-primary);
   display: flex;
   align-items: center;
@@ -140,7 +140,7 @@
 
 .address-label {
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--sf-accent);
   background: var(--sf-accent-light);
   padding: 4px 10px;
@@ -150,7 +150,7 @@
 
 .address-default-badge {
   font-size: 0.7rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--sf-success);
   background: rgba(16, 185, 129, 0.1);
   padding: 4px 8px;
@@ -167,14 +167,14 @@
 }
 
 .address-user-name {
-  font-weight: 700;
+  font-weight: 600;
   color: var(--sf-text-primary);
   margin-bottom: 4px;
   font-size: 0.95rem;
 }
 
 .address-user-phone {
-  font-weight: 600;
+  font-weight: 500;
   color: var(--sf-text-secondary);
   margin-bottom: 8px;
 }
@@ -197,7 +197,7 @@
   height: 32px;
   border-radius: 8px;
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -544,6 +544,29 @@
 }
 
 /* ---- Mobile Responsive Layout & Touch-Friendly Account Slide Drawer ---- */
+.account-mobile-dots-menu-btn {
+  display: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--sf-border);
+  background: white;
+  color: var(--sf-text-primary);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  transition: all 0.2s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.account-mobile-dots-menu-btn:hover {
+  background: var(--sf-bg-light);
+  border-color: var(--sf-accent);
+  color: var(--sf-accent);
+}
+
 .account-mobile-bar {
   display: none;
 }
@@ -564,6 +587,10 @@
 }
 
 @media (max-width: 992px) {
+  .account-mobile-dots-menu-btn {
+    display: flex !important;
+  }
+
   .store-products-layout {
     grid-template-columns: 1fr !important;
   }

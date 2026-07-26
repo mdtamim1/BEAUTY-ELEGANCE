@@ -102,7 +102,7 @@ export const CustomerEventsTab: React.FC = () => {
                     borderRadius: '10px',
                     padding: '8px 14px',
                     fontSize: '0.85rem',
-                    fontWeight: 800,
+                    fontWeight: 600,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -112,7 +112,7 @@ export const CustomerEventsTab: React.FC = () => {
                   }}
                 >
                   {copiedCode === ach.couponCode ? <Check size={14} /> : <Copy size={14} />}
-                  <span>{copiedCode === ach.couponCode ? 'কুপন কপি হয়েছে!' : 'কুপন কোড কপি করুন'}</span>
+                  <span>{copiedCode === ach.couponCode ? 'Coupon Copied!' : 'Copy Coupon Code'}</span>
                 </button>
               </div>
             ))}
@@ -134,19 +134,19 @@ export const CustomerEventsTab: React.FC = () => {
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <span style={{ background: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24', border: '1px solid rgba(251, 191, 36, 0.4)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ background: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24', border: '1px solid rgba(251, 191, 36, 0.4)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Sparkles size={14} />
-              <span>ইন্টারেক্টিভ গেমস (Live Events)</span>
+              <span>Live Interactive Games</span>
             </span>
           </div>
 
           <div>
-            <h4 style={{ margin: '0 0 8px 0', fontSize: '1.2rem', fontWeight: 900, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '1.2rem', fontWeight: 600, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Gamepad2 size={20} style={{ color: '#f59e0b' }} />
-              <span>হোমপেজ ইভেন্ট জোন</span>
+              <span>Homepage Event Arena</span>
             </h4>
             <p style={{ margin: '0 0 20px 0', fontSize: '0.88rem', color: '#cbd5e1', lineHeight: 1.5 }}>
-              হোমপেজের <strong>"Interactive Events & Games"</strong> সেকশনে গিয়ে ইভেন্ট খেলুন এবং সরাসরি ২০% পর্যন্ত কুপন জিতুন!
+              Participate in interactive games on the homepage <strong>"Interactive Events & Games"</strong> section and win instant discount coupons up to 20% OFF!
             </p>
           </div>
 

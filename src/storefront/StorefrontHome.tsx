@@ -628,17 +628,6 @@ export default function StorefrontHome() {
               className="campaign-banner-img"
             />
             <div className="campaign-banner-overlay" />
-            <div className="campaign-banner-content">
-              <span className="campaign-banner-badge">
-                <Sparkles size={14} /> EXCLUSIVE CAMPAIGNS & OFFERS
-              </span>
-              <h2 className="campaign-banner-title">
-                EXPLORE ALL OUR SPECIAL CAMPAIGNS
-              </h2>
-              <p className="campaign-banner-subtitle">
-                Explore all our contemporary special offers & mega deals at a glance
-              </p>
-            </div>
             <div className="campaign-banner-btn-box">
               <span>VIEW ALL CAMPAIGNS</span>
               <ArrowRight size={18} />
@@ -658,17 +647,6 @@ export default function StorefrontHome() {
               style={{ opacity: 0.4 }}
             />
             <div className="campaign-banner-overlay" style={{ background: 'linear-gradient(90deg, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.6) 60%, transparent 100%)' }} />
-            <div className="campaign-banner-content">
-              <span className="campaign-banner-badge" style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.4)' }}>
-                <Flame size={14} fill="#38bdf8" /> RUNNING & UPCOMING EVENTS
-              </span>
-              <h2 className="campaign-banner-title">
-                JOIN LIVE EVENTS & PLAY TRIVIA GAMES
-              </h2>
-              <p className="campaign-banner-subtitle">
-                Join our live events, quizzes and games to win discount vouchers instantly
-              </p>
-            </div>
             <div className="campaign-banner-btn-box" style={{ background: '#38bdf8', color: '#0f172a' }}>
               <span>EXPLORE EVENT ZONE</span>
               <ArrowRight size={18} />

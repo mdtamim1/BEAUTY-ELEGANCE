@@ -199,6 +199,14 @@ export default function CollectionPage() {
   const isAllCategoriesPage = !slug || slug === 'all' || slug === 'categories';
   const isSpecialCollection = slug ? Boolean(SPECIAL_COLLECTION_SLUGS[slug.toLowerCase()]) : false;
 
+  const pillTabs = useMemo(() => {
+    const defaults = ['ALL', 'SNEAKERS', 'PANJABI', 'SHIRTS', 'PERFUMES', 'PANTS', 'SPORTS SHOES', 'SPORTS WEAR', 'FITNESS ITEM'];
+    const customCats = (config.categories || [])
+      .filter(c => c.published)
+      .map(c => c.name.toUpperCase());
+    return Array.from(new Set([...defaults, ...customCats]));
+  }, [config.categories]);
+
   // Dynamic Category list
   const dynamicCategories = useMemo(() => {
     const publishedProducts = config.products.filter(p => p.published);
@@ -472,32 +480,58 @@ export default function CollectionPage() {
       {/* ── Clean Centered Page Title Hero ── */}
       <div className="col-page-hero">
         <h1 className="col-page-title">{activeCategoryTitle}</h1>
-        <p className="col-page-meta">
-          {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'} available
-        </p>
       </div>
 
-      {/* ── Category Pills Filter Row (New & Popular Replica) ── */}
-      <div className="new-popular-tabs-row" style={{ margin: '0 0 24px 0' }}>
-        {['ALL', 'SNEAKERS', 'PANJABI', 'SHIRTS', 'PERFUMES', 'PANTS', 'SPORTS SHOES', 'SPORTS WEAR', 'FITNESS ITEM'].map((tab) => {
-          const isActive = (selectedCategory === 'All' && tab === 'ALL') || (selectedCategory.toUpperCase() === tab);
-          return (
-            <button
-              key={tab}
-              type="button"
-              className={`new-popular-tab-btn ${isActive ? 'active' : ''}`}
-              onClick={() => {
-                if (tab === 'ALL') {
-                  setSelectedCategory('All');
-                } else {
-                  setSelectedCategory(tab);
-                }
-              }}
-            >
-              {tab}
-            </button>
-          );
-        })}
+      {/* ── Sticky Category Bar (Fixed Filter Left & Featured Right | Middle Scrollable Pills) ── */}
+      <div className="collection-sticky-header-bar">
+        <div className="cat-bar-fixed-wrapper">
+          {/* Fixed Left: Filter Icon Button */}
+          <button
+            type="button"
+            className="cat-bar-fixed-btn left-fixed"
+            onClick={() => setIsFilterDrawerOpen(true)}
+            title="Filter"
+          >
+            <Filter size={16} />
+            {(selectedCategory !== 'All' || minPrice || maxPrice || selectedSizes.length > 0 || selectedBrands.length > 0 || inStockOnly) && (
+              <span className="filter-active-dot" />
+            )}
+          </button>
+
+          {/* Middle Scrollable Category Pills */}
+          <div className="new-popular-tabs-row cat-bar-scroll-middle">
+            {pillTabs.map((tab) => {
+              const isActive = (selectedCategory === 'All' && tab === 'ALL') || (selectedCategory.toUpperCase() === tab);
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  className={`new-popular-tab-btn ${isActive ? 'active' : ''}`}
+                  onClick={() => {
+                    if (tab === 'ALL') {
+                      setSelectedCategory('All');
+                    } else {
+                      setSelectedCategory(tab);
+                    }
+                  }}
+                >
+                  {tab}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Fixed Right: Sort Icon Dropdown (Icon only, no text) */}
+          <div className="cat-bar-fixed-btn right-fixed" title="Sort Products">
+            <SlidersHorizontal size={16} />
+            <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="cat-bar-sort-select-overlay" title="Sort Products">
+              <option value="default">Featured</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
+              <option value="rating">Rating: High to Low</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* ── Main Layout: Left Filter + Right Products ── */}
@@ -566,37 +600,6 @@ export default function CollectionPage() {
 
         {/* ── RIGHT PRODUCTS COLUMN ── */}
         <div className="collection-products-column">
-
-          {/* Toolbar */}
-          <div className="collection-toolbar">
-            {/* Left side: Filter button */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <button
-                type="button"
-                className="filter-drawer-trigger-btn"
-                onClick={() => setIsFilterDrawerOpen(true)}
-              >
-                <Filter size={14} />
-                <span>Filter</span>
-                {(selectedCategory !== 'All' || minPrice || maxPrice || selectedSizes.length > 0 || selectedBrands.length > 0 || inStockOnly) && (
-                  <span className="filter-active-dot" />
-                )}
-              </button>
-              <span className="collection-product-count">
-                <strong>{filteredProducts.length}</strong> products
-              </span>
-            </div>
-
-            {/* Right side: Featured dropdown */}
-            <div className="sort-control">
-              <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="sort-select">
-                <option value="default">Featured</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-                <option value="rating">Rating: High to Low</option>
-              </select>
-            </div>
-          </div>
 
           {/* Product Grid */}
           {filteredProducts.length > 0 ? (
