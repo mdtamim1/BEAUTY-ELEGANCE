@@ -482,9 +482,9 @@ export default function CollectionPage() {
         <h1 className="col-page-title">{activeCategoryTitle}</h1>
       </div>
 
-      {/* ── Sticky Category Bar (Fixed Filter Left & Featured Right | Middle Scrollable Pills) ── */}
+      {/* ── Sticky Control Bar (Filter Button Left & Featured/Sort Button Right) ── */}
       <div className="collection-sticky-header-bar">
-        <div className="cat-bar-fixed-wrapper">
+        <div className="cat-bar-fixed-wrapper" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           {/* Fixed Left: Filter Icon Button */}
           <button
             type="button"
@@ -497,29 +497,6 @@ export default function CollectionPage() {
               <span className="filter-active-dot" />
             )}
           </button>
-
-          {/* Middle Scrollable Category Pills */}
-          <div className="new-popular-tabs-row cat-bar-scroll-middle">
-            {pillTabs.map((tab) => {
-              const isActive = (selectedCategory === 'All' && tab === 'ALL') || (selectedCategory.toUpperCase() === tab);
-              return (
-                <button
-                  key={tab}
-                  type="button"
-                  className={`new-popular-tab-btn ${isActive ? 'active' : ''}`}
-                  onClick={() => {
-                    if (tab === 'ALL') {
-                      setSelectedCategory('All');
-                    } else {
-                      setSelectedCategory(tab);
-                    }
-                  }}
-                >
-                  {tab}
-                </button>
-              );
-            })}
-          </div>
 
           {/* Fixed Right: Sort Icon Dropdown (Icon only, no text) */}
           <div className="cat-bar-fixed-btn right-fixed" title="Sort Products">
