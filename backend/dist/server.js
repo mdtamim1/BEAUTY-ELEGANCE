@@ -5642,35 +5642,9 @@ app.use(cors({
   credentials: true
 }));
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://accounts.google.com"],
-      connectSrc: [
-        "'self'",
-        "https://beauty-elegance-admin.onrender.com",
-        "https://api.tamimglobal.com",
-        "https://tamimglobal.com",
-        "https://admin.tamimglobal.com",
-        "http://localhost:5000",
-        "ws:",
-        "wss:",
-        "https://generativelanguage.googleapis.com"
-      ],
-      imgSrc: [
-        "'self'",
-        "data:",
-        "https://picsum.photos",
-        "https://*.picsum.photos",
-        "https://images.unsplash.com",
-        "https://*.unsplash.com"
-      ],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-      frameSrc: ["'self'", "https://accounts.google.com"]
-    }
-  },
-  crossOriginEmbedderPolicy: false
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 app.use(morgan("dev"));
 app.use(express.json({ limit: "10mb" }));
