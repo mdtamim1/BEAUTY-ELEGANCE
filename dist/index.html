@@ -20,6 +20,19 @@
       fbq('track', 'PageView');
     </script>
     <!-- End Meta Pixel Code -->
+
+    <!-- Stale Asset Auto-Recovery Script -->
+    <script>
+      window.addEventListener('error', function(e) {
+        if (e.target && (e.target.tagName === 'LINK' || e.target.tagName === 'SCRIPT')) {
+          var lastReload = sessionStorage.getItem('asset_reload_retry');
+          if (!lastReload || (Date.now() - parseInt(lastReload)) > 10000) {
+            sessionStorage.setItem('asset_reload_retry', Date.now().toString());
+            window.location.reload(true);
+          }
+        }
+      }, true);
+    </script>
     <script type="module" crossorigin src="/assets/index-CZx5NRpn.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-CkLLb1Xm.css">
   </head>
