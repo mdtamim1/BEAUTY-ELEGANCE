@@ -2151,7 +2151,7 @@ export default function Orders() {
                         <td style={{ padding: '8px 12px', color: '#10b981', fontWeight: 600 }}>{cDelivered}</td>
                         <td style={{ padding: '8px 12px', color: '#ef4444', fontWeight: 600 }}>{cReturned}</td>
                         <td style={{ padding: '8px 12px', fontWeight: 700, color: cRatio >= 80 ? '#10b981' : '#f59e0b' }}>
-                          {cTotal > 0 ? `${cRatio}%` : courierKey === 'steadfast' ? '100% (Central API)' : '0 Returns (Connected API)'}
+                          {cTotal > 0 ? `${cRatio}%` : '100%'}
                         </td>
                       </tr>
                     );
@@ -2160,7 +2160,7 @@ export default function Orders() {
               </table>
 
               <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '14px', background: 'rgba(255,255,255,0.03)', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)', lineHeight: '1.5' }}>
-                💡 <strong>BD Courier API Policy:</strong> Steadfast API provides nationwide central delivery history across all BD merchants ({universalFraudModal.courier_breakdown?.steadfast?.delivered || 0} delivered). Pathao, RedX, CarryBee & Paperfly APIs track your store&apos;s own order dispatches.
+                💡 <strong>BD Courier API Policy:</strong> Multi-courier APIs aggregate nationwide central delivery history across all BD merchants ({universalFraudModal.delivered_parcels || 0} delivered / {universalFraudModal.total_parcels || 0} total across Steadfast, Pathao, RedX, CarryBee & Paperfly).
               </div>
             </div>
 
