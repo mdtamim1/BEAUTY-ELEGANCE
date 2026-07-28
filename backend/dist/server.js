@@ -5981,13 +5981,7 @@ var aiLimiter = rateLimit({
   }
 });
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || /^http:\/\/localhost(:\d+)?$/.test(origin) || origin.includes("beauty-elegance-ec88f") || origin.includes("web.app") || origin.includes("firebaseapp.com") || origin.includes("tamimglobal.com")) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS: " + origin));
-    }
-  },
+  origin: true,
   credentials: true
 }));
 app.use(helmet({
