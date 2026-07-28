@@ -340,15 +340,23 @@ export default function StorefrontLayout() {
         <header className="store-header">
           {!mobileSearchOpen ? (
             <div className="store-header-inner-grid">
-              {/* Left Action: Menu Toggle */}
+              {/* Left Action: Mobile Menu Toggle & Desktop Nav Links */}
               <div className="store-header-left">
                 <button 
-                  className="store-header-btn" 
+                  className="store-header-btn store-mobile-menu-btn" 
                   onClick={() => setMobileMenuOpen(true)}
                   title="Open Menu"
                 >
                   <Menu size={22} />
                 </button>
+
+                <nav className="store-desktop-nav">
+                  {navLinks.map((link) => (
+                    <Link key={link.id} to={link.url} className="store-desktop-nav-link">
+                      {link.label}
+                    </Link>
+                  ))}
+                </nav>
               </div>
 
               {/* Center: Logo */}
