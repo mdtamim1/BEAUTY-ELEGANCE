@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 
-const EMAIL_USER = process.env.EMAIL_USER || 'rjtamim154@gmail.com';
-const EMAIL_PASS = process.env.EMAIL_PASS || 'yfginnhvzzloemza';
+const EMAIL_USER = process.env.EMAIL_USER || '';
+const EMAIL_PASS = process.env.EMAIL_PASS || '';
 
 // ---- Nodemailer transporter (Gmail SMTP) ----
 const createTransporter = () => {
@@ -17,7 +17,7 @@ const createTransporter = () => {
 const STORE_NAME = process.env.STORE_NAME || 'Tamim Global';
 const STORE_URL = process.env.STORE_URL || 'https://tamimglobal.com';
 const STORE_LOGO = `${STORE_URL}/logo.png`;
-const FROM_EMAIL = `"${STORE_NAME}" <${EMAIL_USER}>`;
+const FROM_EMAIL = EMAIL_USER ? `"${STORE_NAME}" <${EMAIL_USER}>` : '';
 
 // ---- HTML email base template ----
 const emailTemplate = (content: string) => `
@@ -370,6 +370,11 @@ export const sendOrderConfirmationEmail = async (order: OrderEmailData): Promise
   }
 
   // 2. Direct Nodemailer Gmail SMTP Execution
+  if (!EMAIL_USER || !EMAIL_PASS) {
+    console.log('[EmailService] Email notification skipped (No active EMAIL_USER / BREVO_API_KEY configured).');
+    return false;
+  }
+
   try {
     const transporter = createTransporter();
     await transporter.sendMail({

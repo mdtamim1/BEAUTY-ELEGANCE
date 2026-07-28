@@ -2113,8 +2113,8 @@ var sendOrderSMS = async (phone, details) => {
 
 // backend/services/emailService.ts
 import nodemailer from "nodemailer";
-var EMAIL_USER = process.env.EMAIL_USER || "rjtamim154@gmail.com";
-var EMAIL_PASS = process.env.EMAIL_PASS || "yfginnhvzzloemza";
+var EMAIL_USER = process.env.EMAIL_USER || "";
+var EMAIL_PASS = process.env.EMAIL_PASS || "";
 var createTransporter = () => {
   return nodemailer.createTransport({
     service: "gmail",
@@ -2127,7 +2127,7 @@ var createTransporter = () => {
 var STORE_NAME = process.env.STORE_NAME || "Tamim Global";
 var STORE_URL = process.env.STORE_URL || "https://tamimglobal.com";
 var STORE_LOGO = `${STORE_URL}/logo.png`;
-var FROM_EMAIL = `"${STORE_NAME}" <${EMAIL_USER}>`;
+var FROM_EMAIL = EMAIL_USER ? `"${STORE_NAME}" <${EMAIL_USER}>` : "";
 var emailTemplate = (content) => `
 <!DOCTYPE html>
 <html>
@@ -2269,6 +2269,10 @@ var sendOrderConfirmationEmail = async (order) => {
     } catch (err) {
       console.error("[EmailService - Brevo API] Failed to send via Brevo:", err.message || err);
     }
+  }
+  if (!EMAIL_USER || !EMAIL_PASS) {
+    console.log("[EmailService] Email notification skipped (No active EMAIL_USER / BREVO_API_KEY configured).");
+    return false;
   }
   try {
     const transporter = createTransporter();
