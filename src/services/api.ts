@@ -41,23 +41,50 @@ export const checkServerHealth = async (): Promise<boolean> => {
   }
 };
 
-// Send Order to backend database
+// Send Order to backend database with multi-endpoint fallback
 export const sendOrderToBackend = async (orderData: any): Promise<boolean> => {
-  try {
-    const response = await fetch(`${API_BASE}/orders`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(orderData),
-    });
-    if (!response.ok) return false;
-    const result = await response.json();
-    return result.status === 'success';
-  } catch (e) {
-    console.warn('Backend server is down or unreachable. Falling back to local storage helper.', e);
-    return false;
+  // Sanitize productsList to ensure code is never empty
+  const sanitizedOrderData = {
+    ...orderData,
+    productsList: (orderData.productsList || []).map((item: any) => ({
+      ...item,
+      code: item.code || item.sku || 'ITEM-001',
+      name: item.name || 'Product',
+      price: Number(item.price || 0),
+      quantity: Number(item.quantity || 1)
+    }))
+  };
+
+  const targetUrls = [
+    `${API_BASE}/orders`,
+    'https://api.tamimglobal.com/api/v1/orders',
+    '/api/v1/orders'
+  ];
+
+  for (const url of targetUrls) {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(sanitizedOrderData),
+      });
+
+      if (response.ok) {
+        const result = await response.json().catch(() => ({}));
+        if (result.status === 'success') {
+          console.log(`[API] Order successfully posted to backend endpoint: ${url}`);
+          return true;
+        }
+      }
+    } catch (e) {
+      console.warn(`[API] Failed posting order to ${url}, attempting next endpoint...`, e);
+    }
   }
+
+  console.error('[API] All backend endpoints unreachable for order submission.');
+  return false;
 };
 
 // Fetch customer orders matching email or phone
