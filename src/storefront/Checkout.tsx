@@ -186,7 +186,7 @@ export default function Checkout() {
 
     const orderData = {
       customer: customerName,
-      email: customerEmail || customer?.email || customerPhone,
+      email: customerEmail || customer?.email || '',
       amount: total,
       items: items.reduce((acc, item) => acc + item.quantity, 0),
       paymentMethod: paymentMethod === 'bkash' ? 'bKash (Send Money)' : paymentMethod === 'nagad' ? 'Nagad (Send Money)' : 'Cash on Delivery',

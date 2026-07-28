@@ -503,7 +503,7 @@ export default function ProductDetails() {
 
     const orderData = {
       customer: customerName,
-      email: customerEmail || customer?.email || customerPhone,
+      email: customerEmail || customer?.email || '',
       amount: total,
       items: buyNowQty,
       paymentMethod: paymentMethod === 'bkash' ? 'bKash (Send Money)' : paymentMethod === 'nagad' ? 'Nagad (Send Money)' : 'Cash on Delivery',

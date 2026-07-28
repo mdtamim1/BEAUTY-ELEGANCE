@@ -2,6 +2,63 @@ import { Request, Response } from 'express';
 import db from '../config/db';
 import { cacheService } from '../services/cacheService';
 import jwt from 'jsonwebtoken';
+import { sendOrderSMS } from '../services/smsService';
+import { sendOrderConfirmationEmail } from '../services/emailService';
+
+const triggerInstantOrderNotifications = (orderData: any) => {
+  const phone = orderData.phone;
+  const email = orderData.email;
+  const storeOwnerEmail = process.env.EMAIL_USER || 'rjtamim154@gmail.com';
+
+  // 1. Instant SMS Notification if phone is provided
+  if (phone) {
+    sendOrderSMS(phone, {
+      orderId: orderData.id,
+      customerName: orderData.customer,
+      amount: orderData.amount,
+      itemsCount: orderData.items || (orderData.productsList ? orderData.productsList.length : 1),
+      paymentMethod: orderData.paymentMethod
+    }).catch(err => console.error('[OrderController] SMS Trigger error:', err));
+  }
+
+  // 2. Instant Email Notification to Customer if email is provided
+  if (email && email.includes('@')) {
+    sendOrderConfirmationEmail({
+      id: orderData.id,
+      customer: orderData.customer,
+      email: email,
+      phone: phone,
+      address: orderData.address,
+      city: orderData.city,
+      thana: orderData.thana,
+      amount: orderData.amount,
+      subtotal: orderData.subtotal,
+      deliveryCharge: orderData.deliveryCharge,
+      discount: orderData.discount,
+      paymentMethod: orderData.paymentMethod,
+      productsList: orderData.productsList
+    }).catch(err => console.error('[OrderController] Customer Email Trigger error:', err));
+  }
+
+  // 3. Instant Admin Alert Email to Store Owner (rjtamim154@gmail.com) for EVERY new order!
+  if (storeOwnerEmail && storeOwnerEmail.includes('@') && storeOwnerEmail.toLowerCase() !== (email || '').toLowerCase()) {
+    sendOrderConfirmationEmail({
+      id: orderData.id,
+      customer: `[ADMIN ALERT] New Order from ${orderData.customer}`,
+      email: storeOwnerEmail,
+      phone: phone,
+      address: orderData.address,
+      city: orderData.city,
+      thana: orderData.thana,
+      amount: orderData.amount,
+      subtotal: orderData.subtotal,
+      deliveryCharge: orderData.deliveryCharge,
+      discount: orderData.discount,
+      paymentMethod: orderData.paymentMethod,
+      productsList: orderData.productsList
+    }).catch(err => console.error('[OrderController] Admin Email Alert Trigger error:', err));
+  }
+};
 
 const logOrderHistory = (
   orderId: string,
@@ -199,6 +256,13 @@ export const createOrder = (req: Request, res: Response) => {
       return res.status(500).json({ status: 'error', message: 'Database error' });
     }
 
+    const finalItems = Number(items || req.body.itemsCount || (productsList && Array.isArray(productsList) ? productsList.reduce((sum: number, i: any) => sum + Number(i.quantity || 1), 0) : 1));
+    const finalAmount = Number(amount || 0);
+    const finalDeliveryCharge = Number(deliveryCharge || 0);
+    const finalDiscount = Number(discount || 0);
+    const finalPaidAmount = Number(paidAmount || 0);
+    const finalSubtotal = Number(subtotal || amount || 0);
+
     db.run(
       `INSERT INTO orders (
         id, customer, email, amount, items, payment_method, store_name, phone, address, 
@@ -206,9 +270,9 @@ export const createOrder = (req: Request, res: Response) => {
         delivery_charge, discount, paid_amount, subtotal, status
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        id, customer, email, amount, items, paymentMethod, storeName, phone, address,
-        courier, city, thana, area, customerNote, shopNote, paymentType, memoNumber,
-        deliveryCharge, discount, paidAmount, subtotal, initialStatus
+        id, customer || 'Customer', email || '', finalAmount, finalItems, paymentMethod || 'Cash on Delivery', storeName || 'Tamim Global', phone || '', address || '',
+        courier || 'Pathao', city || 'Dhaka', thana || '', area || '', customerNote || '', shopNote || '', paymentType || 'cod', memoNumber || '',
+        finalDeliveryCharge, finalDiscount, finalPaidAmount, finalSubtotal, initialStatus
       ],
       function (err) {
         if (err) {
@@ -216,7 +280,7 @@ export const createOrder = (req: Request, res: Response) => {
           db.run('ROLLBACK', (rbErr) => {
             if (rbErr) console.error('Error rolling back transaction:', rbErr);
           });
-          return res.status(500).json({ status: 'error', message: 'Failed to create order' });
+          return res.status(500).json({ status: 'error', message: err?.message || 'Failed to create order' });
         }
 
         // Insert order items
@@ -231,7 +295,7 @@ export const createOrder = (req: Request, res: Response) => {
 
           productsList.forEach((item: any) => {
             stmt.run(
-              [id, item.name, item.color || 'Default', item.size || 'Free Size', item.code, item.quantity, item.price],
+              [id, item.name || 'Product', item.color || 'Default', item.size || 'Free Size', item.code || 'ITEM-001', Number(item.quantity || 1), Number(item.price || 0)],
               (runErr: any) => {
                 if (runErr) {
                   console.error('Error inserting order item:', runErr);
@@ -267,6 +331,23 @@ export const createOrder = (req: Request, res: Response) => {
                         db.run(`UPDATE customer_coupons SET status = 'used' WHERE UPPER(code) = ?`, [cleanCode]);
                       }
 
+                      // Trigger instant SMS & Email notifications to customer
+                      triggerInstantOrderNotifications({
+                        id,
+                        customer,
+                        email,
+                        phone,
+                        address,
+                        city,
+                        thana,
+                        amount,
+                        subtotal,
+                        deliveryCharge,
+                        discount,
+                        paymentMethod,
+                        productsList
+                      });
+
                       res.json({ status: 'success', message: 'Order created successfully', data: { id } });
                     });
                   });
@@ -294,6 +375,23 @@ export const createOrder = (req: Request, res: Response) => {
               db.run(`UPDATE coupons SET status = 'used' WHERE UPPER(code) = ?`, [cleanCode]);
               db.run(`UPDATE customer_coupons SET status = 'used' WHERE UPPER(code) = ?`, [cleanCode]);
             }
+
+            // Trigger instant SMS & Email notifications to customer
+            triggerInstantOrderNotifications({
+              id,
+              customer,
+              email,
+              phone,
+              address,
+              city,
+              thana,
+              amount,
+              subtotal,
+              deliveryCharge,
+              discount,
+              paymentMethod,
+              productsList
+            });
 
             res.json({ status: 'success', message: 'Order created successfully', data: { id } });
           });

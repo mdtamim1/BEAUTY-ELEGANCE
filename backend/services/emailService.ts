@@ -202,3 +202,161 @@ export const sendOfferEmail = async (
     console.error('[EmailService] Failed to send offer emails:', err);
   }
 };
+
+// ---- Instant Order Confirmation Email ----
+export interface OrderEmailData {
+  id: string;
+  customer: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  thana?: string;
+  amount: number;
+  subtotal?: number;
+  deliveryCharge?: number;
+  discount?: number;
+  paymentMethod?: string;
+  productsList?: Array<{ name: string; quantity: number; price: number; color?: string; size?: string }>;
+}
+
+/**
+ * Sends transactional email via Brevo API v3 (api.brevo.com/v3/smtp/email)
+ */
+export const sendBrevoEmail = async (
+  toEmail: string,
+  toName: string,
+  subject: string,
+  htmlContent: string
+): Promise<boolean> => {
+  const brevoApiKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY || '';
+  if (!brevoApiKey) return false;
+
+  const senderEmail = process.env.EMAIL_USER || 'rjtamim154@gmail.com';
+  const senderName = process.env.STORE_NAME || 'Tamim Global';
+
+  try {
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': brevoApiKey,
+        'content-type': 'application/json',
+        'accept': 'application/json'
+      },
+      body: JSON.stringify({
+        sender: { name: senderName, email: senderEmail },
+        to: [{ email: toEmail, name: toName || 'Customer' }],
+        subject: subject,
+        htmlContent: htmlContent
+      })
+    });
+
+    if (response.ok) {
+      console.log(`[EmailService - Brevo API] Email sent successfully to: ${toEmail}`);
+      return true;
+    } else {
+      const errRes = await response.json().catch(() => ({}));
+      console.error('[EmailService - Brevo API] Brevo API returned error:', errRes);
+      return false;
+    }
+  } catch (err: any) {
+    console.error('[EmailService - Brevo API] Failed to send via Brevo:', err.message || err);
+    return false;
+  }
+};
+
+export const sendOrderConfirmationEmail = async (order: OrderEmailData): Promise<boolean> => {
+  if (!order.email || !order.email.includes('@')) {
+    console.warn(`[EmailService] Invalid customer email: ${order.email}, skipping confirmation email.`);
+    return false;
+  }
+
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.warn('[EmailService] EMAIL_USER or EMAIL_PASS not set in .env, skipping order confirmation email.');
+    return false;
+  }
+
+  const itemsHtml = (order.productsList || []).map(item => `
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:10px 0;font-weight:600;color:#111827;">${item.name} ${item.color && item.color !== 'Default' ? `(${item.color})` : ''} x${item.quantity}</td>
+      <td style="padding:10px 0;text-align:right;font-weight:700;color:#e11d48;">৳${(item.price * item.quantity).toFixed(2)}</td>
+    </tr>
+  `).join('');
+
+  const content = `
+    <div style="background:#fef2f2;border-left:4px solid #e11d48;padding:12px 16px;border-radius:6px;margin-bottom:20px;">
+      <h2 style="margin:0 0 4px;font-size:1.2rem;color:#9f1239;">🎉 অর্ডার সফলভাবে গৃহীত হয়েছে!</h2>
+      <p style="margin:0;font-size:0.88rem;color:#be123c;">অর্ডার নম্বর: <strong>${order.id}</strong></p>
+    </div>
+
+    <p>প্রিয় <strong>${order.customer}</strong>,</p>
+    <p><strong>${STORE_NAME}</strong>-এ কেনাকাটার জন্য আপনাকে ধন্যবাদ! আপনার অর্ডারটি সফলভাবে আমাদের সিস্টেমে প্রসেস হচ্ছে।</p>
+
+    <h3 style="font-size:1rem;margin:20px 0 10px;color:#111827;border-bottom:2px solid #f3f4f6;padding-bottom:6px;">📦 অর্ডারের বিবরণ</h3>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+      <thead>
+        <tr style="border-bottom:2px solid #e5e7eb;text-align:left;font-size:0.8rem;color:#6b7280;">
+          <th style="padding:6px 0;">পণ্য</th>
+          <th style="padding:6px 0;text-align:right;">মূল্য</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemsHtml || '<tr><td colspan="2" style="padding:10px 0;">পণ্য তালিকা প্রসেসিং এ রয়েছে</td></tr>'}
+      </tbody>
+    </table>
+
+    <div style="background:#f9fafb;border-radius:8px;padding:14px;margin-bottom:20px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.88rem;">
+        <span>সাবটোটাল:</span>
+        <span style="font-weight:600;">৳${(order.subtotal || order.amount).toFixed(2)}</span>
+      </div>
+      ${order.deliveryCharge ? `
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.88rem;">
+        <span>ডেলিভারি চার্জ:</span>
+        <span style="font-weight:600;">৳${order.deliveryCharge.toFixed(2)}</span>
+      </div>` : ''}
+      ${order.discount ? `
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.88rem;color:#10b981;">
+        <span>ডিসকাউন্ট:</span>
+        <span style="font-weight:600;">-৳${order.discount.toFixed(2)}</span>
+      </div>` : ''}
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:8px 0;" />
+      <div style="display:flex;justify-content:space-between;font-size:1.05rem;font-weight:800;color:#e11d48;">
+        <span>সর্বমোট দেয়:</span>
+        <span>৳${order.amount.toFixed(2)}</span>
+      </div>
+    </div>
+
+    <h3 style="font-size:1rem;margin:20px 0 10px;color:#111827;border-bottom:2px solid #f3f4f6;padding-bottom:6px;">📍 ডেলিভারি ঠিকানা</h3>
+    <p style="margin:4px 0;font-size:0.88rem;color:#374151;"><strong>গ্রহীতা:</strong> ${order.customer}</p>
+    <p style="margin:4px 0;font-size:0.88rem;color:#374151;"><strong>মোবাইল:</strong> ${order.phone || 'N/A'}</p>
+    <p style="margin:4px 0;font-size:0.88rem;color:#374151;"><strong>ঠিকানা:</strong> ${order.address || ''} ${order.thana ? `, ${order.thana}` : ''} ${order.city ? `, ${order.city}` : ''}</p>
+    <p style="margin:4px 0;font-size:0.88rem;color:#374151;"><strong>পেমেন্ট মেথড:</strong> ${order.paymentMethod || 'Cash on Delivery'}</p>
+
+    <hr class="divider" />
+    <p style="font-size:0.85rem;color:#6b7280;text-align:center;">যেকোনো প্রয়োজনে আমাদের সাথে যোগাযোগ করুন। ধন্যবাদ!</p>
+  `;
+
+  const htmlBody = emailTemplate(content);
+  const subjectText = `🛍️ আপনার অর্ডার কনফার্ম হয়েছে! (অর্ডার #${order.id}) — ${STORE_NAME}`;
+
+  // 1. Attempt sending via Brevo API v3 if BREVO_API_KEY is present
+  const brevoSuccess = await sendBrevoEmail(order.email, order.customer, subjectText, htmlBody);
+  if (brevoSuccess) return true;
+
+  // 2. Fallback to Gmail SMTP Nodemailer
+  try {
+    const transporter = createTransporter();
+    await transporter.sendMail({
+      from: FROM_EMAIL,
+      to: order.email,
+      subject: subjectText,
+      html: htmlBody,
+    });
+    console.log(`[EmailService] Order confirmation email sent to: ${order.email} for order #${order.id}`);
+    return true;
+  } catch (err: any) {
+    console.error(`[EmailService] Failed to send order confirmation email to ${order.email}:`, err.message || err);
+    return false;
+  }
+};

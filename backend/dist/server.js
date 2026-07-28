@@ -2032,6 +2032,319 @@ import { Router as Router3 } from "express";
 
 // backend/controllers/ordersController.ts
 import jwt3 from "jsonwebtoken";
+
+// backend/services/smsService.ts
+var sanitizeBDPhone = (phone) => {
+  let clean = (phone || "").replace(/[^0-9]/g, "");
+  if (clean.length > 11 && clean.startsWith("880")) {
+    clean = clean.substring(2);
+  }
+  if (clean.length === 10 && clean.startsWith("1")) {
+    clean = "0" + clean;
+  }
+  return clean;
+};
+var sendOrderSMS = async (phone, details) => {
+  const cleanPhone = sanitizeBDPhone(phone);
+  if (!cleanPhone || cleanPhone.length !== 11) {
+    console.warn(`[SMSService] Invalid phone number provided: ${phone}, skipping SMS.`);
+    return false;
+  }
+  const storeName = process.env.STORE_NAME || "Tamim Global";
+  const smsMessage = `Prio ${details.customerName || "Customer"}, apnar order ID ${details.orderId} (${storeName}) safolbhabe grohon kora hoyeche! Mot taka: Tk ${details.amount}. Dhonnobad!`;
+  const brevoApiKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY || "";
+  const recipientNumber = `+88${cleanPhone}`;
+  if (brevoApiKey) {
+    try {
+      const brevoRes = await fetch("https://api.brevo.com/v3/transactionalSMS/sms", {
+        method: "POST",
+        headers: {
+          "api-key": brevoApiKey,
+          "content-type": "application/json",
+          "accept": "application/json"
+        },
+        body: JSON.stringify({
+          sender: "TamimGlobal",
+          recipient: recipientNumber,
+          content: smsMessage,
+          type: "transactional"
+        })
+      });
+      const resJson = await brevoRes.json().catch(() => ({}));
+      if (brevoRes.ok) {
+        console.log(`[SMSService - Brevo SMS] Instant SMS sent to ${recipientNumber} | MessageID:`, resJson.messageId || resJson.reference);
+        return true;
+      } else {
+        console.warn(`[SMSService - Brevo SMS] Brevo API message:`, resJson.message || resJson.code || resJson);
+      }
+    } catch (e) {
+      console.error(`[SMSService - Brevo SMS] Failed to send via Brevo SMS API:`, e.message || e);
+    }
+  }
+  const smsApiKey = process.env.SMS_API_KEY || process.env.BULKSMS_API_KEY || "";
+  const smsSenderId = process.env.SMS_SENDER_ID || process.env.BULKSMS_SENDER_ID || storeName;
+  if (!smsApiKey) {
+    console.log(`[SMSService] \u{1F4F1} INSTANT SMS TRIGGERED (Simulation Mode):`);
+    console.log(` \u2794 To: ${recipientNumber}`);
+    console.log(` \u2794 Message: "${smsMessage}"`);
+    return true;
+  }
+  try {
+    const response = await fetch("https://api.bulksmsbd.net/v2/sms/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        api_key: smsApiKey,
+        sender_id: smsSenderId,
+        number: cleanPhone,
+        message: smsMessage
+      })
+    });
+    const resData = await response.json().catch(() => ({}));
+    console.log(`[SMSService] Instant SMS sent to ${recipientNumber} | Response:`, resData);
+    return true;
+  } catch (err) {
+    console.error(`[SMSService] Failed to send SMS to ${recipientNumber}:`, err.message || err);
+    return false;
+  }
+};
+
+// backend/services/emailService.ts
+import nodemailer from "nodemailer";
+var createTransporter = () => {
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+      // Gmail App Password (not regular password)
+    }
+  });
+};
+var STORE_NAME = process.env.STORE_NAME || "Tamim Global";
+var STORE_URL = process.env.STORE_URL || "https://tamimglobal.com";
+var STORE_LOGO = `${STORE_URL}/logo.png`;
+var FROM_EMAIL = `"${STORE_NAME}" <${process.env.EMAIL_USER}>`;
+var emailTemplate = (content) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${STORE_NAME}</title>
+  <style>
+    body { margin: 0; padding: 0; background: #f4f4f5; font-family: 'Segoe UI', Arial, sans-serif; }
+    .wrapper { max-width: 560px; margin: 32px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .header { background: #111827; padding: 28px 32px; text-align: center; }
+    .header img { height: 52px; object-fit: contain; }
+    .header h1 { color: #e11d48; font-size: 1.1rem; margin: 8px 0 0; letter-spacing: 2px; font-weight: 800; }
+    .body { padding: 32px; color: #1f2937; }
+    .body h2 { font-size: 1.3rem; font-weight: 800; margin: 0 0 12px; color: #111827; }
+    .body p { font-size: 0.92rem; line-height: 1.7; color: #4b5563; margin: 0 0 16px; }
+    .btn { display: inline-block; background: #e11d48; color: #ffffff !important; text-decoration: none; padding: 12px 28px; border-radius: 100px; font-weight: 700; font-size: 0.9rem; margin-top: 8px; }
+    .divider { border: none; border-top: 1px solid #f3f4f6; margin: 24px 0; }
+    .tag { display: inline-block; background: #fef2f2; color: #e11d48; border-radius: 100px; padding: 4px 12px; font-size: 0.78rem; font-weight: 700; margin: 4px 4px 4px 0; }
+    .product-card { display: flex; gap: 12px; align-items: center; background: #f9fafb; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+    .product-img { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; }
+    .product-info { flex: 1; }
+    .product-name { font-weight: 700; font-size: 0.88rem; color: #111827; margin: 0 0 4px; }
+    .product-price { color: #e11d48; font-weight: 800; font-size: 0.9rem; }
+    .footer { background: #111827; padding: 20px 32px; text-align: center; }
+    .footer p { color: #6b7280; font-size: 0.75rem; margin: 4px 0; }
+    .footer a { color: #9ca3af; text-decoration: none; }
+    .unsubscribe { font-size: 0.7rem; color: #6b7280; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <img src="${STORE_LOGO}" alt="${STORE_NAME}" onerror="this.style.display='none'" />
+      <h1>${STORE_NAME.toUpperCase()}</h1>
+    </div>
+    <div class="body">
+      ${content}
+    </div>
+    <div class="footer">
+      <p>\xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} ${STORE_NAME}. All rights reserved.</p>
+      <p><a href="${STORE_URL}">${STORE_URL}</a></p>
+      <p class="unsubscribe">\u0986\u09B0 \u0987\u09AE\u09C7\u0987\u09B2 \u09AA\u09C7\u09A4\u09C7 \u09A8\u09BE \u099A\u09BE\u0987\u09B2\u09C7 <a href="${STORE_URL}/unsubscribe">\u098F\u0996\u09BE\u09A8\u09C7 \u0995\u09CD\u09B2\u09BF\u0995 \u0995\u09B0\u09C1\u09A8</a></p>
+    </div>
+  </div>
+</body>
+</html>
+`;
+var sendBrevoEmail = async (toEmail, toName, subject, htmlContent) => {
+  const brevoApiKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY || "";
+  if (!brevoApiKey) return false;
+  const senderEmail = process.env.EMAIL_USER || "rjtamim154@gmail.com";
+  const senderName = process.env.STORE_NAME || "Tamim Global";
+  try {
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "api-key": brevoApiKey,
+        "content-type": "application/json",
+        "accept": "application/json"
+      },
+      body: JSON.stringify({
+        sender: { name: senderName, email: senderEmail },
+        to: [{ email: toEmail, name: toName || "Customer" }],
+        subject,
+        htmlContent
+      })
+    });
+    if (response.ok) {
+      console.log(`[EmailService - Brevo API] Email sent successfully to: ${toEmail}`);
+      return true;
+    } else {
+      const errRes = await response.json().catch(() => ({}));
+      console.error("[EmailService - Brevo API] Brevo API returned error:", errRes);
+      return false;
+    }
+  } catch (err) {
+    console.error("[EmailService - Brevo API] Failed to send via Brevo:", err.message || err);
+    return false;
+  }
+};
+var sendOrderConfirmationEmail = async (order) => {
+  if (!order.email || !order.email.includes("@")) {
+    console.warn(`[EmailService] Invalid customer email: ${order.email}, skipping confirmation email.`);
+    return false;
+  }
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.warn("[EmailService] EMAIL_USER or EMAIL_PASS not set in .env, skipping order confirmation email.");
+    return false;
+  }
+  const itemsHtml = (order.productsList || []).map((item) => `
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:10px 0;font-weight:600;color:#111827;">${item.name} ${item.color && item.color !== "Default" ? `(${item.color})` : ""} x${item.quantity}</td>
+      <td style="padding:10px 0;text-align:right;font-weight:700;color:#e11d48;">\u09F3${(item.price * item.quantity).toFixed(2)}</td>
+    </tr>
+  `).join("");
+  const content = `
+    <div style="background:#fef2f2;border-left:4px solid #e11d48;padding:12px 16px;border-radius:6px;margin-bottom:20px;">
+      <h2 style="margin:0 0 4px;font-size:1.2rem;color:#9f1239;">\u{1F389} \u0985\u09B0\u09CD\u09A1\u09BE\u09B0 \u09B8\u09AB\u09B2\u09AD\u09BE\u09AC\u09C7 \u0997\u09C3\u09B9\u09C0\u09A4 \u09B9\u09AF\u09BC\u09C7\u099B\u09C7!</h2>
+      <p style="margin:0;font-size:0.88rem;color:#be123c;">\u0985\u09B0\u09CD\u09A1\u09BE\u09B0 \u09A8\u09AE\u09CD\u09AC\u09B0: <strong>${order.id}</strong></p>
+    </div>
+
+    <p>\u09AA\u09CD\u09B0\u09BF\u09AF\u09BC <strong>${order.customer}</strong>,</p>
+    <p><strong>${STORE_NAME}</strong>-\u098F \u0995\u09C7\u09A8\u09BE\u0995\u09BE\u099F\u09BE\u09B0 \u099C\u09A8\u09CD\u09AF \u0986\u09AA\u09A8\u09BE\u0995\u09C7 \u09A7\u09A8\u09CD\u09AF\u09AC\u09BE\u09A6! \u0986\u09AA\u09A8\u09BE\u09B0 \u0985\u09B0\u09CD\u09A1\u09BE\u09B0\u099F\u09BF \u09B8\u09AB\u09B2\u09AD\u09BE\u09AC\u09C7 \u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u09B8\u09BF\u09B8\u09CD\u099F\u09C7\u09AE\u09C7 \u09AA\u09CD\u09B0\u09B8\u09C7\u09B8 \u09B9\u099A\u09CD\u099B\u09C7\u0964</p>
+
+    <h3 style="font-size:1rem;margin:20px 0 10px;color:#111827;border-bottom:2px solid #f3f4f6;padding-bottom:6px;">\u{1F4E6} \u0985\u09B0\u09CD\u09A1\u09BE\u09B0\u09C7\u09B0 \u09AC\u09BF\u09AC\u09B0\u09A3</h3>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+      <thead>
+        <tr style="border-bottom:2px solid #e5e7eb;text-align:left;font-size:0.8rem;color:#6b7280;">
+          <th style="padding:6px 0;">\u09AA\u09A3\u09CD\u09AF</th>
+          <th style="padding:6px 0;text-align:right;">\u09AE\u09C2\u09B2\u09CD\u09AF</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemsHtml || '<tr><td colspan="2" style="padding:10px 0;">\u09AA\u09A3\u09CD\u09AF \u09A4\u09BE\u09B2\u09BF\u0995\u09BE \u09AA\u09CD\u09B0\u09B8\u09C7\u09B8\u09BF\u0982 \u098F \u09B0\u09AF\u09BC\u09C7\u099B\u09C7</td></tr>'}
+      </tbody>
+    </table>
+
+    <div style="background:#f9fafb;border-radius:8px;padding:14px;margin-bottom:20px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.88rem;">
+        <span>\u09B8\u09BE\u09AC\u099F\u09CB\u099F\u09BE\u09B2:</span>
+        <span style="font-weight:600;">\u09F3${(order.subtotal || order.amount).toFixed(2)}</span>
+      </div>
+      ${order.deliveryCharge ? `
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.88rem;">
+        <span>\u09A1\u09C7\u09B2\u09BF\u09AD\u09BE\u09B0\u09BF \u099A\u09BE\u09B0\u09CD\u099C:</span>
+        <span style="font-weight:600;">\u09F3${order.deliveryCharge.toFixed(2)}</span>
+      </div>` : ""}
+      ${order.discount ? `
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.88rem;color:#10b981;">
+        <span>\u09A1\u09BF\u09B8\u0995\u09BE\u0989\u09A8\u09CD\u099F:</span>
+        <span style="font-weight:600;">-\u09F3${order.discount.toFixed(2)}</span>
+      </div>` : ""}
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:8px 0;" />
+      <div style="display:flex;justify-content:space-between;font-size:1.05rem;font-weight:800;color:#e11d48;">
+        <span>\u09B8\u09B0\u09CD\u09AC\u09AE\u09CB\u099F \u09A6\u09C7\u09AF\u09BC:</span>
+        <span>\u09F3${order.amount.toFixed(2)}</span>
+      </div>
+    </div>
+
+    <h3 style="font-size:1rem;margin:20px 0 10px;color:#111827;border-bottom:2px solid #f3f4f6;padding-bottom:6px;">\u{1F4CD} \u09A1\u09C7\u09B2\u09BF\u09AD\u09BE\u09B0\u09BF \u09A0\u09BF\u0995\u09BE\u09A8\u09BE</h3>
+    <p style="margin:4px 0;font-size:0.88rem;color:#374151;"><strong>\u0997\u09CD\u09B0\u09B9\u09C0\u09A4\u09BE:</strong> ${order.customer}</p>
+    <p style="margin:4px 0;font-size:0.88rem;color:#374151;"><strong>\u09AE\u09CB\u09AC\u09BE\u0987\u09B2:</strong> ${order.phone || "N/A"}</p>
+    <p style="margin:4px 0;font-size:0.88rem;color:#374151;"><strong>\u09A0\u09BF\u0995\u09BE\u09A8\u09BE:</strong> ${order.address || ""} ${order.thana ? `, ${order.thana}` : ""} ${order.city ? `, ${order.city}` : ""}</p>
+    <p style="margin:4px 0;font-size:0.88rem;color:#374151;"><strong>\u09AA\u09C7\u09AE\u09C7\u09A8\u09CD\u099F \u09AE\u09C7\u09A5\u09A1:</strong> ${order.paymentMethod || "Cash on Delivery"}</p>
+
+    <hr class="divider" />
+    <p style="font-size:0.85rem;color:#6b7280;text-align:center;">\u09AF\u09C7\u0995\u09CB\u09A8\u09CB \u09AA\u09CD\u09B0\u09AF\u09BC\u09CB\u099C\u09A8\u09C7 \u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u09B8\u09BE\u09A5\u09C7 \u09AF\u09CB\u0997\u09BE\u09AF\u09CB\u0997 \u0995\u09B0\u09C1\u09A8\u0964 \u09A7\u09A8\u09CD\u09AF\u09AC\u09BE\u09A6!</p>
+  `;
+  const htmlBody = emailTemplate(content);
+  const subjectText = `\u{1F6CD}\uFE0F \u0986\u09AA\u09A8\u09BE\u09B0 \u0985\u09B0\u09CD\u09A1\u09BE\u09B0 \u0995\u09A8\u09AB\u09BE\u09B0\u09CD\u09AE \u09B9\u09AF\u09BC\u09C7\u099B\u09C7! (\u0985\u09B0\u09CD\u09A1\u09BE\u09B0 #${order.id}) \u2014 ${STORE_NAME}`;
+  const brevoSuccess = await sendBrevoEmail(order.email, order.customer, subjectText, htmlBody);
+  if (brevoSuccess) return true;
+  try {
+    const transporter = createTransporter();
+    await transporter.sendMail({
+      from: FROM_EMAIL,
+      to: order.email,
+      subject: subjectText,
+      html: htmlBody
+    });
+    console.log(`[EmailService] Order confirmation email sent to: ${order.email} for order #${order.id}`);
+    return true;
+  } catch (err) {
+    console.error(`[EmailService] Failed to send order confirmation email to ${order.email}:`, err.message || err);
+    return false;
+  }
+};
+
+// backend/controllers/ordersController.ts
+var triggerInstantOrderNotifications = (orderData) => {
+  const phone = orderData.phone;
+  const email = orderData.email;
+  const storeOwnerEmail = process.env.EMAIL_USER || "rjtamim154@gmail.com";
+  if (phone) {
+    sendOrderSMS(phone, {
+      orderId: orderData.id,
+      customerName: orderData.customer,
+      amount: orderData.amount,
+      itemsCount: orderData.items || (orderData.productsList ? orderData.productsList.length : 1),
+      paymentMethod: orderData.paymentMethod
+    }).catch((err) => console.error("[OrderController] SMS Trigger error:", err));
+  }
+  if (email && email.includes("@")) {
+    sendOrderConfirmationEmail({
+      id: orderData.id,
+      customer: orderData.customer,
+      email,
+      phone,
+      address: orderData.address,
+      city: orderData.city,
+      thana: orderData.thana,
+      amount: orderData.amount,
+      subtotal: orderData.subtotal,
+      deliveryCharge: orderData.deliveryCharge,
+      discount: orderData.discount,
+      paymentMethod: orderData.paymentMethod,
+      productsList: orderData.productsList
+    }).catch((err) => console.error("[OrderController] Customer Email Trigger error:", err));
+  }
+  if (storeOwnerEmail && storeOwnerEmail.includes("@") && storeOwnerEmail.toLowerCase() !== (email || "").toLowerCase()) {
+    sendOrderConfirmationEmail({
+      id: orderData.id,
+      customer: `[ADMIN ALERT] New Order from ${orderData.customer}`,
+      email: storeOwnerEmail,
+      phone,
+      address: orderData.address,
+      city: orderData.city,
+      thana: orderData.thana,
+      amount: orderData.amount,
+      subtotal: orderData.subtotal,
+      deliveryCharge: orderData.deliveryCharge,
+      discount: orderData.discount,
+      paymentMethod: orderData.paymentMethod,
+      productsList: orderData.productsList
+    }).catch((err) => console.error("[OrderController] Admin Email Alert Trigger error:", err));
+  }
+};
 var logOrderHistory = (orderId, actionType, oldValue, newValue, performedBy) => {
   db_default.run(
     `INSERT INTO order_history (order_id, action_type, old_value, new_value, performed_by)
@@ -2197,6 +2510,12 @@ var createOrder = (req, res) => {
       console.error("Failed to start transaction:", txErr);
       return res.status(500).json({ status: "error", message: "Database error" });
     }
+    const finalItems = Number(items || req.body.itemsCount || (productsList && Array.isArray(productsList) ? productsList.reduce((sum, i) => sum + Number(i.quantity || 1), 0) : 1));
+    const finalAmount = Number(amount || 0);
+    const finalDeliveryCharge = Number(deliveryCharge || 0);
+    const finalDiscount = Number(discount || 0);
+    const finalPaidAmount = Number(paidAmount || 0);
+    const finalSubtotal = Number(subtotal || amount || 0);
     db_default.run(
       `INSERT INTO orders (
         id, customer, email, amount, items, payment_method, store_name, phone, address, 
@@ -2205,26 +2524,26 @@ var createOrder = (req, res) => {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
-        customer,
-        email,
-        amount,
-        items,
-        paymentMethod,
-        storeName,
-        phone,
-        address,
-        courier,
-        city,
-        thana,
-        area,
-        customerNote,
-        shopNote,
-        paymentType,
-        memoNumber,
-        deliveryCharge,
-        discount,
-        paidAmount,
-        subtotal,
+        customer || "Customer",
+        email || "",
+        finalAmount,
+        finalItems,
+        paymentMethod || "Cash on Delivery",
+        storeName || "Tamim Global",
+        phone || "",
+        address || "",
+        courier || "Pathao",
+        city || "Dhaka",
+        thana || "",
+        area || "",
+        customerNote || "",
+        shopNote || "",
+        paymentType || "cod",
+        memoNumber || "",
+        finalDeliveryCharge,
+        finalDiscount,
+        finalPaidAmount,
+        finalSubtotal,
         initialStatus
       ],
       function(err) {
@@ -2233,7 +2552,7 @@ var createOrder = (req, res) => {
           db_default.run("ROLLBACK", (rbErr) => {
             if (rbErr) console.error("Error rolling back transaction:", rbErr);
           });
-          return res.status(500).json({ status: "error", message: "Failed to create order" });
+          return res.status(500).json({ status: "error", message: err?.message || "Failed to create order" });
         }
         if (productsList && Array.isArray(productsList) && productsList.length > 0) {
           const stmt = db_default.prepare(
@@ -2244,7 +2563,7 @@ var createOrder = (req, res) => {
           let pending = productsList.length;
           productsList.forEach((item) => {
             stmt.run(
-              [id, item.name, item.color || "Default", item.size || "Free Size", item.code, item.quantity, item.price],
+              [id, item.name || "Product", item.color || "Default", item.size || "Free Size", item.code || "ITEM-001", Number(item.quantity || 1), Number(item.price || 0)],
               (runErr) => {
                 if (runErr) {
                   console.error("Error inserting order item:", runErr);
@@ -2276,6 +2595,21 @@ var createOrder = (req, res) => {
                         db_default.run(`UPDATE coupons SET status = 'used' WHERE UPPER(code) = ?`, [cleanCode]);
                         db_default.run(`UPDATE customer_coupons SET status = 'used' WHERE UPPER(code) = ?`, [cleanCode]);
                       }
+                      triggerInstantOrderNotifications({
+                        id,
+                        customer,
+                        email,
+                        phone,
+                        address,
+                        city,
+                        thana,
+                        amount,
+                        subtotal,
+                        deliveryCharge,
+                        discount,
+                        paymentMethod,
+                        productsList
+                      });
                       res.json({ status: "success", message: "Order created successfully", data: { id } });
                     });
                   });
@@ -2301,6 +2635,21 @@ var createOrder = (req, res) => {
               db_default.run(`UPDATE coupons SET status = 'used' WHERE UPPER(code) = ?`, [cleanCode]);
               db_default.run(`UPDATE customer_coupons SET status = 'used' WHERE UPPER(code) = ?`, [cleanCode]);
             }
+            triggerInstantOrderNotifications({
+              id,
+              customer,
+              email,
+              phone,
+              address,
+              city,
+              thana,
+              amount,
+              subtotal,
+              deliveryCharge,
+              discount,
+              paymentMethod,
+              productsList
+            });
             res.json({ status: "success", message: "Order created successfully", data: { id } });
           });
         }
@@ -4122,13 +4471,6 @@ var employees_default = router8;
 // backend/routes/marketing.ts
 import { Router as Router9 } from "express";
 
-// backend/services/emailService.ts
-import nodemailer from "nodemailer";
-var STORE_NAME = process.env.STORE_NAME || "Tamim Global";
-var STORE_URL = process.env.STORE_URL || "https://tamimglobal.com";
-var STORE_LOGO = `${STORE_URL}/logo.png`;
-var FROM_EMAIL = `"${STORE_NAME}" <${process.env.EMAIL_USER}>`;
-
 // backend/controllers/marketingController.ts
 var getCoupons = (req, res) => {
   db_default.all(`SELECT * FROM coupons ORDER BY created_at DESC`, [], (err, rows) => {
@@ -5215,7 +5557,7 @@ var FraudCheckService = class {
   static async fetchCourierCheckAggregatorData(phone) {
     try {
       const cleanPhone = this.sanitizePhone(phone);
-      const key = process.env.COURIERCHECK_API_KEY || "Knhuj0FollSYAhAwmH8qJHS0Qz7vPVsDhKKMCJ8ThSAwh1sTHyvkGbzUi1h5";
+      const key = process.env.COURIERCHECK_API_KEY || "L16P5I9sVmsBGaRRbovEkPMwpPUfho0XKd3kg9EUXXKGN6xWo8f3a6XjczKl";
       if (!key) return {};
       const response = await fetch(`https://api.bdcourier.com/courier-check`, {
         method: "POST",
@@ -5230,25 +5572,30 @@ var FraudCheckService = class {
       const resData = await response.json();
       const data = resData?.data || resData?.couriers || resData || {};
       return {
+        steadfast: {
+          total: Number(data?.steadfast?.total_parcel ?? data?.steadfast?.total ?? 0),
+          delivered: Number(data?.steadfast?.success_parcel ?? data?.steadfast?.delivered ?? 0),
+          returned: Number(data?.steadfast?.cancelled_parcel ?? data?.steadfast?.returned ?? 0)
+        },
         pathao: {
-          total: Number(data?.pathao?.total ?? data?.pathao?.total_parcel ?? 0),
-          delivered: Number(data?.pathao?.delivered ?? data?.pathao?.success_parcel ?? 0),
-          returned: Number(data?.pathao?.returned ?? data?.pathao?.cancelled_parcel ?? 0)
+          total: Number(data?.pathao?.total_parcel ?? data?.pathao?.total ?? 0),
+          delivered: Number(data?.pathao?.success_parcel ?? data?.pathao?.delivered ?? 0),
+          returned: Number(data?.pathao?.cancelled_parcel ?? data?.pathao?.returned ?? 0)
         },
         redx: {
-          total: Number(data?.redx?.total ?? data?.redx?.total_parcel ?? 0),
-          delivered: Number(data?.redx?.delivered ?? data?.redx?.success_parcel ?? 0),
-          returned: Number(data?.redx?.returned ?? data?.redx?.cancelled_parcel ?? 0)
+          total: Number(data?.redx?.total_parcel ?? data?.redx?.total ?? 0),
+          delivered: Number(data?.redx?.success_parcel ?? data?.redx?.delivered ?? 0),
+          returned: Number(data?.redx?.cancelled_parcel ?? data?.redx?.returned ?? 0)
         },
         paperfly: {
-          total: Number(data?.paperfly?.total ?? data?.paperfly?.total_parcel ?? 0),
-          delivered: Number(data?.paperfly?.delivered ?? data?.paperfly?.success_parcel ?? 0),
-          returned: Number(data?.paperfly?.returned ?? data?.paperfly?.cancelled_parcel ?? 0)
+          total: Number(data?.paperfly?.total_parcel ?? data?.paperfly?.total ?? 0),
+          delivered: Number(data?.paperfly?.success_parcel ?? data?.paperfly?.delivered ?? 0),
+          returned: Number(data?.paperfly?.cancelled_parcel ?? data?.paperfly?.returned ?? 0)
         },
         carrybee: {
-          total: Number(data?.carrybee?.total ?? data?.carrybee?.total_parcel ?? 0),
-          delivered: Number(data?.carrybee?.delivered ?? data?.carrybee?.success_parcel ?? 0),
-          returned: Number(data?.carrybee?.returned ?? data?.carrybee?.cancelled_parcel ?? 0)
+          total: Number(data?.carrybee?.total_parcel ?? data?.carrybee?.total ?? 0),
+          delivered: Number(data?.carrybee?.success_parcel ?? data?.carrybee?.delivered ?? 0),
+          returned: Number(data?.carrybee?.cancelled_parcel ?? data?.carrybee?.returned ?? 0)
         }
       };
     } catch {
@@ -5275,63 +5622,15 @@ var FraudCheckService = class {
     let paperflyStats = paperflyRes.status === "fulfilled" ? paperflyRes.value : { total: 0, delivered: 0, returned: 0 };
     if (courierCheckRes.status === "fulfilled" && courierCheckRes.value && Object.keys(courierCheckRes.value).length > 0) {
       const ccData = courierCheckRes.value;
+      if (ccData.steadfast && ccData.steadfast.total > 0) steadfastStats = ccData.steadfast;
       if (ccData.pathao && ccData.pathao.total > 0) pathaoStats = ccData.pathao;
       if (ccData.redx && ccData.redx.total > 0) redxStats = ccData.redx;
       if (ccData.paperfly && ccData.paperfly.total > 0) paperflyStats = ccData.paperfly;
       if (ccData.carrybee && ccData.carrybee.total > 0) carrybeeStats = ccData.carrybee;
     }
-    let totalParcels = steadfastStats.total + pathaoStats.total + carrybeeStats.total + redxStats.total + paperflyStats.total;
-    let deliveredParcels = steadfastStats.delivered + pathaoStats.delivered + carrybeeStats.delivered + redxStats.delivered + paperflyStats.delivered;
-    let returnedParcels = steadfastStats.returned + pathaoStats.returned + carrybeeStats.returned + redxStats.returned + paperflyStats.returned;
-    if (totalParcels > 0) {
-      const nonZeroCouriers = [steadfastStats, pathaoStats, carrybeeStats, redxStats, paperflyStats].filter((c) => c.total > 0).length;
-      if (nonZeroCouriers === 1) {
-        const rawTotal = totalParcels;
-        const rawDelivered = deliveredParcels;
-        const rawReturned = returnedParcels;
-        const weights = {
-          steadfast: 0.45,
-          pathao: 0.25,
-          redx: 0.15,
-          carrybee: 0.1,
-          paperfly: 0.05
-        };
-        let remTotal = rawTotal;
-        let remDelivered = rawDelivered;
-        let remReturned = rawReturned;
-        const keys = ["steadfast", "pathao", "redx", "carrybee", "paperfly"];
-        const distrib = {};
-        keys.forEach((key, index) => {
-          if (index === keys.length - 1) {
-            distrib[key] = {
-              total: remTotal,
-              delivered: Math.min(remDelivered, remTotal),
-              returned: Math.min(remReturned, Math.max(0, remTotal - Math.min(remDelivered, remTotal)))
-            };
-          } else {
-            const cTot = Math.round(rawTotal * weights[key]);
-            const cDel = Math.round(rawDelivered * weights[key]);
-            const cRet = Math.round(rawReturned * weights[key]);
-            distrib[key] = {
-              total: Math.min(cTot, remTotal),
-              delivered: Math.min(cDel, remDelivered),
-              returned: Math.min(cRet, remReturned)
-            };
-            remTotal -= distrib[key].total;
-            remDelivered -= distrib[key].delivered;
-            remReturned -= distrib[key].returned;
-          }
-        });
-        steadfastStats = distrib.steadfast;
-        pathaoStats = distrib.pathao;
-        redxStats = distrib.redx;
-        carrybeeStats = distrib.carrybee;
-        paperflyStats = distrib.paperfly;
-        totalParcels = steadfastStats.total + pathaoStats.total + carrybeeStats.total + redxStats.total + paperflyStats.total;
-        deliveredParcels = steadfastStats.delivered + pathaoStats.delivered + carrybeeStats.delivered + redxStats.delivered + paperflyStats.delivered;
-        returnedParcels = steadfastStats.returned + pathaoStats.returned + carrybeeStats.returned + redxStats.returned + paperflyStats.returned;
-      }
-    }
+    const totalParcels = steadfastStats.total + pathaoStats.total + carrybeeStats.total + redxStats.total + paperflyStats.total;
+    const deliveredParcels = steadfastStats.delivered + pathaoStats.delivered + carrybeeStats.delivered + redxStats.delivered + paperflyStats.delivered;
+    const returnedParcels = steadfastStats.returned + pathaoStats.returned + carrybeeStats.returned + redxStats.returned + paperflyStats.returned;
     const successRate = totalParcels > 0 ? Number((deliveredParcels / totalParcels * 100).toFixed(1)) : 100;
     let riskLevel = "Low Risk";
     let recommendation = "Customer has a high delivery success rate. Safe to ship via Cash on Delivery.";

@@ -3,6 +3,7 @@ import { ShoppingCart, Search, Plus, Download, Eye, RotateCcw, Truck, Clock, Che
 import { generateOrders, updateOrderStatus, addOrder, formatCurrency, formatDate, formatTime, timeAgo } from '../../mock/data';
 import { fetchOrdersFromBackend, updateOrderStatusInBackend, createOrderFromAdminInBackend, updateOrderInBackend, validateCouponCode, fetchProductsFromBackend, syncOrdersInBackend, assignOrderInBackend, fetchActiveEmployees, fetchOrderHistory, sendOrderToSteadfastApi, bulkSendToSteadfastApi, fetchSteadfastStatusApi, checkUniversalFraudApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { DHAKA_THANAS_AND_AREAS } from '../../data/dhakaLocations';
 
 const DEMO_PRODUCTS = [
   { sku: 'ST-EPB-001', name: 'Wireless Earbuds Pro Max', price: 129.99 },
@@ -23,7 +24,7 @@ const statusConfig: Record<string, { class: string; icon: any }> = {
 };
 
 const BD_DISTRICTS: Record<string, string[]> = {
-  "Dhaka": ["Dhamrai", "Dohar", "Keraniganj", "Nawabganj", "Savar"],
+  "Dhaka": Object.keys(DHAKA_THANAS_AND_AREAS).sort(),
   "Faridpur": ["Alfadanga", "Bhanga", "Boalmari", "Charbhadrasan", "Faridpur Sadar", "Madhukhali", "Nagarkanda", "Sadorpur", "Saltha"],
   "Gazipur": ["Gazipur Sadar", "Kaliakair", "Kaliganj", "Kapasia", "Sreepur"],
   "Gopalganj": ["Gopalganj Sadar", "Kashiani", "Kotalipara", "Muksudpur", "Tungipara"],
@@ -273,6 +274,7 @@ export default function Orders() {
   const [formInvoice, setFormInvoice] = useState('');
   const [formCustomerName, setFormCustomerName] = useState('');
   const [formCustomerPhone, setFormCustomerPhone] = useState('');
+  const [formCustomerEmail, setFormCustomerEmail] = useState('');
   const [formCustomerAddress, setFormCustomerAddress] = useState('');
   const [formCourier, setFormCourier] = useState('Pathao');
   const [formStatus, setFormStatus] = useState<typeof orders[0]['status']>('processing');
@@ -322,6 +324,7 @@ export default function Orders() {
     setFormInvoice(`TR${Math.floor(1000000 + Math.random() * 9000000)}`);
     setFormCustomerName('');
     setFormCustomerPhone('');
+    setFormCustomerEmail('');
     setFormCustomerAddress('');
     setFormCourier('Pathao');
     setFormStatus('processing');
@@ -348,7 +351,8 @@ export default function Orders() {
     setFormStoreName(order.storeName || 'TAMIM GLOBAL');
     setFormInvoice(order.id);
     setFormCustomerName(order.customer);
-    setFormCustomerPhone(order.email || order.phone || '');
+    setFormCustomerPhone(order.phone || (order.email && !order.email.includes('@') ? order.email : ''));
+    setFormCustomerEmail(order.email && order.email.includes('@') ? order.email : '');
     setFormCustomerAddress(order.address || '');
     setFormCourier(order.courier || 'Pathao');
     setFormStatus(order.status);
@@ -829,7 +833,7 @@ export default function Orders() {
 
     const orderData = {
       customer: formCustomerName,
-      email: formCustomerPhone,
+      email: formCustomerEmail || (formCustomerPhone ? `${formCustomerPhone}@customer.com` : ''),
       amount: amount,
       items: itemsCount,
       paymentMethod: formPaymentType === 'cod' ? 'Cash on Delivery' : formPaymentType.toUpperCase(),
@@ -1218,7 +1222,9 @@ export default function Orders() {
                     <td>
                       <div>
                         <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{order.customer}</div>
-                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>{order.email}</div>
+                        {order.email && order.email.includes('@') && (
+                          <div style={{ fontSize: '11px', color: '#818cf8', fontWeight: 500 }}>✉️ {order.email}</div>
+                        )}
                         {order.phone && <div style={{ fontSize: '10px', color: '#94a3b8' }}>📞 {order.phone}</div>}
 
                         <button
@@ -1594,7 +1600,7 @@ export default function Orders() {
                     </div>
                   </div>
 
-                  <div className="grid-2">
+                  <div className="grid-3">
                     <div className="form-group">
                       <label className="form-label" style={{ color: '#94a3b8' }}>CUSTOMER NAME <span>*</span></label>
                       <input type="text" value={formCustomerName} onChange={(e) => setFormCustomerName(e.target.value)} required className="form-input" placeholder="Enter Name" style={{ background: '#111827', border: '1px solid #1e293b', color: '#fff' }} />
@@ -1602,6 +1608,10 @@ export default function Orders() {
                     <div className="form-group">
                       <label className="form-label" style={{ color: '#94a3b8' }}>CUSTOMER PHONE <span>*</span></label>
                       <input type="text" value={formCustomerPhone} onChange={(e) => setFormCustomerPhone(e.target.value)} required className="form-input" placeholder="Enter Phone" style={{ background: '#111827', border: '1px solid #1e293b', color: '#fff' }} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label" style={{ color: '#94a3b8' }}>CUSTOMER GMAIL / EMAIL</label>
+                      <input type="email" value={formCustomerEmail} onChange={(e) => setFormCustomerEmail(e.target.value)} className="form-input" placeholder="customer@gmail.com" style={{ background: '#111827', border: '1px solid #1e293b', color: '#fff' }} />
                     </div>
                   </div>
 
@@ -1660,7 +1670,12 @@ export default function Orders() {
                       <label className="form-label" style={{ color: '#94a3b8' }}>THANA NAME</label>
                       <select 
                         value={formThana} 
-                        onChange={(e) => setFormThana(e.target.value)} 
+                        onChange={(e) => {
+                          const selectedThana = e.target.value;
+                          setFormThana(selectedThana);
+                          const areas = DHAKA_THANAS_AND_AREAS[selectedThana] || [];
+                          setFormArea(areas.length > 0 ? areas[0] : '');
+                        }} 
                         className="form-select" 
                         style={{ background: '#111827', border: '1px solid #1e293b', color: '#fff' }}
                       >
@@ -1671,8 +1686,22 @@ export default function Orders() {
                       </select>
                     </div>
                     <div className="form-group">
-                      <label className="form-label" style={{ color: '#94a3b8' }}>AREA NAME</label>
-                      <input type="text" value={formArea} onChange={(e) => setFormArea(e.target.value)} className="form-input" placeholder="Select Area" style={{ background: '#111827', border: '1px solid #1e293b', color: '#fff' }} />
+                      <label className="form-label" style={{ color: '#94a3b8' }}>AREA / NEIGHBORHOOD</label>
+                      {DHAKA_THANAS_AND_AREAS[formThana] && DHAKA_THANAS_AND_AREAS[formThana].length > 0 ? (
+                        <select 
+                          value={formArea} 
+                          onChange={(e) => setFormArea(e.target.value)} 
+                          className="form-select" 
+                          style={{ background: '#111827', border: '1px solid #1e293b', color: '#fff' }}
+                        >
+                          <option value="">Select Area</option>
+                          {DHAKA_THANAS_AND_AREAS[formThana].map(a => (
+                            <option key={a} value={a}>{a}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input type="text" value={formArea} onChange={(e) => setFormArea(e.target.value)} className="form-input" placeholder="Enter Area Name" style={{ background: '#111827', border: '1px solid #1e293b', color: '#fff' }} />
+                      )}
                     </div>
                   </div>
 
@@ -2151,7 +2180,7 @@ export default function Orders() {
                         <td style={{ padding: '8px 12px', color: '#10b981', fontWeight: 600 }}>{cDelivered}</td>
                         <td style={{ padding: '8px 12px', color: '#ef4444', fontWeight: 600 }}>{cReturned}</td>
                         <td style={{ padding: '8px 12px', fontWeight: 700, color: cRatio >= 80 ? '#10b981' : '#f59e0b' }}>
-                          {cTotal > 0 ? `${cRatio}%` : '100%'}
+                          {cTotal > 0 ? `${cRatio}%` : courierKey === 'steadfast' ? '100% (Central API)' : '0 Returns (Connected API)'}
                         </td>
                       </tr>
                     );
@@ -2160,7 +2189,7 @@ export default function Orders() {
               </table>
 
               <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '14px', background: 'rgba(255,255,255,0.03)', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)', lineHeight: '1.5' }}>
-                💡 <strong>BD Courier API Policy:</strong> Multi-courier APIs aggregate nationwide central delivery history across all BD merchants ({universalFraudModal.delivered_parcels || 0} delivered / {universalFraudModal.total_parcels || 0} total across Steadfast, Pathao, RedX, CarryBee & Paperfly).
+                💡 <strong>BD Courier API Policy:</strong> Steadfast API provides nationwide central delivery history across all BD merchants ({universalFraudModal.courier_breakdown?.steadfast?.delivered || 0} delivered). Pathao, RedX, CarryBee & Paperfly APIs track your store&apos;s own order dispatches.
               </div>
             </div>
 

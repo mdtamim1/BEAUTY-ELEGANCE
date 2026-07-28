@@ -247,7 +247,7 @@ export class FraudCheckService {
   public static async fetchCourierCheckAggregatorData(phone: string): Promise<Record<string, CourierFraudStats>> {
     try {
       const cleanPhone = this.sanitizePhone(phone);
-      const key = process.env.COURIERCHECK_API_KEY || 'Knhuj0FollSYAhAwmH8qJHS0Qz7vPVsDhKKMCJ8ThSAwh1sTHyvkGbzUi1h5';
+      const key = process.env.COURIERCHECK_API_KEY || 'L16P5I9sVmsBGaRRbovEkPMwpPUfho0XKd3kg9EUXXKGN6xWo8f3a6XjczKl';
       if (!key) return {};
 
       // POST request to official BD Courier API endpoint
@@ -266,25 +266,30 @@ export class FraudCheckService {
       const data = resData?.data || resData?.couriers || resData || {};
       
       return {
+        steadfast: {
+          total: Number(data?.steadfast?.total_parcel ?? data?.steadfast?.total ?? 0),
+          delivered: Number(data?.steadfast?.success_parcel ?? data?.steadfast?.delivered ?? 0),
+          returned: Number(data?.steadfast?.cancelled_parcel ?? data?.steadfast?.returned ?? 0)
+        },
         pathao: {
-          total: Number(data?.pathao?.total ?? data?.pathao?.total_parcel ?? 0),
-          delivered: Number(data?.pathao?.delivered ?? data?.pathao?.success_parcel ?? 0),
-          returned: Number(data?.pathao?.returned ?? data?.pathao?.cancelled_parcel ?? 0)
+          total: Number(data?.pathao?.total_parcel ?? data?.pathao?.total ?? 0),
+          delivered: Number(data?.pathao?.success_parcel ?? data?.pathao?.delivered ?? 0),
+          returned: Number(data?.pathao?.cancelled_parcel ?? data?.pathao?.returned ?? 0)
         },
         redx: {
-          total: Number(data?.redx?.total ?? data?.redx?.total_parcel ?? 0),
-          delivered: Number(data?.redx?.delivered ?? data?.redx?.success_parcel ?? 0),
-          returned: Number(data?.redx?.returned ?? data?.redx?.cancelled_parcel ?? 0)
+          total: Number(data?.redx?.total_parcel ?? data?.redx?.total ?? 0),
+          delivered: Number(data?.redx?.success_parcel ?? data?.redx?.delivered ?? 0),
+          returned: Number(data?.redx?.cancelled_parcel ?? data?.redx?.returned ?? 0)
         },
         paperfly: {
-          total: Number(data?.paperfly?.total ?? data?.paperfly?.total_parcel ?? 0),
-          delivered: Number(data?.paperfly?.delivered ?? data?.paperfly?.success_parcel ?? 0),
-          returned: Number(data?.paperfly?.returned ?? data?.paperfly?.cancelled_parcel ?? 0)
+          total: Number(data?.paperfly?.total_parcel ?? data?.paperfly?.total ?? 0),
+          delivered: Number(data?.paperfly?.success_parcel ?? data?.paperfly?.delivered ?? 0),
+          returned: Number(data?.paperfly?.cancelled_parcel ?? data?.paperfly?.returned ?? 0)
         },
         carrybee: {
-          total: Number(data?.carrybee?.total ?? data?.carrybee?.total_parcel ?? 0),
-          delivered: Number(data?.carrybee?.delivered ?? data?.carrybee?.success_parcel ?? 0),
-          returned: Number(data?.carrybee?.returned ?? data?.carrybee?.cancelled_parcel ?? 0)
+          total: Number(data?.carrybee?.total_parcel ?? data?.carrybee?.total ?? 0),
+          delivered: Number(data?.carrybee?.success_parcel ?? data?.carrybee?.delivered ?? 0),
+          returned: Number(data?.carrybee?.cancelled_parcel ?? data?.carrybee?.returned ?? 0)
         }
       };
     } catch {
@@ -320,76 +325,17 @@ export class FraudCheckService {
     // Merge CourierCheck aggregator stats if available
     if (courierCheckRes.status === 'fulfilled' && courierCheckRes.value && Object.keys(courierCheckRes.value).length > 0) {
       const ccData = courierCheckRes.value;
+      if (ccData.steadfast && ccData.steadfast.total > 0) steadfastStats = ccData.steadfast;
       if (ccData.pathao && ccData.pathao.total > 0) pathaoStats = ccData.pathao;
       if (ccData.redx && ccData.redx.total > 0) redxStats = ccData.redx;
       if (ccData.paperfly && ccData.paperfly.total > 0) paperflyStats = ccData.paperfly;
       if (ccData.carrybee && ccData.carrybee.total > 0) carrybeeStats = ccData.carrybee;
     }
 
-    // Calculate Combined Totals from live API & cached central data
-    let totalParcels = steadfastStats.total + pathaoStats.total + carrybeeStats.total + redxStats.total + paperflyStats.total;
-    let deliveredParcels = steadfastStats.delivered + pathaoStats.delivered + carrybeeStats.delivered + redxStats.delivered + paperflyStats.delivered;
-    let returnedParcels = steadfastStats.returned + pathaoStats.returned + carrybeeStats.returned + redxStats.returned + paperflyStats.returned;
-
-    // Distribute central parcel data across BD courier network if only 1 courier returned raw stats
-    if (totalParcels > 0) {
-      const nonZeroCouriers = [steadfastStats, pathaoStats, carrybeeStats, redxStats, paperflyStats].filter(c => c.total > 0).length;
-      if (nonZeroCouriers === 1) {
-        const rawTotal = totalParcels;
-        const rawDelivered = deliveredParcels;
-        const rawReturned = returnedParcels;
-
-        // Weights: Steadfast 45%, Pathao 25%, RedX 15%, CarryBee 10%, Paperfly 5%
-        const weights = {
-          steadfast: 0.45,
-          pathao: 0.25,
-          redx: 0.15,
-          carrybee: 0.10,
-          paperfly: 0.05
-        };
-
-        let remTotal = rawTotal;
-        let remDelivered = rawDelivered;
-        let remReturned = rawReturned;
-
-        const keys: Array<keyof typeof weights> = ['steadfast', 'pathao', 'redx', 'carrybee', 'paperfly'];
-        const distrib: Record<string, CourierFraudStats> = {};
-
-        keys.forEach((key, index) => {
-          if (index === keys.length - 1) {
-            distrib[key] = {
-              total: remTotal,
-              delivered: Math.min(remDelivered, remTotal),
-              returned: Math.min(remReturned, Math.max(0, remTotal - Math.min(remDelivered, remTotal)))
-            };
-          } else {
-            const cTot = Math.round(rawTotal * weights[key]);
-            const cDel = Math.round(rawDelivered * weights[key]);
-            const cRet = Math.round(rawReturned * weights[key]);
-
-            distrib[key] = {
-              total: Math.min(cTot, remTotal),
-              delivered: Math.min(cDel, remDelivered),
-              returned: Math.min(cRet, remReturned)
-            };
-
-            remTotal -= distrib[key].total;
-            remDelivered -= distrib[key].delivered;
-            remReturned -= distrib[key].returned;
-          }
-        });
-
-        steadfastStats = distrib.steadfast;
-        pathaoStats = distrib.pathao;
-        redxStats = distrib.redx;
-        carrybeeStats = distrib.carrybee;
-        paperflyStats = distrib.paperfly;
-
-        totalParcels = steadfastStats.total + pathaoStats.total + carrybeeStats.total + redxStats.total + paperflyStats.total;
-        deliveredParcels = steadfastStats.delivered + pathaoStats.delivered + carrybeeStats.delivered + redxStats.delivered + paperflyStats.delivered;
-        returnedParcels = steadfastStats.returned + pathaoStats.returned + carrybeeStats.returned + redxStats.returned + paperflyStats.returned;
-      }
-    }
+    // Calculate Combined Totals strictly from real live API data
+    const totalParcels = steadfastStats.total + pathaoStats.total + carrybeeStats.total + redxStats.total + paperflyStats.total;
+    const deliveredParcels = steadfastStats.delivered + pathaoStats.delivered + carrybeeStats.delivered + redxStats.delivered + paperflyStats.delivered;
+    const returnedParcels = steadfastStats.returned + pathaoStats.returned + carrybeeStats.returned + redxStats.returned + paperflyStats.returned;
 
     const successRate = totalParcels > 0 
       ? Number(((deliveredParcels / totalParcels) * 100).toFixed(1))
