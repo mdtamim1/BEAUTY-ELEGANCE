@@ -5706,17 +5706,28 @@ app.use("/api/v1/customers", customers_default);
 app.use("/api/v1/settings", settings_default);
 app.use("/api/v1/vendors", (_req, res) => res.json({ status: "success", data: [] }));
 var projectRoot = process.cwd();
-var distPath = path2.resolve(projectRoot, "dist");
-if (!fs2.existsSync(path2.resolve(distPath, "index.html"))) {
-  distPath = path2.resolve(__dirname2, "../../dist");
-}
-if (!fs2.existsSync(path2.resolve(distPath, "index.html"))) {
-  distPath = path2.resolve(__dirname2, "../dist");
-}
+var possibleDistPaths = [
+  path2.resolve(projectRoot, "dist"),
+  path2.resolve(__dirname2, "../../dist"),
+  path2.resolve(__dirname2, "../dist"),
+  path2.resolve(__dirname2, "dist")
+];
+var distPath = possibleDistPaths.find((p) => fs2.existsSync(path2.resolve(p, "index.html"))) || possibleDistPaths[0];
+app.use("/assets", (req, res, next) => {
+  const filePath = path2.join(distPath, "assets", req.path);
+  if (fs2.existsSync(filePath) && fs2.statSync(filePath).isFile()) {
+    if (filePath.endsWith(".css")) {
+      res.setHeader("Content-Type", "text/css");
+    } else if (filePath.endsWith(".js")) {
+      res.setHeader("Content-Type", "application/javascript");
+    }
+    return res.sendFile(filePath);
+  }
+  return res.status(404).type("text/plain").send("Asset not found");
+});
 app.use(express.static(distPath));
-app.use("/assets", express.static(path2.resolve(distPath, "assets")));
 app.get(/.*/, (req, res, next) => {
-  if (req.path.startsWith("/api")) {
+  if (req.path.startsWith("/api") || req.path.startsWith("/assets")) {
     return next();
   }
   const indexPath = path2.resolve(distPath, "index.html");

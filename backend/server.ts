@@ -188,20 +188,34 @@ app.use('/api/v1/vendors', (_req, res) => res.json({ status: 'success', data: []
 
 // Serve static assets from Vite build folder
 const projectRoot = process.cwd();
-let distPath = path.resolve(projectRoot, 'dist');
-if (!fs.existsSync(path.resolve(distPath, 'index.html'))) {
-  distPath = path.resolve(__dirname, '../../dist');
-}
-if (!fs.existsSync(path.resolve(distPath, 'index.html'))) {
-  distPath = path.resolve(__dirname, '../dist');
-}
+const possibleDistPaths = [
+  path.resolve(projectRoot, 'dist'),
+  path.resolve(__dirname, '../../dist'),
+  path.resolve(__dirname, '../dist'),
+  path.resolve(__dirname, 'dist')
+];
+
+const distPath = possibleDistPaths.find(p => fs.existsSync(path.resolve(p, 'index.html'))) || possibleDistPaths[0];
+
+// Explicit /assets handler with proper MIME type headers
+app.use('/assets', (req, res, next) => {
+  const filePath = path.join(distPath, 'assets', req.path);
+  if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+    if (filePath.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css');
+    } else if (filePath.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+    return res.sendFile(filePath);
+  }
+  return res.status(404).type('text/plain').send('Asset not found');
+});
 
 app.use(express.static(distPath));
-app.use('/assets', express.static(path.resolve(distPath, 'assets')));
 
-// For all other requests that are NOT API requests, serve the index.html from dist
+// For all other requests that are NOT API or asset requests, serve index.html
 app.get(/.*/, (req, res, next) => {
-  if (req.path.startsWith('/api')) {
+  if (req.path.startsWith('/api') || req.path.startsWith('/assets')) {
     return next(); // pass it to API error handler
   }
   const indexPath = path.resolve(distPath, 'index.html');
