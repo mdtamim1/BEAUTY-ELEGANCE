@@ -9,6 +9,7 @@ import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { SEOMeta } from '../components/layout/SEOMeta';
 import './storefront-checkout.css';
 import './storefront-account.css';
+import './storefront-pdp.css';
 
 interface StorefrontContext {
   cart: { product: any, quantity: number }[];
@@ -298,7 +299,7 @@ export default function Checkout() {
         noindex={true}
       />
       
-      <div className="pdp-checkout-modal" style={{ maxWidth: '640px', background: '#f8fafc', width: '100%', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 10px 40px rgba(0,0,0,0.08)' }}>
+      <div className="pdp-checkout-modal" style={{ maxWidth: '640px', background: '#f8fafc', width: '100%', borderRadius: '20px', overflow: 'visible', maxHeight: 'none', boxShadow: '0 10px 40px rgba(0,0,0,0.08)' }}>
         {/* Modal Header */}
         <div className="pco-header">
           <div className="pco-header-left">

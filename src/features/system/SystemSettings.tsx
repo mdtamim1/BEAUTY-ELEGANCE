@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Globe, CreditCard, Truck, Mail, Database, Save, HardDrive, Play, Trash2, Download } from 'lucide-react';
+import { Globe, CreditCard, Truck, Mail, Database, Save, HardDrive, Play, Trash2, Download, RefreshCw, Key, ShieldCheck, Users } from 'lucide-react';
 import { systemSettings as mockSystemSettings } from '../../mock/data';
-import { fetchSystemSettings, saveSystemSettings } from '../../services/api';
+import { fetchSystemSettings, saveSystemSettings, fetchSteadfastBalanceApi } from '../../services/api';
 
 export default function SystemSettings() {
   const [activeTab, setActiveTab] = useState('general');
@@ -20,10 +20,28 @@ export default function SystemSettings() {
   const [paymentSslCommerz, setPaymentSslCommerz] = useState(false);
   const [paymentCod, setPaymentCod] = useState(true);
 
-  // Shipping Zones Form states
+  // Shipping Zones & Courier Form states
   const [shippingPathao, setShippingPathao] = useState(true);
   const [shippingSteadfast, setShippingSteadfast] = useState(true);
-  const [shippingRedx, setShippingRedx] = useState(false);
+  const [shippingRedx, setShippingRedx] = useState(true);
+  const [shippingCarrybee, setShippingCarrybee] = useState(true);
+  const [shippingPaperfly, setShippingPaperfly] = useState(true);
+
+  const [steadfastApiKey, setSteadfastApiKey] = useState('79pqokvknppabsrcstiz6kyzlsc9p3zm');
+  const [steadfastSecretKey, setSteadfastSecretKey] = useState('7lyfy5nakfdkq8x2m2rvkbzr');
+  const [steadfastEnabled, setSteadfastEnabled] = useState(true);
+  const [steadfastBalanceInfo, setSteadfastBalanceInfo] = useState<any | null>(null);
+  const [isCheckingBalance, setIsCheckingBalance] = useState(false);
+
+  const [redxToken, setRedxToken] = useState('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaWF0IjoxNzM1NTMxNjU2LCJpc3MiOiJ0OTlnbEVnZTBUTm5MYTNvalh6MG9VaGxtNEVoamNFMyIsInNob3BfaWQiOjEsInVzZXJfaWQiOjZ9.zpKfyHK6zPBVaTrYevnCqnUA-e2jFKQJ7lK-z4aOx2g');
+  const [carrybeeClientId, setCarrybeeClientId] = useState('5ee3037e-712f-4f5e-a3cc-17ebefa42134');
+  const [carrybeeClientSecret, setCarrybeeClientSecret] = useState('8d03381f-b0b4-4a9b-9a0b-70b73cbbe835');
+  const [pathaoClientId, setPathaoClientId] = useState('w9aA85PevM');
+  const [pathaoClientSecret, setPathaoClientSecret] = useState('LBiXnHQFvxh8ODWA7aDmRkC6v');
+  const [pathaoUsername, setPathaoUsername] = useState('rjtamim154@gmail.com');
+  const [pathaoPassword, setPathaoPassword] = useState('');
+  const [paperflyKey, setPaperflyKey] = useState('Paperfly_~La?Rj73FcLm');
+  const [couriercheckApiKey, setCouriercheckApiKey] = useState('');
 
   // Email Provider Form states
   const [emailProvider, setEmailProvider] = useState('SendGrid');
@@ -67,6 +85,20 @@ export default function SystemSettings() {
         setShippingSteadfast(data.shippingSteadfast !== undefined ? !!data.shippingSteadfast : true);
         setShippingRedx(!!data.shippingRedx);
         
+        setSteadfastApiKey(data.steadfastApiKey || '79pqokvknppabsrcstiz6kyzlsc9p3zm');
+        setSteadfastSecretKey(data.steadfastSecretKey || '7lyfy5nakfdkq8x2m2rvkbzr');
+        setSteadfastEnabled(data.steadfastEnabled !== undefined ? !!data.steadfastEnabled : true);
+
+        setRedxToken(data.redxToken || '');
+        setCarrybeeClientId(data.carrybeeClientId || '');
+        setCarrybeeClientSecret(data.carrybeeClientSecret || '');
+        setPathaoClientId(data.pathaoClientId || 'w9aA85PevM');
+        setPathaoClientSecret(data.pathaoClientSecret || 'LBiXnHQFvxh8ODWA7aDmRkC6v');
+        setPathaoUsername(data.pathaoUsername || 'rjtamim154@gmail.com');
+        setPathaoPassword(data.pathaoPassword || '');
+        setPaperflyKey(data.paperflyKey || '');
+        setCouriercheckApiKey(data.couriercheckApiKey || '');
+
         setEmailProvider(data.emailProvider || 'SendGrid');
         setSmtpHost(data.smtpHost || 'smtp.sendgrid.net');
         setSmtpPort(data.smtpPort || 587);
@@ -121,6 +153,18 @@ export default function SystemSettings() {
       shippingPathao,
       shippingSteadfast,
       shippingRedx,
+      steadfastApiKey,
+      steadfastSecretKey,
+      steadfastEnabled,
+      redxToken,
+      carrybeeClientId,
+      carrybeeClientSecret,
+      pathaoClientId,
+      pathaoClientSecret,
+      pathaoUsername,
+      pathaoPassword,
+      paperflyKey,
+      couriercheckApiKey,
       emailProvider,
       smtpHost,
       smtpPort,
@@ -174,6 +218,20 @@ export default function SystemSettings() {
       setIsFlushingCache(false);
       alert('Redis cache flushed successfully! Cache metrics recalculated.');
     }, 1500);
+  };
+
+  const handleCheckSteadfastBalance = async () => {
+    setIsCheckingBalance(true);
+    const res = await fetchSteadfastBalanceApi();
+    setIsCheckingBalance(false);
+    if (res && res.status === 'success') {
+      setSteadfastBalanceInfo(res.data);
+      const balance = res.data?.current_balance !== undefined ? res.data.current_balance : JSON.stringify(res.data);
+      alert(`Steadfast Connection Successful!\nCurrent Merchant Balance: ৳${balance}`);
+    } else {
+      setSteadfastBalanceInfo(null);
+      alert(`Steadfast Connection Failed: ${res?.message || 'Check API credentials'}`);
+    }
   };
 
   const tabs = [
@@ -389,28 +447,262 @@ export default function SystemSettings() {
                     />
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: 'var(--bg-input)', borderRadius: 'var(--radius-md)' }}>
-                    <div>
-                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Steadfast Courier API</div>
-                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Fast delivery integration for nationwide Cash on Delivery handling.</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '20px', background: 'var(--bg-input)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Truck size={20} style={{ color: 'var(--accent-primary)' }} />
+                        <div>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}>Steadfast Courier API (স্টেডফাস্ট কুরিয়ার)</div>
+                          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Automate parcel creation, COD collection, and shipment tracking.</div>
+                        </div>
+                      </div>
+                      <div 
+                        className={`form-switch ${shippingSteadfast ? 'active' : ''}`} 
+                        onClick={() => {
+                          setShippingSteadfast(!shippingSteadfast);
+                          setSteadfastEnabled(!shippingSteadfast);
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      />
                     </div>
-                    <div 
-                      className={`form-switch ${shippingSteadfast ? 'active' : ''}`} 
-                      onClick={() => setShippingSteadfast(!shippingSteadfast)}
-                      style={{ cursor: 'pointer' }}
-                    />
+
+                    {shippingSteadfast && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '10px', paddingTop: '14px', borderTop: '1px solid var(--border-color)' }}>
+                        <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                          <div className="form-group">
+                            <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <Key size={14} /> Steadfast API Key
+                            </label>
+                            <input 
+                              type="text" 
+                              className="form-input" 
+                              placeholder="e.g. 5x89a...your_api_key" 
+                              value={steadfastApiKey} 
+                              onChange={(e) => setSteadfastApiKey(e.target.value)}
+                            />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <ShieldCheck size={14} /> Steadfast Secret Key
+                            </label>
+                            <input 
+                              type="password" 
+                              className="form-input" 
+                              placeholder="e.g. sec_77b...your_secret_key" 
+                              value={steadfastSecretKey} 
+                              onChange={(e) => setSteadfastSecretKey(e.target.value)}
+                            />
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
+                          <button 
+                            type="button"
+                            className="btn btn-secondary" 
+                            onClick={handleCheckSteadfastBalance}
+                            disabled={isCheckingBalance}
+                            style={{ fontSize: 'var(--text-xs)' }}
+                          >
+                            <RefreshCw size={14} className={isCheckingBalance ? 'animate-spin' : ''} style={{ marginRight: '6px' }} />
+                            {isCheckingBalance ? 'Testing Connection...' : 'Test Connection & Check Balance'}
+                          </button>
+                          
+                          {steadfastBalanceInfo && (
+                            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--success-color)' }}>
+                              Current Balance: ৳{steadfastBalanceInfo.current_balance ?? 0} BDT
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: 'var(--bg-input)', borderRadius: 'var(--radius-md)' }}>
-                    <div>
-                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>RedX Logistics API</div>
-                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Enterprise shipping tracking and automated delivery booking.</div>
+                  {/* Pathao Courier API */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '20px', background: 'var(--bg-input)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Truck size={20} style={{ color: '#ef4444' }} />
+                        <div>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}>Pathao Courier API (পাঠাও কুরিয়ার)</div>
+                          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Automate merchant orders booking and sync tracking URLs.</div>
+                        </div>
+                      </div>
+                      <div 
+                        className={`form-switch ${shippingPathao ? 'active' : ''}`} 
+                        onClick={() => setShippingPathao(!shippingPathao)}
+                        style={{ cursor: 'pointer' }}
+                      />
                     </div>
-                    <div 
-                      className={`form-switch ${shippingRedx ? 'active' : ''}`} 
-                      onClick={() => setShippingRedx(!shippingRedx)}
-                      style={{ cursor: 'pointer' }}
-                    />
+                    {shippingPathao && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '10px', paddingTop: '14px', borderTop: '1px solid var(--border-color)' }}>
+                        <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                          <div className="form-group">
+                            <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <Key size={14} /> Pathao Client ID
+                            </label>
+                            <input type="text" className="form-input" value={pathaoClientId} onChange={(e) => setPathaoClientId(e.target.value)} />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <ShieldCheck size={14} /> Pathao Client Secret
+                            </label>
+                            <input type="password" className="form-input" value={pathaoClientSecret} onChange={(e) => setPathaoClientSecret(e.target.value)} />
+                          </div>
+                        </div>
+
+                        <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                          <div className="form-group">
+                            <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <Users size={14} /> Pathao Login Email (Username)
+                            </label>
+                            <input 
+                              type="email" 
+                              className="form-input" 
+                              placeholder="e.g. merchant@gmail.com"
+                              value={pathaoUsername} 
+                              onChange={(e) => setPathaoUsername(e.target.value)} 
+                            />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <Key size={14} /> Pathao Account Password
+                            </label>
+                            <input 
+                              type="password" 
+                              className="form-input" 
+                              placeholder="Your Pathao Merchant Login Password"
+                              value={pathaoPassword} 
+                              onChange={(e) => setPathaoPassword(e.target.value)} 
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* CarryBee Courier API */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '20px', background: 'var(--bg-input)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Truck size={20} style={{ color: '#f59e0b' }} />
+                        <div>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}>CarryBee Courier API (ক্যারিবী কুরিয়ার)</div>
+                          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Production & Sandbox API integration for automated merchant delivery.</div>
+                        </div>
+                      </div>
+                      <div 
+                        className={`form-switch ${shippingCarrybee ? 'active' : ''}`} 
+                        onClick={() => setShippingCarrybee(!shippingCarrybee)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    </div>
+                    {shippingCarrybee && (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '10px', paddingTop: '14px', borderTop: '1px solid var(--border-color)' }}>
+                        <div className="form-group">
+                          <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Key size={14} /> CarryBee Client ID
+                          </label>
+                          <input type="text" className="form-input" value={carrybeeClientId} onChange={(e) => setCarrybeeClientId(e.target.value)} />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <ShieldCheck size={14} /> CarryBee Client Secret
+                          </label>
+                          <input type="password" className="form-input" value={carrybeeClientSecret} onChange={(e) => setCarrybeeClientSecret(e.target.value)} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* RedX Logistics API */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '20px', background: 'var(--bg-input)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Truck size={20} style={{ color: '#ef4444' }} />
+                        <div>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}>RedX Logistics API (রেডএক্স লজিস্টিকস)</div>
+                          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Enterprise shipping tracking and automated delivery booking.</div>
+                        </div>
+                      </div>
+                      <div 
+                        className={`form-switch ${shippingRedx ? 'active' : ''}`} 
+                        onClick={() => setShippingRedx(!shippingRedx)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    </div>
+                    {shippingRedx && (
+                      <div style={{ marginTop: '10px', paddingTop: '14px', borderTop: '1px solid var(--border-color)' }}>
+                        <div className="form-group">
+                          <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Key size={14} /> RedX JWT Access Token
+                          </label>
+                          <input type="password" className="form-input" value={redxToken} onChange={(e) => setRedxToken(e.target.value)} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Paperfly Courier API */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '20px', background: 'var(--bg-input)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Truck size={20} style={{ color: '#3b82f6' }} />
+                        <div>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}>Paperfly Courier API (পেপারফ্লাই)</div>
+                          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Nationwide doorstep delivery and smart return API.</div>
+                        </div>
+                      </div>
+                      <div 
+                        className={`form-switch ${shippingPaperfly ? 'active' : ''}`} 
+                        onClick={() => setShippingPaperfly(!shippingPaperfly)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    </div>
+                    {shippingPaperfly && (
+                      <div style={{ marginTop: '10px', paddingTop: '14px', borderTop: '1px solid var(--border-color)' }}>
+                        <div className="form-group">
+                          <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Key size={14} /> Paperfly Key
+                          </label>
+                          <input type="text" className="form-input" value={paperflyKey} onChange={(e) => setPaperflyKey(e.target.value)} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* CourierCheck BD Universal Aggregator API */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '20px', background: 'var(--bg-input)', borderRadius: 'var(--radius-md)', border: '1px solid #10b981' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <ShieldCheck size={22} style={{ color: '#10b981' }} />
+                        <div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}>
+                            CourierCheck BD Universal API (সারাদেশের পাঠাও + রেডএক্স ফ্রড চেক) 🏆
+                          </div>
+                          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                            Connect CourierCheck / BD Courier API Key for 1-click nationwide Pathao, RedX, CarryBee & Steadfast fraud reports.
+                          </div>
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '11px', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '3px 10px', borderRadius: '12px', fontWeight: 700 }}>
+                        RECOMMENDED FOR PATHAO
+                      </span>
+                    </div>
+
+                    <div style={{ marginTop: '10px', paddingTop: '14px', borderTop: '1px solid var(--border-color)' }}>
+                      <div className="form-group">
+                        <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Key size={14} /> CourierCheck API Key (Bearer Token)
+                        </label>
+                        <input 
+                          type="password" 
+                          className="form-input" 
+                          placeholder="Paste CourierCheck.com.bd API Key here for nationwide Pathao reports"
+                          value={couriercheckApiKey} 
+                          onChange={(e) => setCouriercheckApiKey(e.target.value)} 
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

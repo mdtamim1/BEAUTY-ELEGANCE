@@ -96,6 +96,14 @@ export const fetchCustomerOrdersFromBackend = async (email: string, phone?: stri
       discount: order.discount,
       paidAmount: order.paid_amount || order.paidAmount,
       subtotal: order.subtotal,
+      consignment_id: order.consignment_id || null,
+      tracking_code: order.tracking_code || null,
+      courier_status: order.courier_status || null,
+      courier_name: order.courier_name || 'Steadfast',
+      consignmentId: order.consignment_id || null,
+      trackingCode: order.tracking_code || null,
+      courierStatus: order.courier_status || null,
+      courierName: order.courier_name || 'Steadfast',
       productsList: order.productsList || []
     }));
   } catch (e) {
@@ -142,6 +150,14 @@ export const fetchOrdersFromBackend = async (): Promise<Order[] | null> => {
       subtotal: order.subtotal,
       assigned_to: order.assigned_to || null,
       assigned_name: order.assigned_name || null,
+      consignment_id: order.consignment_id || null,
+      tracking_code: order.tracking_code || null,
+      courier_status: order.courier_status || null,
+      courier_name: order.courier_name || 'Steadfast',
+      consignmentId: order.consignment_id || null,
+      trackingCode: order.tracking_code || null,
+      courierStatus: order.courier_status || null,
+      courierName: order.courier_name || 'Steadfast',
       productsList: order.productsList || []
     }));
   } catch (e) {
@@ -1083,6 +1099,75 @@ export const deleteBlogFromBackend = async (id: string): Promise<any> => {
     return { status: 'error', message: 'Failed to delete blog' };
   }
 };
+
+// --- COURIER (STEADFAST) APIS ---
+
+export const sendOrderToSteadfastApi = async (orderId: string): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/courier/send-order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
+      body: JSON.stringify({ orderId })
+    });
+    return await res.json();
+  } catch (e: any) {
+    return { status: 'error', message: e.message || 'Failed to send order to Steadfast' };
+  }
+};
+
+export const bulkSendToSteadfastApi = async (orderIds: string[]): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/courier/bulk-send`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
+      body: JSON.stringify({ orderIds })
+    });
+    return await res.json();
+  } catch (e: any) {
+    return { status: 'error', message: e.message || 'Failed to bulk send orders to Steadfast' };
+  }
+};
+
+export const fetchSteadfastStatusApi = async (orderId: string): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/courier/status/${orderId}`, {
+      headers: getAuthHeaders()
+    });
+    return await res.json();
+  } catch (e: any) {
+    return { status: 'error', message: e.message || 'Failed to fetch Steadfast status' };
+  }
+};
+
+export const fetchSteadfastBalanceApi = async (): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/courier/balance`, {
+      headers: getAuthHeaders()
+    });
+    return await res.json();
+  } catch (e: any) {
+    return { status: 'error', message: e.message || 'Failed to connect to Steadfast' };
+  }
+};
+
+export const checkUniversalFraudApi = async (phone: string): Promise<any> => {
+  try {
+    const res = await fetch(`${API_BASE}/courier/universal-fraud-check/${encodeURIComponent(phone)}`, {
+      headers: getAuthHeaders()
+    });
+    return await res.json();
+  } catch (e: any) {
+    return { status: 'error', message: e.message || 'Failed to run universal fraud check' };
+  }
+};
+
+
 
 
 

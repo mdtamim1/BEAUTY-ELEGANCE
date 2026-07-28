@@ -347,6 +347,17 @@ function initializeDatabase() {
       )
     `);
 
+    db.run(`INSERT OR IGNORE INTO system_settings (setting_key, setting_value, group_name) VALUES ('steadfast_api_key', '79pqokvknppabsrcstiz6kyzlsc9p3zm', 'courier')`);
+    db.run(`INSERT OR IGNORE INTO system_settings (setting_key, setting_value, group_name) VALUES ('steadfast_secret_key', '7lyfy5nakfdkq8x2m2rvkbzr', 'courier')`);
+    db.run(`INSERT OR IGNORE INTO system_settings (setting_key, setting_value, group_name) VALUES ('steadfast_enabled', '1', 'courier')`);
+    db.run(`INSERT OR IGNORE INTO system_settings (setting_key, setting_value, group_name) VALUES ('redx_token', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaWF0IjoxNzM1NTMxNjU2LCJpc3MiOiJ0OTlnbEVnZTBUTm5MYTNvalh6MG9VaGxtNEVoamNFMyIsInNob3BfaWQiOjEsInVzZXJfaWQiOjZ9.zpKfyHK6zPBVaTrYevnCqnUA-e2jFKQJ7lK-z4aOx2g', 'courier')`);
+    db.run(`INSERT OR IGNORE INTO system_settings (setting_key, setting_value, group_name) VALUES ('carrybee_client_id', '5ee3037e-712f-4f5e-a3cc-17ebefa42134', 'courier')`);
+    db.run(`INSERT OR IGNORE INTO system_settings (setting_key, setting_value, group_name) VALUES ('carrybee_client_secret', '8d03381f-b0b4-4a9b-9a0b-70b73cbbe835', 'courier')`);
+    db.run(`INSERT OR IGNORE INTO system_settings (setting_key, setting_value, group_name) VALUES ('carrybee_client_context', 'YGqCETxCG1b0NmnHK74EfS6p1VIWZz', 'courier')`);
+    db.run(`INSERT OR IGNORE INTO system_settings (setting_key, setting_value, group_name) VALUES ('pathao_client_id', 'w9aA85PevM', 'courier')`);
+    db.run(`INSERT OR IGNORE INTO system_settings (setting_key, setting_value, group_name) VALUES ('pathao_client_secret', 'LBiXnHQFvxh8ODWA7aDmRkC6v', 'courier')`);
+    db.run(`INSERT OR IGNORE INTO system_settings (setting_key, setting_value, group_name) VALUES ('paperfly_key', 'Paperfly_~La?Rj73FcLm', 'courier')`);
+
     db.run(`
       CREATE TABLE IF NOT EXISTS blog_posts (
         id TEXT PRIMARY KEY,
@@ -570,25 +581,21 @@ function initializeDatabase() {
         status TEXT DEFAULT 'processing',
         assigned_to TEXT DEFAULT NULL,
         assigned_name TEXT DEFAULT NULL,
+        consignment_id TEXT DEFAULT NULL,
+        tracking_code TEXT DEFAULT NULL,
+        courier_status TEXT DEFAULT NULL,
+        courier_name TEXT DEFAULT 'Steadfast',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
     // Migration: Add assigned_to column if it doesn't exist (for existing databases)
-    db.run(`ALTER TABLE orders ADD COLUMN assigned_to TEXT DEFAULT NULL`, (err) => {
-      // Ignore error if column already exists
-      if (err && !String(err).includes('duplicate column')) {
-        // Column already exists, safe to ignore
-      }
-    });
-
-    // Migration: Add assigned_name column if it doesn't exist (for existing databases)
-    db.run(`ALTER TABLE orders ADD COLUMN assigned_name TEXT DEFAULT NULL`, (err) => {
-      // Ignore error if column already exists
-      if (err && !String(err).includes('duplicate column')) {
-        // Column already exists, safe to ignore
-      }
-    });
+    db.run(`ALTER TABLE orders ADD COLUMN assigned_to TEXT DEFAULT NULL`, (err) => {});
+    db.run(`ALTER TABLE orders ADD COLUMN assigned_name TEXT DEFAULT NULL`, (err) => {});
+    db.run(`ALTER TABLE orders ADD COLUMN consignment_id TEXT DEFAULT NULL`, (err) => {});
+    db.run(`ALTER TABLE orders ADD COLUMN tracking_code TEXT DEFAULT NULL`, (err) => {});
+    db.run(`ALTER TABLE orders ADD COLUMN courier_status TEXT DEFAULT NULL`, (err) => {});
+    db.run(`ALTER TABLE orders ADD COLUMN courier_name TEXT DEFAULT 'Steadfast'`, (err) => {});
 
     db.run(`
       CREATE TABLE IF NOT EXISTS order_items (

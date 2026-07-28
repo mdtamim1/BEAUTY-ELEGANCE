@@ -19,6 +19,18 @@ const keyMapToCamel: Record<string, string> = {
   shipping_pathao: 'shippingPathao',
   shipping_steadfast: 'shippingSteadfast',
   shipping_redx: 'shippingRedx',
+  steadfast_api_key: 'steadfastApiKey',
+  steadfast_secret_key: 'steadfastSecretKey',
+  steadfast_enabled: 'steadfastEnabled',
+  redx_token: 'redxToken',
+  carrybee_client_id: 'carrybeeClientId',
+  carrybee_client_secret: 'carrybeeClientSecret',
+  pathao_client_id: 'pathaoClientId',
+  pathao_client_secret: 'pathaoClientSecret',
+  pathao_username: 'pathaoUsername',
+  pathao_password: 'pathaoPassword',
+  paperfly_key: 'paperflyKey',
+  couriercheck_api_key: 'couriercheckApiKey',
   cache_driver: 'cacheDriver',
   cache_ttl: 'cacheTTL',
 };
@@ -41,6 +53,18 @@ const keyMapToSnake: Record<string, string> = {
   shippingPathao: 'shipping_pathao',
   shippingSteadfast: 'shipping_steadfast',
   shippingRedx: 'shipping_redx',
+  steadfastApiKey: 'steadfast_api_key',
+  steadfastSecretKey: 'steadfast_secret_key',
+  steadfastEnabled: 'steadfast_enabled',
+  redxToken: 'redx_token',
+  carrybeeClientId: 'carrybee_client_id',
+  carrybeeClientSecret: 'carrybee_client_secret',
+  pathaoClientId: 'pathao_client_id',
+  pathaoClientSecret: 'pathao_client_secret',
+  pathaoUsername: 'pathao_username',
+  pathaoPassword: 'pathao_password',
+  paperflyKey: 'paperfly_key',
+  couriercheckApiKey: 'couriercheck_api_key',
   cacheDriver: 'cache_driver',
   cacheTTL: 'cache_ttl',
 };
@@ -71,6 +95,9 @@ export const getSettings = (req: Request, res: Response) => {
       shippingPathao: true,
       shippingSteadfast: true,
       shippingRedx: false,
+      steadfastApiKey: process.env.STEADFAST_API_KEY || '79pqokvknppabsrcstiz6kyzlsc9p3zm',
+      steadfastSecretKey: process.env.STEADFAST_SECRET_KEY || '7lyfy5nakfdkq8x2m2rvkbzr',
+      steadfastEnabled: true,
       cacheDriver: 'Redis',
       cacheHitRate: 94.2,
       cacheSize: '2.4 GB',
@@ -90,7 +117,8 @@ export const getSettings = (req: Request, res: Response) => {
             camelKey === 'paymentCod' ||
             camelKey === 'shippingPathao' ||
             camelKey === 'shippingSteadfast' ||
-            camelKey === 'shippingRedx'
+            camelKey === 'shippingRedx' ||
+            camelKey === 'steadfastEnabled'
           ) {
             val = val === '1' || val === 'true';
           } else if (camelKey === 'smtpPort' || camelKey === 'cacheTTL') {
@@ -170,6 +198,15 @@ export const updateSettings = (req: Request, res: Response) => {
       } else {
         val = String(val);
       }
+
+      // Dynamically update process.env for courier keys
+      if (snakeKey === 'couriercheck_api_key') process.env.COURIERCHECK_API_KEY = val;
+      if (snakeKey === 'pathao_client_id') process.env.PATHAO_CLIENT_ID = val;
+      if (snakeKey === 'pathao_client_secret') process.env.PATHAO_CLIENT_SECRET = val;
+      if (snakeKey === 'pathao_username') process.env.PATHAO_USERNAME = val;
+      if (snakeKey === 'pathao_password') process.env.PATHAO_PASSWORD = val;
+      if (snakeKey === 'steadfast_api_key') process.env.STEADFAST_API_KEY = val;
+      if (snakeKey === 'steadfast_secret_key') process.env.STEADFAST_SECRET_KEY = val;
 
       db.run(
         `INSERT OR REPLACE INTO system_settings (setting_key, setting_value) VALUES (?, ?)`,

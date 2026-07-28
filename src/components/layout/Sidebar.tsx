@@ -74,6 +74,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
       items: [
         { id: 'marketing', label: 'Marketing', icon: Megaphone, path: '/admin/marketing', badge: '', badgeType: '' },
         { id: 'employees', label: 'Employees', icon: UserCog, path: '/admin/employees', badge: '', badgeType: '' },
+        { id: 'settings', label: 'System Settings', icon: Settings, path: '/admin/settings', badge: 'Courier', badgeType: 'success' },
       ],
     },
   ];

@@ -1291,9 +1291,27 @@ export default function CustomerAccount() {
                           <div>
                             <div style={{ fontSize: '0.78rem', color: 'var(--sf-text-tertiary)' }}>Courier Service</div>
                             <div style={{ fontWeight: 600, fontSize: '0.95rem', marginTop: '2px', color: 'var(--sf-text-primary)' }}>
-                              {currentActiveOrder.courier || 'Pathao Courier'}
+                              {currentActiveOrder.courier || (currentActiveOrder as any).courier_name || 'Steadfast Courier'}
                             </div>
                           </div>
+
+                          {((currentActiveOrder as any).tracking_code || (currentActiveOrder as any).trackingCode || (currentActiveOrder as any).consignment_id) && (
+                            <div>
+                              <div style={{ fontSize: '0.78rem', color: 'var(--sf-text-tertiary)' }}>Tracking Code</div>
+                              <div style={{ fontWeight: 700, fontSize: '0.95rem', marginTop: '2px', color: '#10b981' }}>
+                                {(currentActiveOrder as any).tracking_code || (currentActiveOrder as any).trackingCode || (currentActiveOrder as any).consignment_id}
+                              </div>
+                              <a 
+                                href={`https://steadfast.com.bd/tracking/${(currentActiveOrder as any).tracking_code || (currentActiveOrder as any).trackingCode}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', color: 'var(--sf-accent)', fontWeight: 600, marginTop: '4px', textDecoration: 'none' }}
+                              >
+                                Track Parcel on Steadfast ↗
+                              </a>
+                            </div>
+                          )}
+
                           <div>
                             <div style={{ fontSize: '0.78rem', color: 'var(--sf-text-tertiary)' }}>Delivery Address</div>
                             <div style={{ fontWeight: 600, fontSize: '0.9rem', marginTop: '2px', color: 'var(--sf-text-primary)' }}>

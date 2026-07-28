@@ -481,7 +481,7 @@ export default function ProductDetails() {
     const deliveryCharge = shippingLocation === 'dhaka' 
       ? config.delivery.insideDhakaPrice 
       : config.delivery.outsideDhakaPrice;
-    const subtotal = product.price * buyNowQty;
+    const subtotal = effectivePrice * buyNowQty;
     
     let discount = 0;
     if (appliedCoupon) {
@@ -531,7 +531,7 @@ export default function ProductDetails() {
         size: selectedSize || 'Free Size',
         code: product.sku,
         quantity: buyNowQty,
-        price: product.price,
+        price: effectivePrice,
       }],
     };
 
@@ -1114,7 +1114,6 @@ export default function ProductDetails() {
                       alert('দয়া করে প্রথমে সাইজ সিলেক্ট করুন!');
                       return;
                     }
-                    setBuyNowQty(1);
                     setIsCheckoutOpen(true);
                   }}
                 >

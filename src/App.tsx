@@ -15,6 +15,7 @@ import Marketing from './features/marketing/Marketing';
 import Employees from './features/employees/Employees';
 import StorefrontManager from './features/storefront-manager/StorefrontManager';
 import RegisterEmployee from './features/employees/RegisterEmployee';
+import SystemSettings from './features/system/SystemSettings';
 
 // Storefront (Customer-facing)
 import StorefrontLayout from './storefront/StorefrontLayout';
@@ -109,6 +110,7 @@ function AdminLayout() {
             <Route path="employees" element={<Employees />} />
             <Route path="storefront-manager" element={<StorefrontManager />} />
             <Route path="blogs" element={<BlogManager />} />
+            <Route path="settings" element={<SystemSettings />} />
           </Routes>
         </main>
       </div>

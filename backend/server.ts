@@ -33,6 +33,7 @@ import analyticsRoutes from './routes/analytics';
 import { initChatSocket } from './websocket/chatSocket';
 import blogRoutes from './routes/blogs';
 import seoRoutes from './routes/seo';
+import courierRoutes from './routes/courier';
 
 dotenv.config();
 
@@ -174,6 +175,7 @@ app.use('/api/v1/employees', employeeRoutes);
 app.use('/api/v1/marketing', marketingRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/blogs', blogRoutes);
+app.use('/api/v1/courier', courierRoutes);
 app.get('/api/v1/cache-status', (_req, res) => res.json({ status: 'success', data: cacheService.getStatus() }));
 app.get('/api/v1/db-status', (_req, res) => res.json({ status: 'success', data: getDbStatus() }));
 app.use('/', seoRoutes);

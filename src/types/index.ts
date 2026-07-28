@@ -46,6 +46,14 @@ export interface Order {
   updatedAt?: string;
   assigned_to?: string | null;
   assigned_name?: string | null;
+  consignment_id?: string | null;
+  tracking_code?: string | null;
+  courier_status?: string | null;
+  courier_name?: string | null;
+  consignmentId?: string | null;
+  trackingCode?: string | null;
+  courierStatus?: string | null;
+  courierName?: string | null;
 }
 
 export interface Customer {

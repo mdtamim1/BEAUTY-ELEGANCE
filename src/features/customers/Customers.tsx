@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Users, Search, Filter, Download, UserPlus, Star, Shield, Heart, AlertTriangle, Eye } from 'lucide-react';
+import { Users, Search, Filter, Download, UserPlus, Star, Shield, Heart, AlertTriangle, Eye, ShieldCheck, RefreshCw, Phone } from 'lucide-react';
 import { generateCustomers, formatCurrency, formatDate, timeAgo } from '../../mock/data';
+import { checkUniversalFraudApi } from '../../services/api';
 
 const segmentColors: Record<string, string> = {
   'VIP': 'badge-purple', 'Regular': 'badge-primary', 'New': 'badge-success',
@@ -14,6 +15,27 @@ export default function Customers() {
   const [selectedCustomer, setSelectedCustomer] = useState<typeof customers[0] | null>(null);
   const [page, setPage] = useState(1);
   const perPage = 10;
+
+  // Universal Fraud Lookup Tool states
+  const [fraudCheckPhone, setFraudCheckPhone] = useState('');
+  const [fraudCheckResult, setFraudCheckResult] = useState<any | null>(null);
+  const [isSearchingFraud, setIsSearchingFraud] = useState(false);
+
+  const handleLookupFraud = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fraudCheckPhone || fraudCheckPhone.trim().length < 10) {
+      alert('Please enter a valid 11-digit mobile number');
+      return;
+    }
+    setIsSearchingFraud(true);
+    const res = await checkUniversalFraudApi(fraudCheckPhone);
+    setIsSearchingFraud(false);
+    if (res && res.status === 'success') {
+      setFraudCheckResult(res.data);
+    } else {
+      alert(`Fraud check failed: ${res?.message || 'Check network'}`);
+    }
+  };
 
   const filtered = useMemo(() => {
     let result = customers;
@@ -106,6 +128,81 @@ export default function Customers() {
             </div>
           );
         })}
+      </div>
+
+      {/* Universal Multi-Courier Fraud Search Tool */}
+      <div className="card" style={{ marginBottom: 'var(--space-6)', padding: '20px', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+          <ShieldCheck size={22} style={{ color: 'var(--accent-primary)' }} />
+          <div>
+            <h3 style={{ margin: 0, fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)' }}>
+              Universal Courier Fraud Lookup (সকল কুরিয়ার ফ্রড সার্চ)
+            </h3>
+            <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+              Search any mobile number to check delivery success rate across Steadfast, Pathao, CarryBee, RedX & Paperfly network.
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleLookupFraud} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', flexGrow: 1, maxWidth: '400px' }}>
+            <Phone size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)' }} />
+            <input 
+              type="text" 
+              className="form-input"
+              placeholder="Enter 11-digit mobile number (e.g. 01712345678)"
+              value={fraudCheckPhone}
+              onChange={(e) => setFraudCheckPhone(e.target.value)}
+              style={{ paddingLeft: '36px', height: '40px' }}
+            />
+          </div>
+          <button 
+            type="submit" 
+            className="btn btn-primary"
+            disabled={isSearchingFraud}
+            style={{ height: '40px', padding: '0 20px', display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <RefreshCw size={16} className={isSearchingFraud ? 'animate-spin' : ''} />
+            {isSearchingFraud ? 'Searching Couriers...' : 'Check Courier History'}
+          </button>
+        </form>
+
+        {/* Display Fraud Result Card */}
+        {fraudCheckResult && (
+          <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '14px' }}>
+              <div style={{ background: 'var(--bg-input)', padding: '10px 14px', borderRadius: '8px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 600 }}>Total BD Orders</span>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginTop: '2px' }}>{fraudCheckResult.total_parcels}</div>
+              </div>
+              <div style={{ background: 'var(--bg-input)', padding: '10px 14px', borderRadius: '8px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 600 }}>Successful Delivered</span>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--success-color)', marginTop: '2px' }}>{fraudCheckResult.delivered_parcels}</div>
+              </div>
+              <div style={{ background: 'var(--bg-input)', padding: '10px 14px', borderRadius: '8px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 600 }}>Returned/Cancelled</span>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--danger-color)', marginTop: '2px' }}>{fraudCheckResult.returned_parcels}</div>
+              </div>
+              <div style={{ background: 'var(--bg-input)', padding: '10px 14px', borderRadius: '8px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 600 }}>Success Ratio</span>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: fraudCheckResult.success_rate >= 80 ? 'var(--success-color)' : 'var(--warning-color)', marginTop: '2px' }}>
+                  {fraudCheckResult.success_rate}%
+                </div>
+              </div>
+            </div>
+
+            <div style={{ 
+              padding: '12px 16px', 
+              borderRadius: '8px', 
+              fontSize: '13px',
+              background: fraudCheckResult.risk_level === 'High Risk' ? 'rgba(239, 68, 68, 0.12)' : fraudCheckResult.risk_level === 'Medium Risk' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+              border: `1px solid ${fraudCheckResult.risk_level === 'High Risk' ? 'rgba(239, 68, 68, 0.3)' : fraudCheckResult.risk_level === 'Medium Risk' ? 'rgba(245, 158, 11, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
+              color: 'var(--text-primary)'
+            }}>
+              <strong>{fraudCheckResult.risk_level}:</strong> {fraudCheckResult.recommendation}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Filters */}
