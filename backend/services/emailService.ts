@@ -1,12 +1,15 @@
 import nodemailer from 'nodemailer';
 
+const EMAIL_USER = process.env.EMAIL_USER || 'rjtamim154@gmail.com';
+const EMAIL_PASS = process.env.EMAIL_PASS || 'yfginnhvzzloemza';
+
 // ---- Nodemailer transporter (Gmail SMTP) ----
 const createTransporter = () => {
   return nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS, // Gmail App Password (not regular password)
+      user: EMAIL_USER,
+      pass: EMAIL_PASS,
     },
   });
 };
@@ -14,7 +17,7 @@ const createTransporter = () => {
 const STORE_NAME = process.env.STORE_NAME || 'Tamim Global';
 const STORE_URL = process.env.STORE_URL || 'https://tamimglobal.com';
 const STORE_LOGO = `${STORE_URL}/logo.png`;
-const FROM_EMAIL = `"${STORE_NAME}" <${process.env.EMAIL_USER}>`;
+const FROM_EMAIL = `"${STORE_NAME}" <${EMAIL_USER}>`;
 
 // ---- HTML email base template ----
 const emailTemplate = (content: string) => `

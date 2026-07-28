@@ -2113,20 +2113,21 @@ var sendOrderSMS = async (phone, details) => {
 
 // backend/services/emailService.ts
 import nodemailer from "nodemailer";
+var EMAIL_USER = process.env.EMAIL_USER || "rjtamim154@gmail.com";
+var EMAIL_PASS = process.env.EMAIL_PASS || "yfginnhvzzloemza";
 var createTransporter = () => {
   return nodemailer.createTransport({
     service: "gmail",
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS
-      // Gmail App Password (not regular password)
+      user: EMAIL_USER,
+      pass: EMAIL_PASS
     }
   });
 };
 var STORE_NAME = process.env.STORE_NAME || "Tamim Global";
 var STORE_URL = process.env.STORE_URL || "https://tamimglobal.com";
 var STORE_LOGO = `${STORE_URL}/logo.png`;
-var FROM_EMAIL = `"${STORE_NAME}" <${process.env.EMAIL_USER}>`;
+var FROM_EMAIL = `"${STORE_NAME}" <${EMAIL_USER}>`;
 var emailTemplate = (content) => `
 <!DOCTYPE html>
 <html>
