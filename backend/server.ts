@@ -10,6 +10,7 @@ import morgan from 'morgan';
 import { createServer } from 'http';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { onRequest } from 'firebase-functions/v2/https';
 
@@ -186,15 +187,28 @@ app.use('/api/v1/settings', settingsRoutes);
 app.use('/api/v1/vendors', (_req, res) => res.json({ status: 'success', data: [] }));
 
 // Serve static assets from Vite build folder
-const distPath = path.resolve(__dirname, '../dist');
+const projectRoot = process.cwd();
+let distPath = path.resolve(projectRoot, 'dist');
+if (!fs.existsSync(path.resolve(distPath, 'index.html'))) {
+  distPath = path.resolve(__dirname, '../../dist');
+}
+if (!fs.existsSync(path.resolve(distPath, 'index.html'))) {
+  distPath = path.resolve(__dirname, '../dist');
+}
+
 app.use(express.static(distPath));
+app.use('/assets', express.static(path.resolve(distPath, 'assets')));
 
 // For all other requests that are NOT API requests, serve the index.html from dist
 app.get(/.*/, (req, res, next) => {
   if (req.path.startsWith('/api')) {
     return next(); // pass it to API error handler
   }
-  res.sendFile(path.resolve(distPath, 'index.html'));
+  const indexPath = path.resolve(distPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+  next();
 });
 
 // ========================================

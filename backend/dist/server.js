@@ -6,6 +6,7 @@ import morgan from "morgan";
 import { createServer } from "http";
 import dotenv3 from "dotenv";
 import path2 from "path";
+import fs2 from "fs";
 import { fileURLToPath as fileURLToPath2 } from "url";
 import { onRequest } from "firebase-functions/v2/https";
 
@@ -5704,13 +5705,25 @@ app.use("/", seo_default);
 app.use("/api/v1/customers", customers_default);
 app.use("/api/v1/settings", settings_default);
 app.use("/api/v1/vendors", (_req, res) => res.json({ status: "success", data: [] }));
-var distPath = path2.resolve(__dirname2, "../dist");
+var projectRoot = process.cwd();
+var distPath = path2.resolve(projectRoot, "dist");
+if (!fs2.existsSync(path2.resolve(distPath, "index.html"))) {
+  distPath = path2.resolve(__dirname2, "../../dist");
+}
+if (!fs2.existsSync(path2.resolve(distPath, "index.html"))) {
+  distPath = path2.resolve(__dirname2, "../dist");
+}
 app.use(express.static(distPath));
+app.use("/assets", express.static(path2.resolve(distPath, "assets")));
 app.get(/.*/, (req, res, next) => {
   if (req.path.startsWith("/api")) {
     return next();
   }
-  res.sendFile(path2.resolve(distPath, "index.html"));
+  const indexPath = path2.resolve(distPath, "index.html");
+  if (fs2.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+  next();
 });
 app.use((_req, res) => {
   res.status(404).json({ status: "error", message: "Route not found" });
