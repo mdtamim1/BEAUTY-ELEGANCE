@@ -343,11 +343,14 @@ export const sendOrderConfirmationEmail = async (order: OrderEmailData): Promise
   const htmlBody = emailTemplate(content);
   const subjectText = `🛍️ আপনার অর্ডার কনফার্ম হয়েছে! (অর্ডার #${order.id}) — ${STORE_NAME}`;
 
-  // 1. Attempt sending via Brevo API v3 if BREVO_API_KEY is present
-  const brevoSuccess = await sendBrevoEmail(order.email, order.customer, subjectText, htmlBody);
-  if (brevoSuccess) return true;
+  // 1. Attempt sending via Brevo API v3 ONLY if valid xkeysib API key is present
+  const brevoApiKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY || '';
+  if (brevoApiKey && brevoApiKey.startsWith('xkeysib')) {
+    const brevoSuccess = await sendBrevoEmail(order.email, order.customer, subjectText, htmlBody);
+    if (brevoSuccess) return true;
+  }
 
-  // 2. Fallback to Gmail SMTP Nodemailer
+  // 2. Direct Nodemailer Gmail SMTP Execution
   try {
     const transporter = createTransporter();
     await transporter.sendMail({

@@ -37,26 +37,28 @@ const triggerInstantOrderNotifications = (orderData: any) => {
       discount: orderData.discount,
       paymentMethod: orderData.paymentMethod,
       productsList: orderData.productsList
+    }).then(() => {
+      // 3. Instant Admin Alert Email to Store Owner with 1000ms stagger to prevent Gmail SMTP connection throttle
+      if (storeOwnerEmail && storeOwnerEmail.includes('@') && storeOwnerEmail.toLowerCase() !== email.toLowerCase()) {
+        setTimeout(() => {
+          sendOrderConfirmationEmail({
+            id: orderData.id,
+            customer: `[ADMIN ALERT] New Order from ${orderData.customer}`,
+            email: storeOwnerEmail,
+            phone: phone,
+            address: orderData.address,
+            city: orderData.city,
+            thana: orderData.thana,
+            amount: orderData.amount,
+            subtotal: orderData.subtotal,
+            deliveryCharge: orderData.deliveryCharge,
+            discount: orderData.discount,
+            paymentMethod: orderData.paymentMethod,
+            productsList: orderData.productsList
+          }).catch(err => console.error('[OrderController] Admin Email Alert Trigger error:', err));
+        }, 1000);
+      }
     }).catch(err => console.error('[OrderController] Customer Email Trigger error:', err));
-  }
-
-  // 3. Instant Admin Alert Email to Store Owner (rjtamim154@gmail.com) for EVERY new order!
-  if (storeOwnerEmail && storeOwnerEmail.includes('@') && storeOwnerEmail.toLowerCase() !== (email || '').toLowerCase()) {
-    sendOrderConfirmationEmail({
-      id: orderData.id,
-      customer: `[ADMIN ALERT] New Order from ${orderData.customer}`,
-      email: storeOwnerEmail,
-      phone: phone,
-      address: orderData.address,
-      city: orderData.city,
-      thana: orderData.thana,
-      amount: orderData.amount,
-      subtotal: orderData.subtotal,
-      deliveryCharge: orderData.deliveryCharge,
-      discount: orderData.discount,
-      paymentMethod: orderData.paymentMethod,
-      productsList: orderData.productsList
-    }).catch(err => console.error('[OrderController] Admin Email Alert Trigger error:', err));
   }
 };
 

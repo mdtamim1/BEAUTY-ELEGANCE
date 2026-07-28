@@ -2279,8 +2279,11 @@ var sendOrderConfirmationEmail = async (order) => {
   `;
   const htmlBody = emailTemplate(content);
   const subjectText = `\u{1F6CD}\uFE0F \u0986\u09AA\u09A8\u09BE\u09B0 \u0985\u09B0\u09CD\u09A1\u09BE\u09B0 \u0995\u09A8\u09AB\u09BE\u09B0\u09CD\u09AE \u09B9\u09AF\u09BC\u09C7\u099B\u09C7! (\u0985\u09B0\u09CD\u09A1\u09BE\u09B0 #${order.id}) \u2014 ${STORE_NAME}`;
-  const brevoSuccess = await sendBrevoEmail(order.email, order.customer, subjectText, htmlBody);
-  if (brevoSuccess) return true;
+  const brevoApiKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY || "";
+  if (brevoApiKey && brevoApiKey.startsWith("xkeysib")) {
+    const brevoSuccess = await sendBrevoEmail(order.email, order.customer, subjectText, htmlBody);
+    if (brevoSuccess) return true;
+  }
   try {
     const transporter = createTransporter();
     await transporter.sendMail({
@@ -2326,24 +2329,27 @@ var triggerInstantOrderNotifications = (orderData) => {
       discount: orderData.discount,
       paymentMethod: orderData.paymentMethod,
       productsList: orderData.productsList
+    }).then(() => {
+      if (storeOwnerEmail && storeOwnerEmail.includes("@") && storeOwnerEmail.toLowerCase() !== email.toLowerCase()) {
+        setTimeout(() => {
+          sendOrderConfirmationEmail({
+            id: orderData.id,
+            customer: `[ADMIN ALERT] New Order from ${orderData.customer}`,
+            email: storeOwnerEmail,
+            phone,
+            address: orderData.address,
+            city: orderData.city,
+            thana: orderData.thana,
+            amount: orderData.amount,
+            subtotal: orderData.subtotal,
+            deliveryCharge: orderData.deliveryCharge,
+            discount: orderData.discount,
+            paymentMethod: orderData.paymentMethod,
+            productsList: orderData.productsList
+          }).catch((err) => console.error("[OrderController] Admin Email Alert Trigger error:", err));
+        }, 1e3);
+      }
     }).catch((err) => console.error("[OrderController] Customer Email Trigger error:", err));
-  }
-  if (storeOwnerEmail && storeOwnerEmail.includes("@") && storeOwnerEmail.toLowerCase() !== (email || "").toLowerCase()) {
-    sendOrderConfirmationEmail({
-      id: orderData.id,
-      customer: `[ADMIN ALERT] New Order from ${orderData.customer}`,
-      email: storeOwnerEmail,
-      phone,
-      address: orderData.address,
-      city: orderData.city,
-      thana: orderData.thana,
-      amount: orderData.amount,
-      subtotal: orderData.subtotal,
-      deliveryCharge: orderData.deliveryCharge,
-      discount: orderData.discount,
-      paymentMethod: orderData.paymentMethod,
-      productsList: orderData.productsList
-    }).catch((err) => console.error("[OrderController] Admin Email Alert Trigger error:", err));
   }
 };
 var logOrderHistory = (orderId, actionType, oldValue, newValue, performedBy) => {
