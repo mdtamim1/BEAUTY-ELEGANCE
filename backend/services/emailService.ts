@@ -1,4 +1,6 @@
 import nodemailer from 'nodemailer';
+import fs from 'fs';
+import path from 'path';
 
 const EMAIL_USER = process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_USER || 'rjtamim154@gmail.com';
 const EMAIL_PASS = process.env.EMAIL_PASS || '';
@@ -16,11 +18,32 @@ const createTransporter = () => {
 
 const STORE_NAME = process.env.STORE_NAME || 'Tamim Global';
 const STORE_URL = process.env.STORE_URL || 'https://tamimglobal.com';
-const STORE_LOGO = `${STORE_URL}/logo.png`;
 const FROM_EMAIL = EMAIL_USER ? `"${STORE_NAME}" <${EMAIL_USER}>` : '';
 
+// Helper to convert TG logo to base64 so email clients display it directly
+const getLogoBase64 = (): string => {
+  try {
+    const candidates = [
+      path.join(process.cwd(), 'public', 'email-logo.png'),
+      path.join(process.cwd(), 'public', 'site-logo.png'),
+      path.join(process.cwd(), 'public', 'favicon.png'),
+    ];
+    for (const logoPath of candidates) {
+      if (fs.existsSync(logoPath)) {
+        const buffer = fs.readFileSync(logoPath);
+        return `data:image/png;base64,${buffer.toString('base64')}`;
+      }
+    }
+  } catch (e) {
+    console.error('[EmailService] Could not read logo file:', e);
+  }
+  return `${STORE_URL}/email-logo.png`;
+};
+
 // ---- HTML email base template ----
-const emailTemplate = (content: string) => `
+const emailTemplate = (content: string) => {
+  const logoSrc = getLogoBase64();
+  return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -48,7 +71,7 @@ const emailTemplate = (content: string) => `
   <div class="email-wrapper">
     <div class="email-container">
       <div class="email-header">
-        <img class="header-logo" src="${STORE_URL}/email-logo.png" alt="${STORE_NAME}" onerror="this.src='${STORE_URL}/logo.png'" />
+        <img class="header-logo" src="${logoSrc}" alt="${STORE_NAME}" />
         <div class="brand-title">${STORE_NAME}</div>
         <div class="brand-subtitle">PREMIUM E-COMMERCE</div>
       </div>
@@ -65,6 +88,7 @@ const emailTemplate = (content: string) => `
 </body>
 </html>
 `;
+};
 
 // ---- Welcome email (on subscribe) ----
 export const sendWelcomeEmail = async (email: string): Promise<boolean> => {
