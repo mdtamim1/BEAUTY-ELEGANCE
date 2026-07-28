@@ -274,11 +274,6 @@ export const sendOrderConfirmationEmail = async (order: OrderEmailData): Promise
     return false;
   }
 
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn('[EmailService] EMAIL_USER or EMAIL_PASS not set in .env, skipping order confirmation email.');
-    return false;
-  }
-
   const itemsHtml = (order.productsList || []).map(item => `
     <tr style="border-bottom:1px solid #f3f4f6;">
       <td style="padding:10px 0;font-weight:600;color:#111827;">${item.name} ${item.color && item.color !== 'Default' ? `(${item.color})` : ''} x${item.quantity}</td>
@@ -343,11 +338,35 @@ export const sendOrderConfirmationEmail = async (order: OrderEmailData): Promise
   const htmlBody = emailTemplate(content);
   const subjectText = `🛍️ আপনার অর্ডার কনফার্ম হয়েছে! (অর্ডার #${order.id}) — ${STORE_NAME}`;
 
-  // 1. Attempt sending via Brevo API v3 ONLY if valid xkeysib API key is present
+  // 1. Attempt sending via Brevo API v3 if BREVO_API_KEY is present
   const brevoApiKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY || '';
-  if (brevoApiKey && brevoApiKey.startsWith('xkeysib')) {
-    const brevoSuccess = await sendBrevoEmail(order.email, order.customer, subjectText, htmlBody);
-    if (brevoSuccess) return true;
+  if (brevoApiKey) {
+    try {
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': brevoApiKey,
+          'content-type': 'application/json',
+          'accept': 'application/json'
+        },
+        body: JSON.stringify({
+          sender: { name: STORE_NAME, email: EMAIL_USER },
+          to: [{ email: order.email, name: order.customer || 'Customer' }],
+          subject: subjectText,
+          htmlContent: htmlBody
+        })
+      });
+
+      if (response.ok) {
+        console.log(`[EmailService - Brevo API] Email sent successfully to: ${order.email}`);
+        return true;
+      } else {
+        const errRes = await response.json().catch(() => ({}));
+        console.error('[EmailService - Brevo API] Brevo returned error:', errRes);
+      }
+    } catch (err: any) {
+      console.error('[EmailService - Brevo API] Failed to send via Brevo:', err.message || err);
+    }
   }
 
   // 2. Direct Nodemailer Gmail SMTP Execution

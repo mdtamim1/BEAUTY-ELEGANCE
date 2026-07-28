@@ -2176,46 +2176,9 @@ var emailTemplate = (content) => `
 </body>
 </html>
 `;
-var sendBrevoEmail = async (toEmail, toName, subject, htmlContent) => {
-  const brevoApiKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY || "";
-  if (!brevoApiKey) return false;
-  const senderEmail = process.env.EMAIL_USER || "rjtamim154@gmail.com";
-  const senderName = process.env.STORE_NAME || "Tamim Global";
-  try {
-    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: {
-        "api-key": brevoApiKey,
-        "content-type": "application/json",
-        "accept": "application/json"
-      },
-      body: JSON.stringify({
-        sender: { name: senderName, email: senderEmail },
-        to: [{ email: toEmail, name: toName || "Customer" }],
-        subject,
-        htmlContent
-      })
-    });
-    if (response.ok) {
-      console.log(`[EmailService - Brevo API] Email sent successfully to: ${toEmail}`);
-      return true;
-    } else {
-      const errRes = await response.json().catch(() => ({}));
-      console.error("[EmailService - Brevo API] Brevo API returned error:", errRes);
-      return false;
-    }
-  } catch (err) {
-    console.error("[EmailService - Brevo API] Failed to send via Brevo:", err.message || err);
-    return false;
-  }
-};
 var sendOrderConfirmationEmail = async (order) => {
   if (!order.email || !order.email.includes("@")) {
     console.warn(`[EmailService] Invalid customer email: ${order.email}, skipping confirmation email.`);
-    return false;
-  }
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn("[EmailService] EMAIL_USER or EMAIL_PASS not set in .env, skipping order confirmation email.");
     return false;
   }
   const itemsHtml = (order.productsList || []).map((item) => `
@@ -2280,9 +2243,32 @@ var sendOrderConfirmationEmail = async (order) => {
   const htmlBody = emailTemplate(content);
   const subjectText = `\u{1F6CD}\uFE0F \u0986\u09AA\u09A8\u09BE\u09B0 \u0985\u09B0\u09CD\u09A1\u09BE\u09B0 \u0995\u09A8\u09AB\u09BE\u09B0\u09CD\u09AE \u09B9\u09AF\u09BC\u09C7\u099B\u09C7! (\u0985\u09B0\u09CD\u09A1\u09BE\u09B0 #${order.id}) \u2014 ${STORE_NAME}`;
   const brevoApiKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY || "";
-  if (brevoApiKey && brevoApiKey.startsWith("xkeysib")) {
-    const brevoSuccess = await sendBrevoEmail(order.email, order.customer, subjectText, htmlBody);
-    if (brevoSuccess) return true;
+  if (brevoApiKey) {
+    try {
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "api-key": brevoApiKey,
+          "content-type": "application/json",
+          "accept": "application/json"
+        },
+        body: JSON.stringify({
+          sender: { name: STORE_NAME, email: EMAIL_USER },
+          to: [{ email: order.email, name: order.customer || "Customer" }],
+          subject: subjectText,
+          htmlContent: htmlBody
+        })
+      });
+      if (response.ok) {
+        console.log(`[EmailService - Brevo API] Email sent successfully to: ${order.email}`);
+        return true;
+      } else {
+        const errRes = await response.json().catch(() => ({}));
+        console.error("[EmailService - Brevo API] Brevo returned error:", errRes);
+      }
+    } catch (err) {
+      console.error("[EmailService - Brevo API] Failed to send via Brevo:", err.message || err);
+    }
   }
   try {
     const transporter = createTransporter();
