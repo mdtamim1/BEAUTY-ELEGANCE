@@ -5721,6 +5721,7 @@ app.get(/.*/, (req, res, next) => {
   }
   const indexPath = path2.resolve(distPath, "index.html");
   if (fs2.existsSync(indexPath)) {
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     return res.sendFile(indexPath);
   }
   next();
