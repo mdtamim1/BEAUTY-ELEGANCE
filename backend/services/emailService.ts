@@ -28,41 +28,38 @@ const emailTemplate = (content: string) => `
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${STORE_NAME}</title>
   <style>
-    body { margin: 0; padding: 0; background: #f4f4f5; font-family: 'Segoe UI', Arial, sans-serif; }
-    .wrapper { max-width: 560px; margin: 32px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
-    .header { background: #111827; padding: 28px 32px; text-align: center; }
-    .header img { height: 52px; object-fit: contain; }
-    .header h1 { color: #e11d48; font-size: 1.1rem; margin: 8px 0 0; letter-spacing: 2px; font-weight: 800; }
-    .body { padding: 32px; color: #1f2937; }
-    .body h2 { font-size: 1.3rem; font-weight: 800; margin: 0 0 12px; color: #111827; }
-    .body p { font-size: 0.92rem; line-height: 1.7; color: #4b5563; margin: 0 0 16px; }
-    .btn { display: inline-block; background: #e11d48; color: #ffffff !important; text-decoration: none; padding: 12px 28px; border-radius: 100px; font-weight: 700; font-size: 0.9rem; margin-top: 8px; }
-    .divider { border: none; border-top: 1px solid #f3f4f6; margin: 24px 0; }
+    body { margin: 0; padding: 0; background-color: #0b0f17; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    .email-wrapper { width: 100%; background-color: #0b0f17; padding: 32px 12px; box-sizing: border-box; }
+    .email-container { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.35); border: 1px solid #1e293b; }
+    .email-header { background: linear-gradient(180deg, #090d16 0%, #171c28 100%); padding: 36px 24px 28px; text-align: center; border-bottom: 3px solid #e11d48; }
+    .header-logo { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; border: 3px solid #e11d48; box-shadow: 0 0 25px rgba(225, 29, 72, 0.45); display: inline-block; background: #000000; }
+    .brand-title { color: #ffffff; font-size: 1.35rem; margin: 14px 0 0; letter-spacing: 3px; font-weight: 900; text-transform: uppercase; font-family: Arial, sans-serif; }
+    .brand-subtitle { color: #f43f5e; font-size: 0.72rem; letter-spacing: 3px; text-transform: uppercase; margin-top: 4px; font-weight: 800; }
+    .email-body { padding: 32px 28px; background: #ffffff; color: #1e293b; }
+    .btn { display: inline-block; background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); color: #ffffff !important; text-decoration: none; padding: 13px 32px; border-radius: 50px; font-weight: 800; font-size: 0.9rem; letter-spacing: 0.5px; box-shadow: 0 6px 18px rgba(225, 29, 72, 0.35); }
+    .divider { border: none; border-top: 1px solid #f1f5f9; margin: 24px 0; }
     .tag { display: inline-block; background: #fef2f2; color: #e11d48; border-radius: 100px; padding: 4px 12px; font-size: 0.78rem; font-weight: 700; margin: 4px 4px 4px 0; }
-    .product-card { display: flex; gap: 12px; align-items: center; background: #f9fafb; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
-    .product-img { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; }
-    .product-info { flex: 1; }
-    .product-name { font-weight: 700; font-size: 0.88rem; color: #111827; margin: 0 0 4px; }
-    .product-price { color: #e11d48; font-weight: 800; font-size: 0.9rem; }
-    .footer { background: #111827; padding: 20px 32px; text-align: center; }
-    .footer p { color: #6b7280; font-size: 0.75rem; margin: 4px 0; }
-    .footer a { color: #9ca3af; text-decoration: none; }
-    .unsubscribe { font-size: 0.7rem; color: #6b7280; margin-top: 12px; }
+    .email-footer { background: #090d16; padding: 26px 24px; text-align: center; color: #94a3b8; font-size: 0.78rem; border-top: 1px solid #1e293b; }
+    .email-footer p { margin: 6px 0; }
+    .email-footer a { color: #f43f5e; text-decoration: none; font-weight: 700; }
   </style>
 </head>
 <body>
-  <div class="wrapper">
-    <div class="header">
-      <img src="${STORE_LOGO}" alt="${STORE_NAME}" onerror="this.style.display='none'" />
-      <h1>${STORE_NAME.toUpperCase()}</h1>
-    </div>
-    <div class="body">
-      ${content}
-    </div>
-    <div class="footer">
-      <p>© ${new Date().getFullYear()} ${STORE_NAME}. All rights reserved.</p>
-      <p><a href="${STORE_URL}">${STORE_URL}</a></p>
-      <p class="unsubscribe">আর ইমেইল পেতে না চাইলে <a href="${STORE_URL}/unsubscribe">এখানে ক্লিক করুন</a></p>
+  <div class="email-wrapper">
+    <div class="email-container">
+      <div class="email-header">
+        <img class="header-logo" src="${STORE_URL}/email-logo.png" alt="${STORE_NAME}" onerror="this.src='${STORE_URL}/logo.png'" />
+        <div class="brand-title">${STORE_NAME}</div>
+        <div class="brand-subtitle">PREMIUM E-COMMERCE</div>
+      </div>
+      <div class="email-body">
+        ${content}
+      </div>
+      <div class="email-footer">
+        <p>© ${new Date().getFullYear()} <strong style="color:#ffffff;">${STORE_NAME}</strong>. All rights reserved.</p>
+        <p><a href="${STORE_URL}">${STORE_URL}</a></p>
+        <p style="margin-top: 12px; color: #64748b; font-size: 0.72rem;">অর্ডার বা যেকোনো সহায়তার জন্য আমাদের সাথে যোগাযোগ করুন।</p>
+      </div>
     </div>
   </div>
 </body>
@@ -275,64 +272,85 @@ export const sendOrderConfirmationEmail = async (order: OrderEmailData): Promise
   }
 
   const itemsHtml = (order.productsList || []).map(item => `
-    <tr style="border-bottom:1px solid #f3f4f6;">
-      <td style="padding:10px 0;font-weight:600;color:#111827;">${item.name} ${item.color && item.color !== 'Default' ? `(${item.color})` : ''} x${item.quantity}</td>
-      <td style="padding:10px 0;text-align:right;font-weight:700;color:#e11d48;">৳${(item.price * item.quantity).toFixed(2)}</td>
+    <tr style="border-bottom:1px solid #f1f5f9;">
+      <td style="padding:12px 10px;font-weight:700;color:#0f172a;vertical-align:middle;">
+        <div style="font-size:0.92rem;color:#0f172a;">${item.name}</div>
+        ${item.color && item.color !== 'Default' ? `<span style="display:inline-block;font-size:0.75rem;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:4px;margin-top:3px;">রং: ${item.color}</span>` : ''}
+        ${item.size && item.size !== 'Free Size' ? `<span style="display:inline-block;font-size:0.75rem;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:4px;margin-top:3px;margin-left:4px;">সাইজ: ${item.size}</span>` : ''}
+      </td>
+      <td style="padding:12px 10px;text-align:center;font-weight:700;color:#475569;vertical-align:middle;font-size:0.88rem;">x${item.quantity}</td>
+      <td style="padding:12px 10px;text-align:right;font-weight:800;color:#e11d48;vertical-align:middle;font-size:0.95rem;">৳${(item.price * item.quantity).toFixed(2)}</td>
     </tr>
   `).join('');
 
   const content = `
-    <div style="background:#fef2f2;border-left:4px solid #e11d48;padding:12px 16px;border-radius:6px;margin-bottom:20px;">
-      <h2 style="margin:0 0 4px;font-size:1.2rem;color:#9f1239;">🎉 অর্ডার সফলভাবে গৃহীত হয়েছে!</h2>
-      <p style="margin:0;font-size:0.88rem;color:#be123c;">অর্ডার নম্বর: <strong>${order.id}</strong></p>
+    <div style="background:linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);border:1px solid #fecdd3;padding:20px;border-radius:14px;margin-bottom:24px;text-align:center;">
+      <div style="font-size:1.3rem;font-weight:900;color:#9f1239;margin-bottom:6px;">🎉 অর্ডার সফলভাবে গৃহীত হয়েছে!</div>
+      <div style="font-size:0.9rem;color:#be123c;">অর্ডার নম্বর: <span style="background:#e11d48;color:#ffffff;padding:3px 12px;border-radius:20px;font-weight:800;letter-spacing:1px;">${order.id}</span></div>
     </div>
 
-    <p>প্রিয় <strong>${order.customer}</strong>,</p>
-    <p><strong>${STORE_NAME}</strong>-এ কেনাকাটার জন্য আপনাকে ধন্যবাদ! আপনার অর্ডারটি সফলভাবে আমাদের সিস্টেমে প্রসেস হচ্ছে।</p>
+    <p style="font-size:0.95rem;color:#334155;line-height:1.6;margin-bottom:20px;">
+      প্রিয় <strong>${order.customer}</strong>,<br />
+      <strong>${STORE_NAME}</strong>-এ কেনাকাটা করার জন্য আপনাকে আন্তরিক ধন্যবাদ। আপনার অর্ডারটি সফলভাবে আমাদের সিস্টেমে নথিভুক্ত হয়েছে এবং শীঘ্রই ডেলিভারির জন্য প্রসেস করা হবে।
+    </p>
 
-    <h3 style="font-size:1rem;margin:20px 0 10px;color:#111827;border-bottom:2px solid #f3f4f6;padding-bottom:6px;">📦 অর্ডারের বিবরণ</h3>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+    <div style="font-size:1rem;font-weight:800;color:#0f172a;border-bottom:2px solid #f1f5f9;padding-bottom:8px;margin:28px 0 16px;text-transform:uppercase;letter-spacing:0.5px;">
+      📦 অর্ডারের বিবরণ
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
       <thead>
-        <tr style="border-bottom:2px solid #e5e7eb;text-align:left;font-size:0.8rem;color:#6b7280;">
-          <th style="padding:6px 0;">পণ্য</th>
-          <th style="padding:6px 0;text-align:right;">মূল্য</th>
+        <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;text-align:left;font-size:0.78rem;color:#64748b;text-transform:uppercase;">
+          <th style="padding:10px 12px;">পণ্য</th>
+          <th style="padding:10px 12px;text-align:center;">পরিমাণ</th>
+          <th style="padding:10px 12px;text-align:right;">মূল্য</th>
         </tr>
       </thead>
       <tbody>
-        ${itemsHtml || '<tr><td colspan="2" style="padding:10px 0;">পণ্য তালিকা প্রসেসিং এ রয়েছে</td></tr>'}
+        ${itemsHtml || '<tr><td colspan="3" style="padding:16px;text-align:center;color:#64748b;">পণ্য তালিকা প্রসেসিং এ রয়েছে</td></tr>'}
       </tbody>
     </table>
 
-    <div style="background:#f9fafb;border-radius:8px;padding:14px;margin-bottom:20px;">
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.88rem;">
-        <span>সাবটোটাল:</span>
-        <span style="font-weight:600;">৳${(order.subtotal || order.amount).toFixed(2)}</span>
-      </div>
-      ${order.deliveryCharge ? `
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.88rem;">
-        <span>ডেলিভারি চার্জ:</span>
-        <span style="font-weight:600;">৳${order.deliveryCharge.toFixed(2)}</span>
-      </div>` : ''}
-      ${order.discount ? `
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.88rem;color:#10b981;">
-        <span>ডিসকাউন্ট:</span>
-        <span style="font-weight:600;">-৳${order.discount.toFixed(2)}</span>
-      </div>` : ''}
-      <hr style="border:none;border-top:1px solid #e5e7eb;margin:8px 0;" />
-      <div style="display:flex;justify-content:space-between;font-size:1.05rem;font-weight:800;color:#e11d48;">
-        <span>সর্বমোট দেয়:</span>
-        <span>৳${order.amount.toFixed(2)}</span>
-      </div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:18px 20px;margin-bottom:24px;">
+      <table style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="padding:4px 0;font-size:0.9rem;color:#475569;">সাবটোটাল:</td>
+          <td style="padding:4px 0;text-align:right;font-size:0.9rem;font-weight:700;color:#1e293b;">৳${(order.subtotal || order.amount).toFixed(2)}</td>
+        </tr>
+        ${order.deliveryCharge ? `
+        <tr>
+          <td style="padding:4px 0;font-size:0.9rem;color:#475569;">ডেলিভারি চার্জ:</td>
+          <td style="padding:4px 0;text-align:right;font-size:0.9rem;font-weight:700;color:#1e293b;">৳${order.deliveryCharge.toFixed(2)}</td>
+        </tr>` : ''}
+        ${order.discount ? `
+        <tr>
+          <td style="padding:4px 0;font-size:0.9rem;color:#10b981;font-weight:600;">ডিসকাউন্ট:</td>
+          <td style="padding:4px 0;text-align:right;font-size:0.9rem;font-weight:700;color:#10b981;">-৳${order.discount.toFixed(2)}</td>
+        </tr>` : ''}
+        <tr>
+          <td colspan="2" style="padding:8px 0 4px;"><hr style="border:none;border-top:1px dashed #cbd5e1;margin:0;" /></td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;font-size:1.05rem;font-weight:900;color:#0f172a;">সর্বমোট দেয়:</td>
+          <td style="padding:6px 0;text-align:right;font-size:1.15rem;font-weight:900;color:#e11d48;">৳${order.amount.toFixed(2)}</td>
+        </tr>
+      </table>
     </div>
 
-    <h3 style="font-size:1rem;margin:20px 0 10px;color:#111827;border-bottom:2px solid #f3f4f6;padding-bottom:6px;">📍 ডেলিভারি ঠিকানা</h3>
-    <p style="margin:4px 0;font-size:0.88rem;color:#374151;"><strong>গ্রহীতা:</strong> ${order.customer}</p>
-    <p style="margin:4px 0;font-size:0.88rem;color:#374151;"><strong>মোবাইল:</strong> ${order.phone || 'N/A'}</p>
-    <p style="margin:4px 0;font-size:0.88rem;color:#374151;"><strong>ঠিকানা:</strong> ${order.address || ''} ${order.thana ? `, ${order.thana}` : ''} ${order.city ? `, ${order.city}` : ''}</p>
-    <p style="margin:4px 0;font-size:0.88rem;color:#374151;"><strong>পেমেন্ট মেথড:</strong> ${order.paymentMethod || 'Cash on Delivery'}</p>
+    <div style="font-size:1rem;font-weight:800;color:#0f172a;border-bottom:2px solid #f1f5f9;padding-bottom:8px;margin:28px 0 16px;text-transform:uppercase;letter-spacing:0.5px;">
+      📍 ডেলিভারি ঠিকানা
+    </div>
 
-    <hr class="divider" />
-    <p style="font-size:0.85rem;color:#6b7280;text-align:center;">যেকোনো প্রয়োজনে আমাদের সাথে যোগাযোগ করুন। ধন্যবাদ!</p>
+    <div style="background:#f8fafc;border-left:4px solid #e11d48;padding:16px 20px;border-radius:0 12px 12px 0;margin-bottom:24px;">
+      <p style="margin:4px 0;font-size:0.9rem;color:#334155;"><strong>গ্রহীতা:</strong> ${order.customer}</p>
+      <p style="margin:4px 0;font-size:0.9rem;color:#334155;"><strong>মোবাইল:</strong> ${order.phone || 'N/A'}</p>
+      <p style="margin:4px 0;font-size:0.9rem;color:#334155;"><strong>ঠিকানা:</strong> ${order.address || ''} ${order.thana ? `, ${order.thana}` : ''} ${order.city ? `, ${order.city}` : ''}</p>
+      <p style="margin:4px 0;font-size:0.9rem;color:#334155;"><strong>পেমেন্ট মেথড:</strong> <span style="background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:4px;font-weight:700;font-size:0.8rem;">${order.paymentMethod || 'Cash on Delivery'}</span></p>
+    </div>
+
+    <div style="text-align:center;margin-top:32px;">
+      <a href="${STORE_URL}" class="btn">🛍️ ওয়েবসাইট ভিজিট করুন</a>
+    </div>
   `;
 
   const htmlBody = emailTemplate(content);
