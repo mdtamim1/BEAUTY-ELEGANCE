@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 
-const EMAIL_USER = process.env.EMAIL_USER || '';
+const EMAIL_USER = process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_USER || 'rjtamim154@gmail.com';
 const EMAIL_PASS = process.env.EMAIL_PASS || '';
 
 // ---- Nodemailer transporter (Gmail SMTP) ----
@@ -341,32 +341,13 @@ export const sendOrderConfirmationEmail = async (order: OrderEmailData): Promise
   // 1. Attempt sending via Brevo API v3 if BREVO_API_KEY is present
   const brevoApiKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY || '';
   if (brevoApiKey) {
-    try {
-      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
-        headers: {
-          'api-key': brevoApiKey,
-          'content-type': 'application/json',
-          'accept': 'application/json'
-        },
-        body: JSON.stringify({
-          sender: { name: STORE_NAME, email: EMAIL_USER },
-          to: [{ email: order.email, name: order.customer || 'Customer' }],
-          subject: subjectText,
-          htmlContent: htmlBody
-        })
-      });
-
-      if (response.ok) {
-        console.log(`[EmailService - Brevo API] Email sent successfully to: ${order.email}`);
-        return true;
-      } else {
-        const errRes = await response.json().catch(() => ({}));
-        console.error('[EmailService - Brevo API] Brevo returned error:', errRes);
-      }
-    } catch (err: any) {
-      console.error('[EmailService - Brevo API] Failed to send via Brevo:', err.message || err);
-    }
+    const sent = await sendBrevoEmail(
+      order.email,
+      order.customer || 'Customer',
+      subjectText,
+      htmlBody
+    );
+    if (sent) return true;
   }
 
   // 2. Direct Nodemailer Gmail SMTP Execution

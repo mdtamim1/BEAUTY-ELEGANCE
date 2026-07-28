@@ -6,7 +6,11 @@ import { sendOrderSMS } from '../services/smsService';
 import { sendOrderConfirmationEmail } from '../services/emailService';
 
 const triggerInstantOrderNotifications = (orderData: any) => {
-  // Email and SMS notifications disabled as requested
+  if (orderData.email && typeof orderData.email === 'string' && orderData.email.includes('@')) {
+    sendOrderConfirmationEmail(orderData).catch(err => {
+      console.error('[Notification] Error sending order confirmation email:', err);
+    });
+  }
 };
 
 const logOrderHistory = (
