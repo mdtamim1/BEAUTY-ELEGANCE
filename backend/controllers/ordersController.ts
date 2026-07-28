@@ -6,60 +6,7 @@ import { sendOrderSMS } from '../services/smsService';
 import { sendOrderConfirmationEmail } from '../services/emailService';
 
 const triggerInstantOrderNotifications = (orderData: any) => {
-  const phone = orderData.phone;
-  const email = orderData.email;
-  const storeOwnerEmail = process.env.EMAIL_USER || 'rjtamim154@gmail.com';
-
-  // 1. Instant SMS Notification if phone is provided
-  if (phone) {
-    sendOrderSMS(phone, {
-      orderId: orderData.id,
-      customerName: orderData.customer,
-      amount: orderData.amount,
-      itemsCount: orderData.items || (orderData.productsList ? orderData.productsList.length : 1),
-      paymentMethod: orderData.paymentMethod
-    }).catch(err => console.error('[OrderController] SMS Trigger error:', err));
-  }
-
-  // 2. Instant Email Notification to Customer if email is provided
-  if (email && email.includes('@')) {
-    sendOrderConfirmationEmail({
-      id: orderData.id,
-      customer: orderData.customer,
-      email: email,
-      phone: phone,
-      address: orderData.address,
-      city: orderData.city,
-      thana: orderData.thana,
-      amount: orderData.amount,
-      subtotal: orderData.subtotal,
-      deliveryCharge: orderData.deliveryCharge,
-      discount: orderData.discount,
-      paymentMethod: orderData.paymentMethod,
-      productsList: orderData.productsList
-    }).catch(err => console.error('[OrderController] Customer Email Trigger error:', err));
-  }
-
-  // 3. ALWAYS Send Instant Admin Alert Email to Store Owner (rjtamim154@gmail.com) for EVERY Order!
-  if (storeOwnerEmail && storeOwnerEmail.includes('@') && storeOwnerEmail.toLowerCase() !== (email || '').toLowerCase()) {
-    setTimeout(() => {
-      sendOrderConfirmationEmail({
-        id: orderData.id,
-        customer: `[ADMIN ALERT] New Order from ${orderData.customer}`,
-        email: storeOwnerEmail,
-        phone: phone,
-        address: orderData.address,
-        city: orderData.city,
-        thana: orderData.thana,
-        amount: orderData.amount,
-        subtotal: orderData.subtotal,
-        deliveryCharge: orderData.deliveryCharge,
-        discount: orderData.discount,
-        paymentMethod: orderData.paymentMethod,
-        productsList: orderData.productsList
-      }).catch(err => console.error('[OrderController] Admin Email Alert Trigger error:', err));
-    }, email && email.includes('@') ? 1000 : 0);
-  }
+  // Email and SMS notifications disabled as requested
 };
 
 const logOrderHistory = (
