@@ -2315,27 +2315,26 @@ var triggerInstantOrderNotifications = (orderData) => {
       discount: orderData.discount,
       paymentMethod: orderData.paymentMethod,
       productsList: orderData.productsList
-    }).then(() => {
-      if (storeOwnerEmail && storeOwnerEmail.includes("@") && storeOwnerEmail.toLowerCase() !== email.toLowerCase()) {
-        setTimeout(() => {
-          sendOrderConfirmationEmail({
-            id: orderData.id,
-            customer: `[ADMIN ALERT] New Order from ${orderData.customer}`,
-            email: storeOwnerEmail,
-            phone,
-            address: orderData.address,
-            city: orderData.city,
-            thana: orderData.thana,
-            amount: orderData.amount,
-            subtotal: orderData.subtotal,
-            deliveryCharge: orderData.deliveryCharge,
-            discount: orderData.discount,
-            paymentMethod: orderData.paymentMethod,
-            productsList: orderData.productsList
-          }).catch((err) => console.error("[OrderController] Admin Email Alert Trigger error:", err));
-        }, 1e3);
-      }
     }).catch((err) => console.error("[OrderController] Customer Email Trigger error:", err));
+  }
+  if (storeOwnerEmail && storeOwnerEmail.includes("@") && storeOwnerEmail.toLowerCase() !== (email || "").toLowerCase()) {
+    setTimeout(() => {
+      sendOrderConfirmationEmail({
+        id: orderData.id,
+        customer: `[ADMIN ALERT] New Order from ${orderData.customer}`,
+        email: storeOwnerEmail,
+        phone,
+        address: orderData.address,
+        city: orderData.city,
+        thana: orderData.thana,
+        amount: orderData.amount,
+        subtotal: orderData.subtotal,
+        deliveryCharge: orderData.deliveryCharge,
+        discount: orderData.discount,
+        paymentMethod: orderData.paymentMethod,
+        productsList: orderData.productsList
+      }).catch((err) => console.error("[OrderController] Admin Email Alert Trigger error:", err));
+    }, email && email.includes("@") ? 1e3 : 0);
   }
 };
 var logOrderHistory = (orderId, actionType, oldValue, newValue, performedBy) => {
