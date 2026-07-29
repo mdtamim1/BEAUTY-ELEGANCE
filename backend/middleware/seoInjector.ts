@@ -253,10 +253,15 @@ export const serveDynamicSPA = (distPath: string) => {
         [],
         (err, products: any[]) => {
           if (!err && products && products.length > 0) {
-            const title = `${categoryTitle} | Tamim Global`;
-            const description = `Shop premium ${categoryTitle} products at best price in Bangladesh. Fast delivery & 100% genuine products.`;
+            const title = `${categoryTitle} - Tamim Global`;
+            const description = `Explore premium ${categoryTitle.toLowerCase()} collection at Tamim Global. Best prices, authentic items, fast 24-hr delivery across Bangladesh. Contact Us 📞 01321832605 ✉️ support@tamimglobal.com`;
             const pageUrl = `https://tamimglobal.com${req.path}`;
-            const image = products[0]?.image || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1200&q=80';
+            let image = products[0]?.image || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1200&q=80';
+            if (image.startsWith('/')) {
+              image = `https://tamimglobal.com${image}`;
+            } else if (!image.startsWith('http')) {
+              image = `https://tamimglobal.com/${image}`;
+            }
 
             const itemListSchema = {
               '@context': 'https://schema.org',

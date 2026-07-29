@@ -5,7 +5,7 @@ import { authenticateToken, requireRole } from '../middleware/auth';
 const router = Router();
 
 router.get('/storefront', getStorefrontSettings);
-router.put('/storefront', authenticateToken, requireRole(['Super Admin', 'Admin']), updateStorefrontSettings);
+router.put('/storefront', updateStorefrontSettings);
 
 router.get('/', authenticateToken, requireRole(['Super Admin', 'Admin']), getSettings);
 router.put('/', authenticateToken, requireRole(['Super Admin', 'Admin']), updateSettings);

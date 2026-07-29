@@ -252,16 +252,28 @@ export const getStorefrontSettings = (req: Request, res: Response) => {
 };
 
 export const updateStorefrontSettings = (req: Request, res: Response) => {
-  const configString = JSON.stringify(req.body);
+  const configObj = req.body || {};
+  const configString = JSON.stringify(configObj);
+
   db.run(
     "INSERT OR REPLACE INTO system_settings (setting_key, setting_value, group_name, is_public) VALUES ('storefront_config', ?, 'storefront', 1)",
     [configString],
     (err) => {
       if (err) {
-        console.error('Failed to update storefront settings:', err);
+        console.error('Failed to update storefront settings in database:', err);
         return res.status(500).json({ status: 'error', message: 'Database error' });
       }
-      res.json({ status: 'success', message: 'Storefront settings updated successfully' });
+
+      // If contactInfo is updated in body, sync individual system_settings keys as well
+      if (configObj.contactInfo) {
+        const ci = configObj.contactInfo;
+        if (ci.phoneNumber) db.run("INSERT OR REPLACE INTO system_settings (setting_key, setting_value, group_name, is_public) VALUES ('phone_number', ?, 'contact', 1)", [String(ci.phoneNumber)]);
+        if (ci.whatsappNumber) db.run("INSERT OR REPLACE INTO system_settings (setting_key, setting_value, group_name, is_public) VALUES ('whatsapp_number', ?, 'contact', 1)", [String(ci.whatsappNumber)]);
+        if (ci.email) db.run("INSERT OR REPLACE INTO system_settings (setting_key, setting_value, group_name, is_public) VALUES ('contact_email', ?, 'contact', 1)", [String(ci.email)]);
+      }
+
+      console.log('[SettingsController] Storefront settings successfully persisted to SQLite database!');
+      res.json({ status: 'success', message: 'Storefront settings updated and persisted successfully' });
     }
   );
 };
