@@ -12,6 +12,7 @@ import { generateOrders as getOrders } from '../mock/data';
 import { useStorefrontConfig } from '../store/storefrontConfig';
 import { CustomerCouponsTab } from './CustomerCouponsTab';
 import { CustomerEventsTab } from './CustomerEventsTab';
+import { createProductSlug } from '../utils/urlSlug';
 import './storefront-account.css';
 
 interface OrderItem {
@@ -1056,7 +1057,7 @@ export default function CustomerAccount() {
                       <div key={product.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px', border: '1px solid var(--sf-border)', borderRadius: '8px', background: 'var(--sf-bg-card)' }}>
                         <img src={product.image} alt={product.name} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} />
                         <div style={{ flexGrow: 1 }}>
-                          <Link to={`/product/${product.id}`} style={{ textDecoration: 'none', color: 'var(--sf-text-primary)', fontWeight: 600 }}>{product.name}</Link>
+                          <Link to={createProductSlug(product)} style={{ textDecoration: 'none', color: 'var(--sf-text-primary)', fontWeight: 600 }}>{product.name}</Link>
                           <div style={{ color: 'var(--sf-accent)', fontWeight: 600, marginTop: '4px' }}>৳{product.price}</div>
                         </div>
                         <div style={{ display: 'flex', gap: '8px' }}>
@@ -1096,7 +1097,7 @@ export default function CustomerAccount() {
                       <div key={item.product.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px', border: '1px solid var(--sf-border)', borderRadius: '8px', background: 'var(--sf-bg-card)' }}>
                         <img src={item.product.image} alt={item.product.name} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} />
                         <div style={{ flexGrow: 1 }}>
-                          <Link to={`/product/${item.product.id}`} style={{ textDecoration: 'none', color: 'var(--sf-text-primary)', fontWeight: 600 }}>{item.product.name}</Link>
+                          <Link to={createProductSlug(item.product)} style={{ textDecoration: 'none', color: 'var(--sf-text-primary)', fontWeight: 600 }}>{item.product.name}</Link>
                           <div style={{ color: 'var(--sf-accent)', fontWeight: 600, marginTop: '4px' }}>৳{(item.product.price * item.quantity).toFixed(2)}</div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

@@ -1,0 +1,14 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Exclude Sensitive and User-Specific Routes
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /account
+Disallow: /checkout
+Disallow: /api/
+
+# XML Sitemaps
+Sitemap: https://tamimglobal.com/sitemap.xml
+Sitemap: https://beauty-elegance-ec88f.web.app/sitemap.xml

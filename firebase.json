@@ -37,6 +37,18 @@
     ],
     "rewrites": [
       {
+        "source": "/sitemap.xml",
+        "function": "api"
+      },
+      {
+        "source": "/google-shopping.xml",
+        "function": "api"
+      },
+      {
+        "source": "/google-feed.xml",
+        "function": "api"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

@@ -3,6 +3,7 @@ import { useOutletContext, Link } from 'react-router-dom';
 import { ShoppingCart, Heart, Star, ArrowRight, Clock, Tag, Package, Filter } from 'lucide-react';
 import { useStorefrontConfig, type CampaignConfig, type CampaignProductOffer, type ProductConfig } from '../store/storefrontConfig';
 import { SEOMeta } from '../components/layout/SEOMeta';
+import { createProductSlug } from '../utils/urlSlug';
 import './storefront-campaign.css';
 
 interface StorefrontContext {
@@ -107,7 +108,7 @@ function CampaignProductCard({
     <div className="cmp-product-card">
       {/* Image + Badges */}
       <div className="cmp-card-img-wrap">
-        <Link to={`/product/${product.id}`}>
+        <Link to={createProductSlug(product)}>
           <img src={product.image} alt={product.name} className="cmp-card-img" loading="lazy" />
         </Link>
 
@@ -133,7 +134,7 @@ function CampaignProductCard({
 
       {/* Card Body */}
       <div className="new-popular-card-body" style={{ padding: '12px 10px 10px' }}>
-        <Link to={`/product/${product.id}`} style={{ textDecoration: 'none' }}>
+        <Link to={createProductSlug(product)} style={{ textDecoration: 'none' }}>
           <h3 className="new-popular-card-title">{product.name}</h3>
         </Link>
 

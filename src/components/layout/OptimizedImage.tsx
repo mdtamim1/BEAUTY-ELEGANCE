@@ -29,6 +29,8 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   // Generate main optimized CDN URL
   const optimizedSrc = getOptimizedImageUrl(src, width, height);
 
+  const cleanAlt = (alt && alt.trim()) ? alt.trim() : 'Tamim Global Sports & Fitness Product Image';
+
   return (
     <div
       className={containerClassName}
@@ -45,7 +47,9 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
       {!isLoaded && blurPlaceholder && (
         <img
           src={blurPlaceholder}
-          alt={alt}
+          alt={cleanAlt}
+          aria-hidden="true"
+          decoding="async"
           style={{
             filter: 'blur(10px)',
             transform: 'scale(1.05)',
@@ -65,8 +69,9 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
       {/* Main High-Res Optimized Image */}
       <img
         src={optimizedSrc}
-        alt={alt}
+        alt={cleanAlt}
         loading="lazy"
+        decoding="async"
         onLoad={() => setIsLoaded(true)}
         className={className}
         style={{

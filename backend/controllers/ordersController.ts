@@ -4,8 +4,32 @@ import { cacheService } from '../services/cacheService';
 import jwt from 'jsonwebtoken';
 import { sendOrderSMS } from '../services/smsService';
 import { sendOrderConfirmationEmail } from '../services/emailService';
+import { sendCustomerSMS, sendAdminOrderAlert, generateWhatsAppOrderLink } from '../services/notificationService';
 
 const triggerInstantOrderNotifications = (orderData: any) => {
+  const itemsText = orderData.productsList && Array.isArray(orderData.productsList)
+    ? orderData.productsList.map((p: any) => `${p.name} (x${p.quantity || 1})`).join(', ')
+    : 'Items';
+
+  const notificationData = {
+    orderId: orderData.id,
+    customerName: orderData.customer || 'Customer',
+    customerPhone: orderData.phone || '',
+    totalAmount: Number(orderData.amount || 0),
+    itemsSummary: itemsText,
+    status: orderData.status,
+    courierName: orderData.courier,
+    trackingCode: orderData.memo_number || orderData.memoNumber,
+  };
+
+  sendCustomerSMS(notificationData).catch(err => {
+    console.error('[Notification] SMS Error:', err);
+  });
+
+  sendAdminOrderAlert(notificationData).catch(err => {
+    console.error('[Notification] Admin Alert Error:', err);
+  });
+
   if (orderData.email && typeof orderData.email === 'string' && orderData.email.includes('@')) {
     sendOrderConfirmationEmail(orderData).catch(err => {
       console.error('[Notification] Error sending order confirmation email:', err);
@@ -298,10 +322,22 @@ export const createOrder = (req: Request, res: Response) => {
                         deliveryCharge,
                         discount,
                         paymentMethod,
-                        productsList
+                        productsList,
                       });
 
-                      res.json({ status: 'success', message: 'Order created successfully', data: { id } });
+                      const itemsSummaryText = productsList && Array.isArray(productsList)
+                        ? productsList.map((p: any) => `${p.name} (x${p.quantity || 1})`).join(', ')
+                        : 'Items';
+
+                      const whatsAppUrl = generateWhatsAppOrderLink({
+                        orderId: id,
+                        customerName: customer || 'Customer',
+                        customerPhone: phone || '',
+                        totalAmount: finalAmount,
+                        itemsSummary: itemsSummaryText,
+                      });
+
+                      res.json({ status: 'success', message: 'Order created successfully', data: { id, whatsAppUrl } });
                     });
                   });
                 }

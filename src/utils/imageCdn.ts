@@ -10,10 +10,19 @@ export const getOptimizedImageUrl = (src: string, width?: number, height?: numbe
   // If the image is a base64 string or already optimized, return it
   if (src.startsWith('data:')) return src;
 
-  // Case 1: Unsplash images (most product images in our seeds)
-  // Example: https://images.unsplash.com/photo-1638536532686-d610adfc8e5c?auto=format&fit=crop&w=600&q=80
+  // Case 1: Unsplash images (auto-convert to WebP & scale width/height)
   if (src.includes('images.unsplash.com')) {
-    return src;
+    try {
+      const urlObj = new URL(src);
+      urlObj.searchParams.set('auto', 'format');
+      urlObj.searchParams.set('fm', 'webp');
+      urlObj.searchParams.set('q', '80');
+      if (width) urlObj.searchParams.set('w', String(width));
+      if (height) urlObj.searchParams.set('h', String(height));
+      return urlObj.toString();
+    } catch (e) {
+      return src;
+    }
   }
 
   // Case 2: Other external URLs (http/https)

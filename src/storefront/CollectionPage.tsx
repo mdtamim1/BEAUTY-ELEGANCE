@@ -5,6 +5,7 @@ import { useStorefrontConfig } from '../store/storefrontConfig';
 import { fetchCampaignsFromBackend } from '../services/api';
 import { resolveProductWithCampaign } from '../utils/productCampaignResolver';
 import { SEOMeta } from '../components/layout/SEOMeta';
+import { createProductSlug } from '../utils/urlSlug';
 
 const StarRating = ({ rating }: { rating: number }) => (
   <div className="product-card-stars">
@@ -475,6 +476,16 @@ export default function CollectionPage() {
         description={`Explore premium ${activeCategoryTitle || 'sports and fitness'} products at Tamim Global. Best prices, authentic items, fast delivery across Bangladesh.`}
         slug={slug ? `collection/${slug}` : 'categories'}
         keywords={`${activeCategoryTitle}, Tamim Global ${activeCategoryTitle}, Buy ${activeCategoryTitle} Bangladesh, Sports Equipment, Fitness Gear BD`}
+        itemList={{
+          name: activeCategoryTitle || 'Collections & Categories',
+          description: `Browse top ${activeCategoryTitle || 'sports & fitness'} products at Tamim Global.`,
+          items: (filteredProducts || []).slice(0, 30).map((p: any) => ({
+            name: p.name || p.title,
+            url: `https://tamimglobal.com${createProductSlug(p)}`,
+            image: p.image || p.imageUrl,
+            price: p.price,
+          })),
+        }}
       />
 
       {/* ── Clean Centered Page Title Hero ── */}
@@ -607,7 +618,7 @@ export default function CollectionPage() {
           {filteredProducts.length > 0 ? (
             <div className="products-grid collection-products-grid">
               {filteredProducts.map((product: any) => (
-                <Link to={`/product/${product.id}`} key={product.id} className="new-popular-card">
+                <Link to={createProductSlug(product)} key={product.id} className="new-popular-card">
                   <div className="new-popular-img-box">
                     <img src={product.image || product.imageUrl} alt={product.name || product.title} className="new-popular-img" />
                     <button

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext, useNavigate, Link, useLocation } from 'react-router-dom';
-import { Shield, Truck, RotateCcw, Headphones, User, MapPin, Package, CreditCard, CheckCircle, Zap, ArrowRight, Minus, Plus } from 'lucide-react';
+import { Shield, Truck, RotateCcw, Headphones, User, MapPin, Package, CreditCard, CheckCircle, Zap, ArrowRight, Minus, Plus, MessageCircle } from 'lucide-react';
 import { storeProducts } from './data';
 import { addOrder } from '../mock/data';
 import { sendOrderToBackend, validateCouponCode, updateProductInBackend } from '../services/api';
@@ -39,6 +39,8 @@ export default function Checkout() {
   const [customerNote, setCustomerNote] = useState('');
   const [shippingLocation, setShippingLocation] = useState<'dhaka' | 'outside'>('dhaka');
   const [isSuccess, setIsSuccess] = useState(false);
+  const [placedOrderId, setPlacedOrderId] = useState<string>('');
+  const [createdWhatsAppUrl, setCreatedWhatsAppUrl] = useState<string>('');
   const [selectedAddressId, setSelectedAddressId] = useState<string | number>('');
   const [saveAddress, setSaveAddress] = useState(true);
   
@@ -183,8 +185,9 @@ export default function Checkout() {
     }
 
     const formattedMemo = trxId ? `TrxID: ${trxId.toUpperCase()} | Sender: ${senderNumber}` : '';
-
+    const orderId = `TG${Date.now().toString().slice(-6)}`;
     const orderData = {
+      id: orderId,
       customer: customerName,
       email: customerEmail || customer?.email || '',
       amount: total,
@@ -217,10 +220,14 @@ export default function Checkout() {
         price: item.product.price,
       })),
     };
+    setPlacedOrderId(orderData.id);
 
     // Safely attempt backend sync
-    const success = await sendOrderToBackend(orderData);
-    if (!success) {
+    const backendRes = await sendOrderToBackend(orderData);
+    if (backendRes.whatsAppUrl) {
+      setCreatedWhatsAppUrl(backendRes.whatsAppUrl);
+    }
+    if (!backendRes.success) {
       try {
         const pending = JSON.parse(localStorage.getItem('pending_sync_orders') || '[]');
         pending.push(orderData);
@@ -659,10 +666,39 @@ export default function Checkout() {
               <CheckCircle size={48} className="pco-success-icon" />
             </div>
             <h2 className="pco-success-title">অর্ডার সফল হয়েছে! 🎉</h2>
-            <p className="pco-success-msg">ধন্যবাদ! আপনার অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে। শীঘ্রই আমাদের প্রতিনিধি আপনার সাথে যোগাযোগ করবে।</p>
-            <div className="pco-success-detail">অর্ডার নম্বর: <strong>#{Date.now().toString().slice(-8)}</strong></div>
-            <button className="pco-submit-btn" onClick={() => navigate('/')}>
-              ✓ ঠিক আছে
+            <p className="pco-success-msg">ধন্যবাদ! আপনার অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে। আপনার ফোনে স্বয়ংক্রিয় SMS পৌঁছাবে এবং আমাদের প্রতিনিধি আপনার সাথে সোজাসুজি যোগাযোগ করবে।</p>
+            <div className="pco-success-detail">অর্ডার নম্বর: <strong>#{placedOrderId || Date.now().toString().slice(-8)}</strong></div>
+
+            {/* Direct WhatsApp Confirmation Button */}
+            <a
+              href={createdWhatsAppUrl || `https://wa.me/8801321832605?text=${encodeURIComponent(`Hello Tamim Global! I just placed Order #${placedOrderId || 'TG-ORDER'}. Please confirm my order!`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="pco-whatsapp-btn"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                width: '100%',
+                padding: '14px 20px',
+                background: '#25D366',
+                color: '#fff',
+                fontWeight: 700,
+                borderRadius: '12px',
+                fontSize: '16px',
+                textDecoration: 'none',
+                marginTop: '20px',
+                boxShadow: '0 4px 16px rgba(37, 211, 102, 0.3)',
+                transition: 'transform 0.2s ease',
+              }}
+            >
+              <MessageCircle size={22} />
+              <span>💬 সরাসরি হোয়াটসঅ্যাপে অর্ডার কনফার্ম করুন</span>
+            </a>
+
+            <button className="pco-submit-btn" style={{ marginTop: '12px', background: '#334155' }} onClick={() => navigate('/')}>
+              ✓ হোমপেজে ফিরে যান
             </button>
           </div>
         )}

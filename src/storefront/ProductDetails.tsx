@@ -8,6 +8,7 @@ import { resolveProductWithCampaign } from '../utils/productCampaignResolver';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { OptimizedImage } from '../components/layout/OptimizedImage';
 import { SEOMeta } from '../components/layout/SEOMeta';
+import { parseProductIdFromSlug, createProductSlug } from '../utils/urlSlug';
 import './storefront-pdp.css';
 import './storefront-checkout.css';
 import './storefront-account.css';
@@ -618,15 +619,16 @@ export default function ProductDetails() {
     let active = true;
     const loadProduct = async () => {
       if (!id) return;
+      const targetId = parseProductIdFromSlug(id);
       
       // Try to find the product in local config first for instant loading
-      const localProduct = config.products.find(p => String(p.id) === String(id));
+      const localProduct = config.products.find(p => String(p.id) === String(targetId) || String(p.id) === String(id));
       if (localProduct) {
         let reviewsList = localProduct.customerReviews || [];
         
         // Local storage reviews
         try {
-          const storedReviews = localStorage.getItem(`product_reviews_${id}`);
+          const storedReviews = localStorage.getItem(`product_reviews_${targetId}`);
           if (storedReviews) {
             const parsed = JSON.parse(storedReviews);
             if (Array.isArray(parsed) && parsed.length > 0) {
@@ -695,13 +697,13 @@ export default function ProductDetails() {
         }
       } catch (err) {}
 
-      const dbProduct = await fetchProductByIdFromBackend(id);
+      const dbProduct = await fetchProductByIdFromBackend(targetId);
       if (!active) return;
 
       if (dbProduct) {
         let reviewsList = dbProduct.customerReviews || [];
         if (reviewsList.length === 0) {
-          const configFound = config.products.find(p => String(p.id) === String(id));
+          const configFound = config.products.find(p => String(p.id) === String(targetId));
           if (configFound && configFound.customerReviews && configFound.customerReviews.length > 0) {
             reviewsList = configFound.customerReviews;
           }
@@ -709,7 +711,7 @@ export default function ProductDetails() {
 
         // Local storage reviews
         try {
-          const storedReviews = localStorage.getItem(`product_reviews_${id}`);
+          const storedReviews = localStorage.getItem(`product_reviews_${targetId}`);
           if (storedReviews) {
             const parsed = JSON.parse(storedReviews);
             if (Array.isArray(parsed) && parsed.length > 0) {
@@ -798,12 +800,14 @@ export default function ProductDetails() {
   }
 
   const effectivePrice = product.campaignOfferPrice || product.price;
+  const rawDesc = product.description ? product.description.replace(/<[^>]*>/g, '').trim() : '';
+  const salesCtaDescription = `৳${effectivePrice} | ১০০% ক্যাশ অন ডেলিভারি | ২৪ ঘণ্টায় ঢাকায় দ্রুত ডেলিভারি | অরিজিনাল ${product.name} সেরা দামে অর্ডার করুন Tamim Global এ। ${rawDesc}`.slice(0, 160);
 
   return (
     <div className="splayd-pdp-container">
       <SEOMeta 
         title={`${product.name} - ৳${effectivePrice}`}
-        description={product.description ? product.description.replace(/<[^>]*>/g, '').slice(0, 160) : `Buy ${product.name} online at best price ৳${effectivePrice} in Bangladesh. Genuine quality, fast delivery.`}
+        description={salesCtaDescription}
         image={activeImage || product.image}
         slug={`product/${product.id}`}
         type="product"
@@ -823,6 +827,20 @@ export default function ProductDetails() {
           image: activeImage || product.image,
           category: product.category,
         }}
+        faqList={[
+          {
+            question: `How fast can I get ${product.name} delivered in Bangladesh?`,
+            answer: `Fast delivery is guaranteed across Bangladesh! Delivery inside Dhaka takes 24 hours and outside Dhaka takes 2-3 days.`,
+          },
+          {
+            question: `Is ${product.name} 100% genuine and original at Tamim Global?`,
+            answer: `Yes, all products sold at Tamim Global are 100% genuine with authentic quality inspection before dispatch.`,
+          },
+          {
+            question: `What payment options are available for ${product.name}?`,
+            answer: `We support Cash on Delivery (COD), bKash, and Nagad payments with secure checkout.`,
+          },
+        ]}
       />
 
       {/* Top Breadcrumb & Quick Nav */}
@@ -1472,7 +1490,7 @@ export default function ProductDetails() {
                 const savings = hasDiscount ? origPrice - relatedProduct.price : 0;
 
                 return (
-                  <Link to={`/product/${relatedProduct.id}`} key={relatedProduct.id} className="product-card" style={{ textDecoration: 'none' }}>
+                  <Link to={createProductSlug(relatedProduct)} key={relatedProduct.id} className="product-card" style={{ textDecoration: 'none' }}>
                     <div className="product-card-image-container">
                       <OptimizedImage src={relatedProduct.image} alt={relatedProduct.name} className="product-card-image" width={400} height={400} />
                       {hasDiscount && (

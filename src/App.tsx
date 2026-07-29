@@ -184,6 +184,7 @@ export default function App() {
             <Route path="blog/:slug" element={<BlogDetails />} />
             <Route path="privacy-policy" element={<PrivacyPolicy />} />
             <Route path="terms-of-service" element={<TermsOfService />} />
+            <Route path="return-policy" element={<TermsOfService />} />
             <Route path="about-us" element={<AboutUs />} />
           </Route>
           

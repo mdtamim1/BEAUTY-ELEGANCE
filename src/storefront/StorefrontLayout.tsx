@@ -6,6 +6,8 @@ import './storefront.css';
 import { replaceContactInfo } from '../utils/storefrontUtils';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
 import { OptimizedImage } from '../components/layout/OptimizedImage';
+import { createProductSlug } from '../utils/urlSlug';
+import { FloatingLiveChatWidget } from '../components/layout/FloatingLiveChatWidget';
 
 interface CartItem {
   product: any;
@@ -455,7 +457,7 @@ export default function StorefrontLayout() {
                               key={product.id}
                               className="store-search-suggestion-item"
                               onClick={() => {
-                                navigate(`/product/${product.id}`);
+                                navigate(createProductSlug(product));
                                 setSearchQuery('');
                                 setMobileSearchOpen(false);
                               }}
@@ -768,7 +770,7 @@ export default function StorefrontLayout() {
                       <OptimizedImage src={product.image} alt={product.name} className="wishlist-item-image" width={100} height={100} />
                       <div className="wishlist-item-info">
                         <Link 
-                          to={`/product/${product.id}`} 
+                          to={createProductSlug(product)} 
                           className="wishlist-item-name"
                           onClick={() => setWishlistOpen(false)}
                         >
@@ -855,7 +857,12 @@ export default function StorefrontLayout() {
         </>
       )}
 
-      {/* Bottom Nav Removed */}
+      {/* Permanent Floating WhatsApp & Messenger Multi-Channel Chat Widget */}
+      <FloatingLiveChatWidget
+        whatsappNumber={config.contactInfo.whatsappNumber || '8801321832605'}
+        messengerUsername="sportscorex"
+        phoneNumber={config.contactInfo.phoneNumber || '+880 1321-832605'}
+      />
     </div>
   );
 }

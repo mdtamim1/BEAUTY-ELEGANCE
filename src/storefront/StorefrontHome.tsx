@@ -11,6 +11,7 @@ import { subscribeToNewsletter, fetchCampaignsFromBackend } from '../services/ap
 import { OptimizedImage } from '../components/layout/OptimizedImage';
 import { SEOMeta } from '../components/layout/SEOMeta';
 import { resolveProductWithCampaign } from '../utils/productCampaignResolver';
+import { createProductSlug } from '../utils/urlSlug';
 import { getEventsFromStore, saveCustomerAchievement, type EventItem } from '../store/eventStore';
 import { Gamepad2, Trophy, HelpCircle, Check, Copy, Flame, Clock } from 'lucide-react';
 
@@ -750,7 +751,7 @@ export default function StorefrontHome() {
                             >
                               <OptimizedImage src={product.image} alt={product.name} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: '10px' }} width={200} height={200} />
                               <Link 
-                                to={`/product/${product.id}`} 
+                                to={createProductSlug(product)} 
                                 onClick={() => setShowCampaignsModal(false)}
                                 style={{ fontSize: '0.78rem', fontWeight: 700, color: '#f8fafc', textDecoration: 'none', lineHeight: 1.3, height: '2.6em', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}
                               >
@@ -804,7 +805,7 @@ export default function StorefrontHome() {
 
         <div className="new-popular-grid">
           {newPopularProducts.map((product: any) => (
-            <Link to={`/product/${product.id}`} key={product.id} className="new-popular-card">
+            <Link to={createProductSlug(product)} key={product.id} className="new-popular-card">
               <div className="new-popular-img-box">
                 <OptimizedImage
                   src={product.image}

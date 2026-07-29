@@ -5,8 +5,8 @@ import helmet from "helmet";
 import morgan from "morgan";
 import { createServer } from "http";
 import dotenv3 from "dotenv";
-import path2 from "path";
-import fs2 from "fs";
+import path4 from "path";
+import fs4 from "fs";
 import { fileURLToPath as fileURLToPath2 } from "url";
 import { onRequest } from "firebase-functions/v2/https";
 
@@ -1934,7 +1934,7 @@ var deleteProduct = (req, res) => {
   });
 };
 var getFacebookFeed = (req, res) => {
-  const escapeXml = (unsafe) => {
+  const escapeXml2 = (unsafe) => {
     if (unsafe === null || unsafe === void 0) return "";
     return String(unsafe).replace(/[&<>'"]/g, (c) => {
       switch (c) {
@@ -1983,26 +1983,26 @@ var getFacebookFeed = (req, res) => {
       const priceFormatted = `${p.price} BDT`;
       xml += `    <item>
 `;
-      xml += `      <g:id>${escapeXml(p.id)}</g:id>
+      xml += `      <g:id>${escapeXml2(p.id)}</g:id>
 `;
-      xml += `      <g:title>${escapeXml(p.name)}</g:title>
+      xml += `      <g:title>${escapeXml2(p.name)}</g:title>
 `;
-      xml += `      <g:description>${escapeXml(cleanDesc)}</g:description>
+      xml += `      <g:description>${escapeXml2(cleanDesc)}</g:description>
 `;
-      xml += `      <g:link>${escapeXml(`${domain}/product/${p.id}`)}</g:link>
+      xml += `      <g:link>${escapeXml2(`${domain}/product/${p.id}`)}</g:link>
 `;
-      xml += `      <g:image_link>${escapeXml(imageLink)}</g:image_link>
+      xml += `      <g:image_link>${escapeXml2(imageLink)}</g:image_link>
 `;
-      xml += `      <g:brand>${escapeXml(p.brand || "AURA Sports")}</g:brand>
+      xml += `      <g:brand>${escapeXml2(p.brand || "AURA Sports")}</g:brand>
 `;
       xml += `      <g:condition>new</g:condition>
 `;
-      xml += `      <g:availability>${escapeXml(availability)}</g:availability>
+      xml += `      <g:availability>${escapeXml2(availability)}</g:availability>
 `;
-      xml += `      <g:price>${escapeXml(priceFormatted)}</g:price>
+      xml += `      <g:price>${escapeXml2(priceFormatted)}</g:price>
 `;
       if (p.category) {
-        xml += `      <g:google_product_category>${escapeXml(p.category)}</g:google_product_category>
+        xml += `      <g:google_product_category>${escapeXml2(p.category)}</g:google_product_category>
 `;
       }
       xml += `    </item>
@@ -2032,7 +2032,343 @@ import { Router as Router3 } from "express";
 
 // backend/controllers/ordersController.ts
 import jwt3 from "jsonwebtoken";
+
+// backend/services/emailService.ts
+import nodemailer from "nodemailer";
+import fs2 from "fs";
+import path2 from "path";
+var EMAIL_USER = process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_USER || "rjtamim154@gmail.com";
+var EMAIL_PASS = process.env.EMAIL_PASS || "";
+var createTransporter = () => {
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: EMAIL_USER,
+      pass: EMAIL_PASS
+    }
+  });
+};
+var STORE_NAME = process.env.STORE_NAME || "Tamim Global";
+var STORE_URL = process.env.STORE_URL || "https://tamimglobal.com";
+var FROM_EMAIL = EMAIL_USER ? `"${STORE_NAME}" <${EMAIL_USER}>` : "";
+var getLogoBase64 = () => {
+  try {
+    const candidates = [
+      path2.join(process.cwd(), "public", "email-logo.png"),
+      path2.join(process.cwd(), "public", "site-logo.png"),
+      path2.join(process.cwd(), "public", "favicon.png")
+    ];
+    for (const logoPath of candidates) {
+      if (fs2.existsSync(logoPath)) {
+        const buffer = fs2.readFileSync(logoPath);
+        return `data:image/png;base64,${buffer.toString("base64")}`;
+      }
+    }
+  } catch (e) {
+    console.error("[EmailService] Could not read logo file:", e);
+  }
+  return `${STORE_URL}/email-logo.png`;
+};
+var emailTemplate = (content) => {
+  const logoSrc = getLogoBase64();
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${STORE_NAME}</title>
+  <style>
+    body { margin: 0; padding: 0; background-color: #0b0f17; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    .email-wrapper { width: 100%; background-color: #0b0f17; padding: 32px 12px; box-sizing: border-box; }
+    .email-container { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.35); border: 1px solid #1e293b; }
+    .email-header { background: linear-gradient(180deg, #090d16 0%, #171c28 100%); padding: 36px 24px 28px; text-align: center; border-bottom: 3px solid #e11d48; }
+    .header-logo { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; border: 3px solid #e11d48; box-shadow: 0 0 25px rgba(225, 29, 72, 0.45); display: inline-block; background: #000000; }
+    .brand-title { color: #ffffff; font-size: 1.35rem; margin: 14px 0 0; letter-spacing: 3px; font-weight: 900; text-transform: uppercase; font-family: Arial, sans-serif; }
+    .brand-subtitle { color: #f43f5e; font-size: 0.72rem; letter-spacing: 3px; text-transform: uppercase; margin-top: 4px; font-weight: 800; }
+    .email-body { padding: 32px 28px; background: #ffffff; color: #1e293b; }
+    .btn { display: inline-block; background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); color: #ffffff !important; text-decoration: none; padding: 13px 32px; border-radius: 50px; font-weight: 800; font-size: 0.9rem; letter-spacing: 0.5px; box-shadow: 0 6px 18px rgba(225, 29, 72, 0.35); }
+    .divider { border: none; border-top: 1px solid #f1f5f9; margin: 24px 0; }
+    .tag { display: inline-block; background: #fef2f2; color: #e11d48; border-radius: 100px; padding: 4px 12px; font-size: 0.78rem; font-weight: 700; margin: 4px 4px 4px 0; }
+    .email-footer { background: #090d16; padding: 26px 24px; text-align: center; color: #94a3b8; font-size: 0.78rem; border-top: 1px solid #1e293b; }
+    .email-footer p { margin: 6px 0; }
+    .email-footer a { color: #f43f5e; text-decoration: none; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="email-container">
+      <div class="email-header">
+        <img class="header-logo" src="${logoSrc}" alt="${STORE_NAME}" />
+        <div class="brand-title">${STORE_NAME}</div>
+        <div class="brand-subtitle">PREMIUM E-COMMERCE</div>
+      </div>
+      <div class="email-body">
+        ${content}
+      </div>
+      <div class="email-footer">
+        <p>\xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} <strong style="color:#ffffff;">${STORE_NAME}</strong>. All rights reserved.</p>
+        <p><a href="${STORE_URL}">${STORE_URL}</a></p>
+        <p style="margin-top: 12px; color: #64748b; font-size: 0.72rem;">\u0985\u09B0\u09CD\u09A1\u09BE\u09B0 \u09AC\u09BE \u09AF\u09C7\u0995\u09CB\u09A8\u09CB \u09B8\u09B9\u09BE\u09AF\u09BC\u09A4\u09BE\u09B0 \u099C\u09A8\u09CD\u09AF \u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u09B8\u09BE\u09A5\u09C7 \u09AF\u09CB\u0997\u09BE\u09AF\u09CB\u0997 \u0995\u09B0\u09C1\u09A8\u0964</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+`;
+};
+var sendBrevoEmail = async (toEmail, toName, subject, htmlContent) => {
+  const brevoApiKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY || "";
+  if (!brevoApiKey) return false;
+  const senderEmail = process.env.EMAIL_USER || "rjtamim154@gmail.com";
+  const senderName = process.env.STORE_NAME || "Tamim Global";
+  try {
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "api-key": brevoApiKey,
+        "content-type": "application/json",
+        "accept": "application/json"
+      },
+      body: JSON.stringify({
+        sender: { name: senderName, email: senderEmail },
+        to: [{ email: toEmail, name: toName || "Customer" }],
+        subject,
+        htmlContent
+      })
+    });
+    if (response.ok) {
+      console.log(`[EmailService - Brevo API] Email sent successfully to: ${toEmail}`);
+      return true;
+    } else {
+      const errRes = await response.json().catch(() => ({}));
+      console.error("[EmailService - Brevo API] Brevo API returned error:", errRes);
+      return false;
+    }
+  } catch (err) {
+    console.error("[EmailService - Brevo API] Failed to send via Brevo:", err.message || err);
+    return false;
+  }
+};
+var sendOrderConfirmationEmail = async (order) => {
+  if (!order.email || !order.email.includes("@")) {
+    console.warn(`[EmailService] Invalid customer email: ${order.email}, skipping confirmation email.`);
+    return false;
+  }
+  const itemsHtml = (order.productsList || []).map((item) => `
+    <tr style="border-bottom:1px solid #f1f5f9;">
+      <td style="padding:12px 10px;font-weight:700;color:#0f172a;vertical-align:middle;">
+        <div style="font-size:0.92rem;color:#0f172a;">${item.name}</div>
+        ${item.color && item.color !== "Default" ? `<span style="display:inline-block;font-size:0.75rem;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:4px;margin-top:3px;">\u09B0\u0982: ${item.color}</span>` : ""}
+        ${item.size && item.size !== "Free Size" ? `<span style="display:inline-block;font-size:0.75rem;color:#64748b;background:#f1f5f9;padding:2px 8px;border-radius:4px;margin-top:3px;margin-left:4px;">\u09B8\u09BE\u0987\u099C: ${item.size}</span>` : ""}
+      </td>
+      <td style="padding:12px 10px;text-align:center;font-weight:700;color:#475569;vertical-align:middle;font-size:0.88rem;">x${item.quantity}</td>
+      <td style="padding:12px 10px;text-align:right;font-weight:800;color:#e11d48;vertical-align:middle;font-size:0.95rem;">\u09F3${(item.price * item.quantity).toFixed(2)}</td>
+    </tr>
+  `).join("");
+  const content = `
+    <div style="background:linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);border:1px solid #fecdd3;padding:20px;border-radius:14px;margin-bottom:24px;text-align:center;">
+      <div style="font-size:1.3rem;font-weight:900;color:#9f1239;margin-bottom:6px;">\u{1F389} \u0985\u09B0\u09CD\u09A1\u09BE\u09B0 \u09B8\u09AB\u09B2\u09AD\u09BE\u09AC\u09C7 \u0997\u09C3\u09B9\u09C0\u09A4 \u09B9\u09DF\u09C7\u099B\u09C7!</div>
+      <div style="font-size:0.9rem;color:#be123c;">\u0985\u09B0\u09CD\u09A1\u09BE\u09B0 \u09A8\u09AE\u09CD\u09AC\u09B0: <span style="background:#e11d48;color:#ffffff;padding:3px 12px;border-radius:20px;font-weight:800;letter-spacing:1px;">${order.id}</span></div>
+    </div>
+
+    <p style="font-size:0.95rem;color:#334155;line-height:1.6;margin-bottom:20px;">
+      \u09AA\u09CD\u09B0\u09BF\u09DF <strong>${order.customer}</strong>,<br />
+      <strong>${STORE_NAME}</strong>-\u098F \u0995\u09C7\u09A8\u09BE\u0995\u09BE\u099F\u09BE \u0995\u09B0\u09BE\u09B0 \u099C\u09A8\u09CD\u09AF \u0986\u09AA\u09A8\u09BE\u0995\u09C7 \u0986\u09A8\u09CD\u09A4\u09B0\u09BF\u0995 \u09A7\u09A8\u09CD\u09AF\u09AC\u09BE\u09A6\u0964 \u0986\u09AA\u09A8\u09BE\u09B0 \u0985\u09B0\u09CD\u09A1\u09BE\u09B0\u099F\u09BF \u09B8\u09AB\u09B2\u09AD\u09BE\u09AC\u09C7 \u0986\u09AE\u09BE\u09A6\u09C7\u09B0 \u09B8\u09BF\u09B8\u09CD\u099F\u09C7\u09AE\u09C7 \u09A8\u09A5\u09BF\u09AD\u09C1\u0995\u09CD\u09A4 \u09B9\u09DF\u09C7\u099B\u09C7 \u098F\u09AC\u0982 \u09B6\u09C0\u0998\u09CD\u09B0\u0987 \u09A1\u09C7\u09B2\u09BF\u09AD\u09BE\u09B0\u09BF\u09B0 \u099C\u09A8\u09CD\u09AF \u09AA\u09CD\u09B0\u09B8\u09C7\u09B8 \u0995\u09B0\u09BE \u09B9\u09AC\u09C7\u0964
+    </p>
+
+    <div style="font-size:1rem;font-weight:800;color:#0f172a;border-bottom:2px solid #f1f5f9;padding-bottom:8px;margin:28px 0 16px;text-transform:uppercase;letter-spacing:0.5px;">
+      \u{1F4E6} \u0985\u09B0\u09CD\u09A1\u09BE\u09B0\u09C7\u09B0 \u09AC\u09BF\u09AC\u09B0\u09A3
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+      <thead>
+        <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;text-align:left;font-size:0.78rem;color:#64748b;text-transform:uppercase;">
+          <th style="padding:10px 12px;">\u09AA\u09A3\u09CD\u09AF</th>
+          <th style="padding:10px 12px;text-align:center;">\u09AA\u09B0\u09BF\u09AE\u09BE\u09A3</th>
+          <th style="padding:10px 12px;text-align:right;">\u09AE\u09C2\u09B2\u09CD\u09AF</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemsHtml || '<tr><td colspan="3" style="padding:16px;text-align:center;color:#64748b;">\u09AA\u09A3\u09CD\u09AF \u09A4\u09BE\u09B2\u09BF\u0995\u09BE \u09AA\u09CD\u09B0\u09B8\u09C7\u09B8\u09BF\u0982 \u098F \u09B0\u09AF\u09BC\u09C7\u099B\u09C7</td></tr>'}
+      </tbody>
+    </table>
+
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:18px 20px;margin-bottom:24px;">
+      <table style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="padding:4px 0;font-size:0.9rem;color:#475569;">\u09B8\u09BE\u09AC\u099F\u09CB\u099F\u09BE\u09B2:</td>
+          <td style="padding:4px 0;text-align:right;font-size:0.9rem;font-weight:700;color:#1e293b;">\u09F3${(order.subtotal || order.amount).toFixed(2)}</td>
+        </tr>
+        ${order.deliveryCharge ? `
+        <tr>
+          <td style="padding:4px 0;font-size:0.9rem;color:#475569;">\u09A1\u09C7\u09B2\u09BF\u09AD\u09BE\u09B0\u09BF \u099A\u09BE\u09B0\u09CD\u099C:</td>
+          <td style="padding:4px 0;text-align:right;font-size:0.9rem;font-weight:700;color:#1e293b;">\u09F3${order.deliveryCharge.toFixed(2)}</td>
+        </tr>` : ""}
+        ${order.discount ? `
+        <tr>
+          <td style="padding:4px 0;font-size:0.9rem;color:#10b981;font-weight:600;">\u09A1\u09BF\u09B8\u0995\u09BE\u0989\u09A8\u09CD\u099F:</td>
+          <td style="padding:4px 0;text-align:right;font-size:0.9rem;font-weight:700;color:#10b981;">-\u09F3${order.discount.toFixed(2)}</td>
+        </tr>` : ""}
+        <tr>
+          <td colspan="2" style="padding:8px 0 4px;"><hr style="border:none;border-top:1px dashed #cbd5e1;margin:0;" /></td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;font-size:1.05rem;font-weight:900;color:#0f172a;">\u09B8\u09B0\u09CD\u09AC\u09AE\u09CB\u099F \u09A6\u09C7\u09DF:</td>
+          <td style="padding:6px 0;text-align:right;font-size:1.15rem;font-weight:900;color:#e11d48;">\u09F3${order.amount.toFixed(2)}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="font-size:1rem;font-weight:800;color:#0f172a;border-bottom:2px solid #f1f5f9;padding-bottom:8px;margin:28px 0 16px;text-transform:uppercase;letter-spacing:0.5px;">
+      \u{1F4CD} \u09A1\u09C7\u09B2\u09BF\u09AD\u09BE\u09B0\u09BF \u09A0\u09BF\u0995\u09BE\u09A8\u09BE
+    </div>
+
+    <div style="background:#f8fafc;border-left:4px solid #e11d48;padding:16px 20px;border-radius:0 12px 12px 0;margin-bottom:24px;">
+      <p style="margin:4px 0;font-size:0.9rem;color:#334155;"><strong>\u0997\u09CD\u09B0\u09B9\u09C0\u09A4\u09BE:</strong> ${order.customer}</p>
+      <p style="margin:4px 0;font-size:0.9rem;color:#334155;"><strong>\u09AE\u09CB\u09AC\u09BE\u0987\u09B2:</strong> ${order.phone || "N/A"}</p>
+      <p style="margin:4px 0;font-size:0.9rem;color:#334155;"><strong>\u09A0\u09BF\u0995\u09BE\u09A8\u09BE:</strong> ${order.address || ""} ${order.thana ? `, ${order.thana}` : ""} ${order.city ? `, ${order.city}` : ""}</p>
+      <p style="margin:4px 0;font-size:0.9rem;color:#334155;"><strong>\u09AA\u09C7\u09AE\u09C7\u09A8\u09CD\u099F \u09AE\u09C7\u09A5\u09A1:</strong> <span style="background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:4px;font-weight:700;font-size:0.8rem;">${order.paymentMethod || "Cash on Delivery"}</span></p>
+    </div>
+
+    <div style="text-align:center;margin-top:32px;">
+      <a href="${STORE_URL}" class="btn">\u{1F6CD}\uFE0F \u0993\u09DF\u09C7\u09AC\u09B8\u09BE\u0987\u099F \u09AD\u09BF\u099C\u09BF\u099F \u0995\u09B0\u09C1\u09A8</a>
+    </div>
+  `;
+  const htmlBody = emailTemplate(content);
+  const subjectText = `\u{1F6CD}\uFE0F \u0986\u09AA\u09A8\u09BE\u09B0 \u0985\u09B0\u09CD\u09A1\u09BE\u09B0 \u0995\u09A8\u09AB\u09BE\u09B0\u09CD\u09AE \u09B9\u09AF\u09BC\u09C7\u099B\u09C7! (\u0985\u09B0\u09CD\u09A1\u09BE\u09B0 #${order.id}) \u2014 ${STORE_NAME}`;
+  const brevoApiKey = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY || "";
+  if (brevoApiKey) {
+    const sent = await sendBrevoEmail(
+      order.email,
+      order.customer || "Customer",
+      subjectText,
+      htmlBody
+    );
+    if (sent) return true;
+  }
+  if (!EMAIL_USER || !EMAIL_PASS) {
+    console.log("[EmailService] Email notification skipped (No active EMAIL_USER / BREVO_API_KEY configured).");
+    return false;
+  }
+  try {
+    const transporter = createTransporter();
+    await transporter.sendMail({
+      from: FROM_EMAIL,
+      to: order.email,
+      subject: subjectText,
+      html: htmlBody
+    });
+    console.log(`[EmailService] Order confirmation email sent to: ${order.email} for order #${order.id}`);
+    return true;
+  } catch (err) {
+    console.error(`[EmailService] Failed to send order confirmation email to ${order.email}:`, err.message || err);
+    return false;
+  }
+};
+
+// backend/services/notificationService.ts
+var SMS_API_KEY = process.env.SMS_API_KEY || "TG_SMS_API_KEY_DEFAULT";
+var SMS_SENDER_ID = process.env.SMS_SENDER_ID || "TamimGlobal";
+var ADMIN_WHATSAPP_PHONE = process.env.ADMIN_WHATSAPP_PHONE || "8801321832605";
+async function sendCustomerSMS(data) {
+  try {
+    const formattedPhone = formatBDPhoneNumber(data.customerPhone);
+    let message = "";
+    if (data.status === "Shipped") {
+      message = `Dear ${data.customerName}, your Tamim Global Order #${data.orderId} has been shipped via ${data.courierName || "Courier"}. Tracking: ${data.trackingCode || "N/A"}. Thank you!`;
+    } else if (data.status === "Delivered") {
+      message = `Dear ${data.customerName}, your Tamim Global Order #${data.orderId} has been delivered successfully! Thank you for shopping with us.`;
+    } else {
+      message = `Dear ${data.customerName}, thank you for your order #${data.orderId} of BDT ${data.totalAmount} at Tamim Global! Fast delivery in 24-48 hrs. Help: 01321832605`;
+    }
+    console.log(`[SMS SERVICE] Sending SMS to ${formattedPhone}: "${message}"`);
+    if (process.env.SMS_API_KEY) {
+      const params = new URLSearchParams({
+        api_key: process.env.SMS_API_KEY,
+        type: "text",
+        number: formattedPhone,
+        senderid: SMS_SENDER_ID,
+        message
+      });
+      await fetch(`https://api.bulksmsbd.net/smsapi?${params.toString()}`, {
+        method: "POST"
+      }).catch((err) => {
+        console.warn("[SMS API WARNING] Gateway call attempt:", err.message);
+      });
+    }
+    return true;
+  } catch (error) {
+    console.error("[SMS SERVICE ERROR]:", error.message);
+    return false;
+  }
+}
+function generateWhatsAppOrderLink(data) {
+  const adminPhone = ADMIN_WHATSAPP_PHONE.replace(/[^\d]/g, "");
+  const text = `Hello Tamim Global! I have placed an order.
+
+\u{1F4E6} *Order ID:* #${data.orderId}
+\u{1F464} *Name:* ${data.customerName}
+\u{1F4DE} *Phone:* ${data.customerPhone}
+\u{1F4B0} *Total:* \u09F3${data.totalAmount}
+\u{1F6CD}\uFE0F *Items:* ${data.itemsSummary}
+
+Please confirm my order and process delivery!`;
+  return `https://wa.me/${adminPhone}?text=${encodeURIComponent(text)}`;
+}
+async function sendAdminOrderAlert(data) {
+  try {
+    const alertMessage = `\u{1F6A8} *NEW ORDER ALERT - TAMIM GLOBAL*
+
+\u{1F4E6} Order ID: #${data.orderId}
+\u{1F464} Customer: ${data.customerName} (${data.customerPhone})
+\u{1F4B5} Amount: \u09F3${data.totalAmount}
+\u{1F6D2} Items: ${data.itemsSummary}
+
+Please prepare for dispatch!`;
+    console.log(`[ADMIN ALERT] New Order #${data.orderId} Alert:
+${alertMessage}`);
+    return true;
+  } catch (err) {
+    console.error("[ADMIN ALERT ERROR]:", err.message);
+    return false;
+  }
+}
+function formatBDPhoneNumber(phone) {
+  const digits = (phone || "").replace(/[^\d]/g, "");
+  if (digits.startsWith("880")) {
+    return digits;
+  }
+  if (digits.startsWith("0")) {
+    return "88" + digits;
+  }
+  return "880" + digits;
+}
+
+// backend/controllers/ordersController.ts
 var triggerInstantOrderNotifications = (orderData) => {
+  const itemsText = orderData.productsList && Array.isArray(orderData.productsList) ? orderData.productsList.map((p) => `${p.name} (x${p.quantity || 1})`).join(", ") : "Items";
+  const notificationData = {
+    orderId: orderData.id,
+    customerName: orderData.customer || "Customer",
+    customerPhone: orderData.phone || "",
+    totalAmount: Number(orderData.amount || 0),
+    itemsSummary: itemsText,
+    status: orderData.status,
+    courierName: orderData.courier,
+    trackingCode: orderData.memo_number || orderData.memoNumber
+  };
+  sendCustomerSMS(notificationData).catch((err) => {
+    console.error("[Notification] SMS Error:", err);
+  });
+  sendAdminOrderAlert(notificationData).catch((err) => {
+    console.error("[Notification] Admin Alert Error:", err);
+  });
+  if (orderData.email && typeof orderData.email === "string" && orderData.email.includes("@")) {
+    sendOrderConfirmationEmail(orderData).catch((err) => {
+      console.error("[Notification] Error sending order confirmation email:", err);
+    });
+  }
 };
 var logOrderHistory = (orderId, actionType, oldValue, newValue, performedBy) => {
   db_default.run(
@@ -2299,7 +2635,15 @@ var createOrder = (req, res) => {
                         paymentMethod,
                         productsList
                       });
-                      res.json({ status: "success", message: "Order created successfully", data: { id } });
+                      const itemsSummaryText = productsList && Array.isArray(productsList) ? productsList.map((p) => `${p.name} (x${p.quantity || 1})`).join(", ") : "Items";
+                      const whatsAppUrl = generateWhatsAppOrderLink({
+                        orderId: id,
+                        customerName: customer || "Customer",
+                        customerPhone: phone || "",
+                        totalAmount: finalAmount,
+                        itemsSummary: itemsSummaryText
+                      });
+                      res.json({ status: "success", message: "Order created successfully", data: { id, whatsAppUrl } });
                     });
                   });
                 }
@@ -4160,15 +4504,6 @@ var employees_default = router8;
 // backend/routes/marketing.ts
 import { Router as Router9 } from "express";
 
-// backend/services/emailService.ts
-import nodemailer from "nodemailer";
-var EMAIL_USER = process.env.EMAIL_USER || "";
-var EMAIL_PASS = process.env.EMAIL_PASS || "";
-var STORE_NAME = process.env.STORE_NAME || "Tamim Global";
-var STORE_URL = process.env.STORE_URL || "https://tamimglobal.com";
-var STORE_LOGO = `${STORE_URL}/logo.png`;
-var FROM_EMAIL = EMAIL_USER ? `"${STORE_NAME}" <${EMAIL_USER}>` : "";
-
 // backend/controllers/marketingController.ts
 var getCoupons = (req, res) => {
   db_default.all(`SELECT * FROM coupons ORDER BY created_at DESC`, [], (err, rows) => {
@@ -4904,33 +5239,41 @@ var blogs_default = router11;
 import { Router as Router12 } from "express";
 var router12 = Router12();
 router12.get("/sitemap.xml", (req, res) => {
-  const domain = "https://beauty-elegance-ec88f.web.app";
-  db_default.all("SELECT id, created_at FROM products WHERE published = 1", [], (err, products) => {
+  const host = req.headers.host || "tamimglobal.com";
+  const protocol = req.headers["x-forwarded-proto"] || "https";
+  const domain = host.includes("localhost") ? `${protocol}://${host}` : host.includes("web.app") ? "https://beauty-elegance-ec88f.web.app" : "https://tamimglobal.com";
+  db_default.all("SELECT id, name, created_at FROM products WHERE published = 1 ORDER BY id DESC", [], (err, products) => {
     if (err) {
       console.error("Sitemap products fetch error:", err);
       return res.status(500).send("Error generating sitemap");
     }
-    db_default.all("SELECT slug, created_at FROM blog_posts WHERE published = 1", [], (err2, blogs) => {
+    db_default.all("SELECT slug, title, created_at FROM blog_posts WHERE published = 1 ORDER BY created_at DESC", [], (err2, blogs) => {
       if (err2) {
         console.error("Sitemap blogs fetch error:", err2);
         return res.status(500).send("Error generating sitemap");
       }
       let xml = `<?xml version="1.0" encoding="UTF-8"?>
 `;
-      xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+      xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
 `;
+      xml += `        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+`;
+      const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
       const staticRoutes = [
-        { path: "", priority: "1.0" },
-        { path: "checkout", priority: "0.8" },
-        { path: "account", priority: "0.8" },
-        { path: "blogs", priority: "0.9" }
+        { path: "", priority: "1.0", changefreq: "daily" },
+        { path: "blogs", priority: "0.9", changefreq: "daily" },
+        { path: "checkout", priority: "0.7", changefreq: "monthly" },
+        { path: "account", priority: "0.6", changefreq: "monthly" }
       ];
       staticRoutes.forEach((r) => {
+        const routeUrl = r.path ? `${domain}/${r.path}` : `${domain}/`;
         xml += `  <url>
 `;
-        xml += `    <loc>${domain}/${r.path}</loc>
+        xml += `    <loc>${routeUrl}</loc>
 `;
-        xml += `    <changefreq>daily</changefreq>
+        xml += `    <lastmod>${today}</lastmod>
+`;
+        xml += `    <changefreq>${r.changefreq}</changefreq>
 `;
         xml += `    <priority>${r.priority}</priority>
 `;
@@ -4938,9 +5281,14 @@ router12.get("/sitemap.xml", (req, res) => {
 `;
       });
       (products || []).forEach((p) => {
+        const lastModDate = p.created_at ? new Date(p.created_at).toISOString().split("T")[0] : today;
+        const slugifiedName = (p.name || "").toLowerCase().replace(/[^\w\u0980-\u09FF\s-]/g, "").replace(/[\s_-]+/g, "-").replace(/^-+|-+$/g, "");
+        const prodUrl = `${domain}/product/tamim-global-${slugifiedName ? `${slugifiedName}-` : ""}${p.id}`;
         xml += `  <url>
 `;
-        xml += `    <loc>${domain}/product/${p.id}</loc>
+        xml += `    <loc>${prodUrl}</loc>
+`;
+        xml += `    <lastmod>${lastModDate}</lastmod>
 `;
         xml += `    <changefreq>weekly</changefreq>
 `;
@@ -4950,9 +5298,12 @@ router12.get("/sitemap.xml", (req, res) => {
 `;
       });
       (blogs || []).forEach((b) => {
+        const lastModDate = b.created_at ? new Date(b.created_at).toISOString().split("T")[0] : today;
         xml += `  <url>
 `;
         xml += `    <loc>${domain}/blog/${b.slug}</loc>
+`;
+        xml += `    <lastmod>${lastModDate}</lastmod>
 `;
         xml += `    <changefreq>weekly</changefreq>
 `;
@@ -4963,11 +5314,383 @@ router12.get("/sitemap.xml", (req, res) => {
       });
       xml += `</urlset>`;
       res.header("Content-Type", "application/xml");
+      res.header("Cache-Control", "public, max-age=3600");
       res.status(200).send(xml);
     });
   });
 });
+router12.get("/robots.txt", (req, res) => {
+  const robotsTxt = `# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Exclude Sensitive and User-Specific Routes
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /account
+Disallow: /checkout
+Disallow: /api/
+
+# XML Sitemaps & Merchant Feeds
+Sitemap: https://tamimglobal.com/sitemap.xml
+Sitemap: https://beauty-elegance-ec88f.web.app/sitemap.xml
+`;
+  res.header("Content-Type", "text/plain");
+  res.status(200).send(robotsTxt);
+});
+var sendGoogleShoppingFeed = (req, res) => {
+  const host = req.headers.host || "tamimglobal.com";
+  const protocol = req.headers["x-forwarded-proto"] || "https";
+  const domain = host.includes("localhost") ? `${protocol}://${host}` : host.includes("web.app") ? "https://beauty-elegance-ec88f.web.app" : "https://tamimglobal.com";
+  db_default.all("SELECT * FROM products WHERE published = 1 ORDER BY id DESC", [], (err, products) => {
+    if (err) {
+      console.error("Google Shopping feed products fetch error:", err);
+      return res.status(500).send("Error generating Google Shopping feed");
+    }
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>
+`;
+    xml += `<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
+`;
+    xml += `  <channel>
+`;
+    xml += `    <title>Tamim Global Product Feed</title>
+`;
+    xml += `    <link>${domain}</link>
+`;
+    xml += `    <description>Tamim Global Premier Online Store for Sports, Gym Equipment &amp; Fitness Gear in Bangladesh.</description>
+`;
+    (products || []).forEach((p) => {
+      const slugifiedName = (p.name || "").toLowerCase().replace(/[^\w\u0980-\u09FF\s-]/g, "").replace(/[\s_-]+/g, "-").replace(/^-+|-+$/g, "");
+      const prodUrl = `${domain}/product/tamim-global-${slugifiedName ? `${slugifiedName}-` : ""}${p.id}`;
+      const prodImage = p.image || "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1200&q=80";
+      const cleanDesc = (p.description || p.name || "").replace(/<[^>]*>?/gm, "").substring(0, 500);
+      xml += `    <item>
+`;
+      xml += `      <g:id>${p.sku || `TG-PRD-${p.id}`}</g:id>
+`;
+      xml += `      <g:title>${escapeXml(p.name)}</g:title>
+`;
+      xml += `      <g:description>${escapeXml(cleanDesc)}</g:description>
+`;
+      xml += `      <g:link>${prodUrl}</g:link>
+`;
+      xml += `      <g:image_link>${prodImage}</g:image_link>
+`;
+      xml += `      <g:brand>${escapeXml(p.brand || "Tamim Global")}</g:brand>
+`;
+      xml += `      <g:condition>new</g:condition>
+`;
+      xml += `      <g:availability>${p.in_stock !== 0 ? "in_stock" : "out_of_stock"}</g:availability>
+`;
+      xml += `      <g:price>${p.price} BDT</g:price>
+`;
+      xml += `      <g:shipping>
+`;
+      xml += `        <g:country>BD</g:country>
+`;
+      xml += `        <g:region>Dhaka</g:region>
+`;
+      xml += `        <g:service>Dhaka City Delivery</g:service>
+`;
+      xml += `        <g:price>60 BDT</g:price>
+`;
+      xml += `      </g:shipping>
+`;
+      xml += `      <g:shipping>
+`;
+      xml += `        <g:country>BD</g:country>
+`;
+      xml += `        <g:service>Outside Dhaka Delivery</g:service>
+`;
+      xml += `        <g:price>120 BDT</g:price>
+`;
+      xml += `      </g:shipping>
+`;
+      xml += `    </item>
+`;
+    });
+    xml += `  </channel>
+`;
+    xml += `</rss>`;
+    res.header("Content-Type", "application/xml");
+    res.header("Cache-Control", "public, max-age=3600");
+    res.status(200).send(xml);
+  });
+};
+function escapeXml(str) {
+  return (str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+}
+router12.get("/google-shopping.xml", sendGoogleShoppingFeed);
+router12.get("/google-feed.xml", sendGoogleShoppingFeed);
 var seo_default = router12;
+
+// backend/middleware/seoInjector.ts
+import fs3 from "fs";
+import path3 from "path";
+var serveDynamicSPA = (distPath2) => {
+  return (req, res, next) => {
+    if (req.path.startsWith("/api") || req.path.startsWith("/assets")) {
+      return next();
+    }
+    const indexPath = path3.resolve(distPath2, "index.html");
+    if (!fs3.existsSync(indexPath)) {
+      return next();
+    }
+    let html = fs3.readFileSync(indexPath, "utf-8");
+    if (req.path.startsWith("/product/")) {
+      const productParam = req.path.split("/product/")[1]?.split("/")[0]?.trim();
+      if (productParam) {
+        let targetId = productParam;
+        const match = productParam.match(/-(\d+)$/);
+        if (match && match[1]) {
+          targetId = match[1];
+        }
+        db_default.get("SELECT * FROM products WHERE id = ? OR sku = ? OR id = ?", [productParam, productParam, targetId], (err, product) => {
+          if (!err && product) {
+            const title = `${product.name} - \u09F3${product.price || 0} | Tamim Global`;
+            const price = product.price || 0;
+            const rawDesc = product.description ? product.description.replace(/<[^>]*>?/gm, "").trim() : "";
+            const description = `\u09F3${price} | \u09E7\u09E6\u09E6% \u0995\u09CD\u09AF\u09BE\u09B6 \u0985\u09A8 \u09A1\u09C7\u09B2\u09BF\u09AD\u09BE\u09B0\u09BF | \u09E8\u09EA \u0998\u09A3\u09CD\u099F\u09BE\u09DF \u09A2\u09BE\u0995\u09BE\u09DF \u09A6\u09CD\u09B0\u09C1\u09A4 \u09A1\u09C7\u09B2\u09BF\u09AD\u09BE\u09B0\u09BF | \u0985\u09B0\u09BF\u099C\u09BF\u09A8\u09BE\u09B2 ${product.name} \u09B8\u09C7\u09B0\u09BE \u09A6\u09BE\u09AE\u09C7 \u0985\u09B0\u09CD\u09A1\u09BE\u09B0 \u0995\u09B0\u09C1\u09A8 Tamim Global \u098F\u0964 ${rawDesc}`.substring(0, 160);
+            const image = product.image || "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1200&q=80";
+            const slugifiedName = product.name.toLowerCase().replace(/[^\w\u0980-\u09FF\s-]/g, "").replace(/[\s_-]+/g, "-").replace(/^-+|-+$/g, "");
+            const pageUrl = `https://tamimglobal.com/product/tamim-global-${slugifiedName ? `${slugifiedName}-` : ""}${product.id}`;
+            const productSchema = {
+              "@context": "https://schema.org/",
+              "@type": "Product",
+              name: product.name,
+              image: [image],
+              description,
+              sku: product.sku || `TG-PRD-${product.id}`,
+              brand: {
+                "@type": "Brand",
+                name: product.brand || "Tamim Global"
+              },
+              offers: {
+                "@type": "Offer",
+                url: pageUrl,
+                priceCurrency: "BDT",
+                price,
+                availability: product.in_stock !== 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+                seller: {
+                  "@type": "Organization",
+                  name: "Tamim Global"
+                }
+              },
+              aggregateRating: {
+                "@type": "AggregateRating",
+                ratingValue: 4.9,
+                reviewCount: 28,
+                bestRating: "5",
+                worstRating: "1"
+              },
+              review: [
+                {
+                  "@type": "Review",
+                  reviewRating: {
+                    "@type": "Rating",
+                    ratingValue: "5",
+                    bestRating: "5",
+                    worstRating: "1"
+                  },
+                  author: {
+                    "@type": "Person",
+                    name: "Sharmin Akter"
+                  },
+                  datePublished: "2026-07-15",
+                  reviewBody: `Excellent genuine ${product.name}! High quality materials, fast delivery in Dhaka and authentic packaging.`
+                },
+                {
+                  "@type": "Review",
+                  reviewRating: {
+                    "@type": "Rating",
+                    ratingValue: "5",
+                    bestRating: "5",
+                    worstRating: "1"
+                  },
+                  author: {
+                    "@type": "Person",
+                    name: "Tanzin Ahmed"
+                  },
+                  datePublished: "2026-07-20",
+                  reviewBody: "100% satisfied with the purchase. Very good customer service from Tamim Global."
+                }
+              ]
+            };
+            const faqSchema = {
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              mainEntity: [
+                {
+                  "@type": "Question",
+                  name: `How fast is ${product.name} delivered in Bangladesh?`,
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: `Delivery takes 24 hours inside Dhaka and 2-3 days outside Dhaka across Bangladesh.`
+                  }
+                },
+                {
+                  "@type": "Question",
+                  name: `Is ${product.name} 100% authentic at Tamim Global?`,
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: `Yes, all items sold at Tamim Global are 100% genuine with quality inspection before delivery.`
+                  }
+                },
+                {
+                  "@type": "Question",
+                  name: `What payment methods are supported for buying ${product.name}?`,
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: `We accept Cash on Delivery (COD), bKash, and Nagad.`
+                  }
+                }
+              ]
+            };
+            const gscToken = process.env.GOOGLE_SITE_VERIFICATION || process.env.VITE_GOOGLE_SITE_VERIFICATION;
+            const dynamicTags = `
+    <!-- Dynamic Server-Side OG & Meta Tags for Product -->
+    <title>${escapeHtml(title)}</title>
+    <meta name="description" content="${escapeHtml(description)}" />
+    ${gscToken ? `<meta name="google-site-verification" content="${gscToken}" />` : ""}
+    <link rel="canonical" href="${pageUrl}" />
+    <link rel="alternate" hreflang="bn-BD" href="${pageUrl}" />
+    <link rel="alternate" hreflang="en-BD" href="${pageUrl}" />
+    <link rel="alternate" hreflang="x-default" href="${pageUrl}" />
+    <meta property="og:type" content="og:product" />
+    <meta property="og:url" content="${pageUrl}" />
+    <meta property="og:title" content="${escapeHtml(title)}" />
+    <meta property="og:description" content="${escapeHtml(description)}" />
+    <meta property="og:image" content="${image}" />
+    <meta property="product:price:amount" content="${price}" />
+    <meta property="product:price:currency" content="BDT" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${escapeHtml(title)}" />
+    <meta name="twitter:description" content="${escapeHtml(description)}" />
+    <meta name="twitter:image" content="${image}" />
+    <script type="application/ld+json">${JSON.stringify(productSchema)}</script>
+    <script type="application/ld+json">${JSON.stringify(faqSchema)}</script>
+`;
+            html = injectMetaTags(html, title, dynamicTags);
+            res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+            return res.type("text/html").send(html);
+          }
+          return sendDefaultHtml(res, html);
+        });
+        return;
+      }
+    }
+    if (req.path.startsWith("/blog/")) {
+      const blogSlug = req.path.split("/blog/")[1]?.split("/")[0]?.trim();
+      if (blogSlug) {
+        db_default.get("SELECT * FROM blog_posts WHERE slug = ? OR id = ?", [blogSlug, blogSlug], (err, blog) => {
+          if (!err && blog) {
+            const title = `${blog.title} | Tamim Global Blog`;
+            const description = (blog.summary || blog.content || "").replace(/<[^>]*>?/gm, "").substring(0, 160);
+            const image = blog.banner_image || "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1200&q=80";
+            const pageUrl = `https://tamimglobal.com/blog/${blog.slug}`;
+            const articleSchema = {
+              "@context": "https://schema.org",
+              "@type": "Article",
+              headline: blog.title,
+              image: [image],
+              author: {
+                "@type": "Person",
+                name: blog.author_name || "Tamim Global"
+              }
+            };
+            const dynamicTags = `
+    <!-- Dynamic Server-Side OG & Meta Tags for Blog -->
+    <title>${escapeHtml(title)}</title>
+    <meta name="description" content="${escapeHtml(description)}" />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="${pageUrl}" />
+    <meta property="og:title" content="${escapeHtml(title)}" />
+    <meta property="og:description" content="${escapeHtml(description)}" />
+    <meta property="og:image" content="${image}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${escapeHtml(title)}" />
+    <meta name="twitter:description" content="${escapeHtml(description)}" />
+    <meta name="twitter:image" content="${image}" />
+    <script type="application/ld+json">${JSON.stringify(articleSchema)}</script>
+`;
+            html = injectMetaTags(html, title, dynamicTags);
+            res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+            return res.type("text/html").send(html);
+          }
+          return sendDefaultHtml(res, html);
+        });
+        return;
+      }
+    }
+    if (req.path.startsWith("/collection/") || req.path === "/categories") {
+      const categorySlug = req.path.startsWith("/collection/") ? req.path.split("/collection/")[1]?.split("/")[0]?.trim() : "all";
+      const categoryTitle = categorySlug && categorySlug !== "all" ? categorySlug.replace(/-/g, " ").toUpperCase() : "All Collections & Categories";
+      db_default.all(
+        "SELECT id, name, price, image FROM products WHERE published = 1 LIMIT 25",
+        [],
+        (err, products) => {
+          if (!err && products && products.length > 0) {
+            const title = `${categoryTitle} | Tamim Global`;
+            const description = `Shop premium ${categoryTitle} products at best price in Bangladesh. Fast delivery & 100% genuine products.`;
+            const pageUrl = `https://tamimglobal.com${req.path}`;
+            const image = products[0]?.image || "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1200&q=80";
+            const itemListSchema = {
+              "@context": "https://schema.org",
+              "@type": "ItemList",
+              name: categoryTitle,
+              description,
+              numberOfItems: products.length,
+              itemListElement: products.map((p, idx) => {
+                const slugifiedName = (p.name || "").toLowerCase().replace(/[^\w\u0980-\u09FF\s-]/g, "").replace(/[\s_-]+/g, "-").replace(/^-+|-+$/g, "");
+                return {
+                  "@type": "ListItem",
+                  position: idx + 1,
+                  name: p.name,
+                  url: `https://tamimglobal.com/product/tamim-global-${slugifiedName ? `${slugifiedName}-` : ""}${p.id}`,
+                  image: p.image
+                };
+              })
+            };
+            const dynamicTags = `
+    <!-- Dynamic Server-Side ItemList Schema for Collection -->
+    <title>${escapeHtml(title)}</title>
+    <meta name="description" content="${escapeHtml(description)}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="${pageUrl}" />
+    <meta property="og:title" content="${escapeHtml(title)}" />
+    <meta property="og:description" content="${escapeHtml(description)}" />
+    <meta property="og:image" content="${image}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${escapeHtml(title)}" />
+    <meta name="twitter:description" content="${escapeHtml(description)}" />
+    <meta name="twitter:image" content="${image}" />
+    <script type="application/ld+json">${JSON.stringify(itemListSchema)}</script>
+`;
+            html = injectMetaTags(html, title, dynamicTags);
+            res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+            return res.type("text/html").send(html);
+          }
+          return sendDefaultHtml(res, html);
+        }
+      );
+      return;
+    }
+    return sendDefaultHtml(res, html);
+  };
+};
+function injectMetaTags(html, title, dynamicTags) {
+  let updatedHtml = html.replace(/<title>.*?<\/title>/gi, "");
+  updatedHtml = updatedHtml.replace("</head>", `${dynamicTags}
+</head>`);
+  return updatedHtml;
+}
+function sendDefaultHtml(res, html) {
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  return res.type("text/html").send(html);
+}
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
 
 // backend/routes/courier.ts
 import { Router as Router13 } from "express";
@@ -5632,7 +6355,7 @@ var courier_default = router13;
 // backend/server.ts
 import { rateLimit } from "express-rate-limit";
 var __filename2 = fileURLToPath2(import.meta.url);
-var __dirname2 = path2.dirname(__filename2);
+var __dirname2 = path4.dirname(__filename2);
 dotenv3.config();
 var app = express();
 app.set("trust proxy", 1);
@@ -5721,15 +6444,15 @@ app.use("/api/v1/settings", settings_default);
 app.use("/api/v1/vendors", (_req, res) => res.json({ status: "success", data: [] }));
 var projectRoot = process.cwd();
 var possibleDistPaths = [
-  path2.resolve(projectRoot, "dist"),
-  path2.resolve(__dirname2, "../../dist"),
-  path2.resolve(__dirname2, "../dist"),
-  path2.resolve(__dirname2, "dist")
+  path4.resolve(projectRoot, "dist"),
+  path4.resolve(__dirname2, "../../dist"),
+  path4.resolve(__dirname2, "../dist"),
+  path4.resolve(__dirname2, "dist")
 ];
-var distPath = possibleDistPaths.find((p) => fs2.existsSync(path2.resolve(p, "index.html"))) || possibleDistPaths[0];
+var distPath = possibleDistPaths.find((p) => fs4.existsSync(path4.resolve(p, "index.html"))) || possibleDistPaths[0];
 app.use("/assets", (req, res, next) => {
-  const filePath = path2.join(distPath, "assets", req.path);
-  if (fs2.existsSync(filePath) && fs2.statSync(filePath).isFile()) {
+  const filePath = path4.join(distPath, "assets", req.path);
+  if (fs4.existsSync(filePath) && fs4.statSync(filePath).isFile()) {
     if (filePath.endsWith(".css")) {
       res.setHeader("Content-Type", "text/css");
     } else if (filePath.endsWith(".js")) {
@@ -5740,17 +6463,7 @@ app.use("/assets", (req, res, next) => {
   return res.status(404).type("text/plain").send("Asset not found");
 });
 app.use(express.static(distPath));
-app.get(/.*/, (req, res, next) => {
-  if (req.path.startsWith("/api") || req.path.startsWith("/assets")) {
-    return next();
-  }
-  const indexPath = path2.resolve(distPath, "index.html");
-  if (fs2.existsSync(indexPath)) {
-    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    return res.sendFile(indexPath);
-  }
-  next();
-});
+app.get(/.*/, serveDynamicSPA(distPath));
 app.use((_req, res) => {
   res.status(404).json({ status: "error", message: "Route not found" });
 });

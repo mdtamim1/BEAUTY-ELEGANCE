@@ -42,7 +42,7 @@ export const checkServerHealth = async (): Promise<boolean> => {
 };
 
 // Send Order to backend database with multi-endpoint fallback
-export const sendOrderToBackend = async (orderData: any): Promise<boolean> => {
+export const sendOrderToBackend = async (orderData: any): Promise<{ success: boolean; whatsAppUrl?: string }> => {
   // Sanitize productsList to ensure code is never empty
   const sanitizedOrderData = {
     ...orderData,
@@ -75,7 +75,7 @@ export const sendOrderToBackend = async (orderData: any): Promise<boolean> => {
         const result = await response.json().catch(() => ({}));
         if (result.status === 'success') {
           console.log(`[API] Order successfully posted to backend endpoint: ${url}`);
-          return true;
+          return { success: true, whatsAppUrl: result.data?.whatsAppUrl };
         }
       }
     } catch (e) {
@@ -84,7 +84,7 @@ export const sendOrderToBackend = async (orderData: any): Promise<boolean> => {
   }
 
   console.error('[API] All backend endpoints unreachable for order submission.');
-  return false;
+  return { success: false };
 };
 
 // Fetch customer orders matching email or phone

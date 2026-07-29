@@ -1,0 +1,30 @@
+{
+  "short_name": "TamimGlobal",
+  "name": "Tamim Global - Premier Online Sports & Fitness Store",
+  "description": "Tamim Global - Premier Online Store for Sports, Gym Equipment, Fitness Gear & Active Lifestyle Essentials in Bangladesh.",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0a0e1a",
+  "theme_color": "#0a0e1a",
+  "display": "standalone",
+  "orientation": "portrait",
+  "categories": [
+    "shopping",
+    "sports",
+    "lifestyle"
+  ],
+  "lang": "bn-BD"
+}

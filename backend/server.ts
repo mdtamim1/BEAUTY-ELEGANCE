@@ -34,6 +34,7 @@ import analyticsRoutes from './routes/analytics';
 import { initChatSocket } from './websocket/chatSocket';
 import blogRoutes from './routes/blogs';
 import seoRoutes from './routes/seo';
+import { serveDynamicSPA } from './middleware/seoInjector';
 import courierRoutes from './routes/courier';
 
 dotenv.config();
@@ -174,18 +175,8 @@ app.use('/assets', (req, res, next) => {
 
 app.use(express.static(distPath));
 
-// For all other requests that are NOT API or asset requests, serve index.html
-app.get(/.*/, (req, res, next) => {
-  if (req.path.startsWith('/api') || req.path.startsWith('/assets')) {
-    return next(); // pass it to API error handler
-  }
-  const indexPath = path.resolve(distPath, 'index.html');
-  if (fs.existsSync(indexPath)) {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    return res.sendFile(indexPath);
-  }
-  next();
-});
+// For all other requests that are NOT API or asset requests, serve dynamic HTML with Open Graph meta tags
+app.get(/.*/, serveDynamicSPA(distPath));
 
 // ========================================
 // Error Handling
