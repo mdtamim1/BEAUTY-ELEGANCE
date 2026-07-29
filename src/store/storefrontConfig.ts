@@ -595,12 +595,45 @@ function migrateConfig(parsed: any): any {
       links: (col.links || []).map((link: any) => {
         const defaultCol = defaults.footerColumns.find(c => c.title === col.title);
         const defaultLink = defaultCol?.links.find(l => l.id === link.id);
-        if (defaultLink && link.customPageContent === undefined) {
-          return { ...link, customPageContent: defaultLink.customPageContent };
-        }
         return link;
       })
     }));
+  }
+  // Auto-migrate legacy SportScoreX branding and contact info to Tamim Global
+  if (parsed.branding) {
+    if (parsed.branding.storeName === 'SportScoreX' || parsed.branding.storeName?.toLowerCase().includes('sportscorex')) {
+      parsed.branding.storeName = 'Tamim Global';
+    }
+    if (parsed.branding.logoTextPrimary === 'Sport') {
+      parsed.branding.logoTextPrimary = 'Tamim';
+    }
+    if (parsed.branding.logoTextSecondary === 'ScoreX') {
+      parsed.branding.logoTextSecondary = 'Global';
+    }
+    if (parsed.branding.footerDescription?.includes('Sports Core X') || parsed.branding.footerDescription?.includes('SportScoreX')) {
+      parsed.branding.footerDescription = defaults.branding.footerDescription;
+    }
+    if (parsed.branding.copyrightText?.includes('SportScoreX')) {
+      parsed.branding.copyrightText = '© 2026 Tamim Global. All rights reserved.';
+    }
+  }
+
+  if (parsed.contactInfo) {
+    if (parsed.contactInfo.email?.includes('sportscorex.com')) {
+      parsed.contactInfo.email = 'support@tamimglobal.com';
+    }
+    if (parsed.contactInfo.messengerUrl?.includes('sportscorex')) {
+      parsed.contactInfo.messengerUrl = 'https://m.me/tamimglobal';
+    }
+    if (parsed.contactInfo.facebookUrl?.includes('sportscorex')) {
+      parsed.contactInfo.facebookUrl = 'https://facebook.com/tamimglobal';
+    }
+    if (parsed.contactInfo.tiktokUrl?.includes('sportscorex')) {
+      parsed.contactInfo.tiktokUrl = 'https://tiktok.com/@tamimglobal';
+    }
+    if (parsed.contactInfo.instagramUrl?.includes('sportscorex')) {
+      parsed.contactInfo.instagramUrl = 'https://instagram.com/tamimglobal';
+    }
   }
 
   return parsed;

@@ -3997,7 +3997,17 @@ var getStorefrontSettings = (req, res) => {
         return res.json({ status: "success", data: null });
       }
       try {
-        const data = JSON.parse(row.setting_value);
+        let cleanValue = row.setting_value.replace(/SportScoreX/g, "Tamim Global").replace(/Sports Core X/g, "Tamim Global").replace(/sportscorex/g, "tamimglobal");
+        if (cleanValue !== row.setting_value) {
+          db_default.run(
+            "UPDATE system_settings SET setting_value = ? WHERE setting_key = 'storefront_config'",
+            [cleanValue],
+            (updateErr) => {
+              if (!updateErr) console.log("[SettingsController] Migrated legacy SportScoreX database row to Tamim Global!");
+            }
+          );
+        }
+        const data = JSON.parse(cleanValue);
         res.json({ status: "success", data });
       } catch (e) {
         res.status(500).json({ status: "error", message: "Failed to parse storefront settings" });
