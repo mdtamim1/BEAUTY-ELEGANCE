@@ -472,8 +472,8 @@ export default function CollectionPage() {
   return (
     <div className="collection-page">
       <SEOMeta
-        title={activeCategoryTitle || 'Collections & Categories'}
-        description={`Explore premium ${activeCategoryTitle || 'sports and fitness'} products at Tamim Global. Best prices, authentic items, fast delivery across Bangladesh.`}
+        title={activeCategoryTitle ? `${activeCategoryTitle} - Tamim Global` : 'Collections & Categories - Tamim Global'}
+        description={`Explore premium ${activeCategoryTitle || 'sports and fitness'} collection at Tamim Global. Best prices, authentic items, fast 24-hr delivery across Bangladesh. Contact Us 📞 01321832605 ✉️ support@tamimglobal.com`}
         slug={slug ? `collection/${slug}` : 'categories'}
         keywords={`${activeCategoryTitle}, Tamim Global ${activeCategoryTitle}, Buy ${activeCategoryTitle} Bangladesh, Sports Equipment, Fitness Gear BD`}
         itemList={{
