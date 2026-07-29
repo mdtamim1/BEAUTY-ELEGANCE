@@ -20,29 +20,14 @@ const STORE_NAME = process.env.STORE_NAME || 'Tamim Global';
 const STORE_URL = process.env.STORE_URL || 'https://tamimglobal.com';
 const FROM_EMAIL = EMAIL_USER ? `"${STORE_NAME}" <${EMAIL_USER}>` : '';
 
-// Helper to convert TG logo to base64 so email clients display it directly
-const getLogoBase64 = (): string => {
-  try {
-    const candidates = [
-      path.join(process.cwd(), 'public', 'email-logo.png'),
-      path.join(process.cwd(), 'public', 'site-logo.png'),
-      path.join(process.cwd(), 'public', 'favicon.png'),
-    ];
-    for (const logoPath of candidates) {
-      if (fs.existsSync(logoPath)) {
-        const buffer = fs.readFileSync(logoPath);
-        return `data:image/png;base64,${buffer.toString('base64')}`;
-      }
-    }
-  } catch (e) {
-    console.error('[EmailService] Could not read logo file:', e);
-  }
+// Helper to get absolute HTTPS URL for TG logo (never base64 to avoid email client clipping)
+const getLogoUrl = (): string => {
   return `${STORE_URL}/email-logo.png`;
 };
 
 // ---- HTML email base template ----
 const emailTemplate = (content: string) => {
-  const logoSrc = getLogoBase64();
+  const logoSrc = getLogoUrl();
   return `
 <!DOCTYPE html>
 <html>
@@ -55,7 +40,7 @@ const emailTemplate = (content: string) => {
     .email-wrapper { width: 100%; background-color: #0b0f17; padding: 32px 12px; box-sizing: border-box; }
     .email-container { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.35); border: 1px solid #1e293b; }
     .email-header { background: linear-gradient(180deg, #090d16 0%, #171c28 100%); padding: 36px 24px 28px; text-align: center; border-bottom: 3px solid #e11d48; }
-    .header-logo { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; border: 3px solid #e11d48; box-shadow: 0 0 25px rgba(225, 29, 72, 0.45); display: inline-block; background: #000000; }
+    .header-logo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #e11d48; box-shadow: 0 0 25px rgba(225, 29, 72, 0.45); display: inline-block; background: #000000; }
     .brand-title { color: #ffffff; font-size: 1.35rem; margin: 14px 0 0; letter-spacing: 3px; font-weight: 900; text-transform: uppercase; font-family: Arial, sans-serif; }
     .brand-subtitle { color: #f43f5e; font-size: 0.72rem; letter-spacing: 3px; text-transform: uppercase; margin-top: 4px; font-weight: 800; }
     .email-body { padding: 32px 28px; background: #ffffff; color: #1e293b; }
@@ -71,7 +56,7 @@ const emailTemplate = (content: string) => {
   <div class="email-wrapper">
     <div class="email-container">
       <div class="email-header">
-        <img class="header-logo" src="${logoSrc}" alt="${STORE_NAME}" />
+        <img class="header-logo" src="${logoSrc}" width="80" height="80" alt="${STORE_NAME}" style="display:inline-block;width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid #e11d48;" />
         <div class="brand-title">${STORE_NAME}</div>
         <div class="brand-subtitle">PREMIUM E-COMMERCE</div>
       </div>

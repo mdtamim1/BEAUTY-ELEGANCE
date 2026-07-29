@@ -5,8 +5,8 @@ import helmet from "helmet";
 import morgan from "morgan";
 import { createServer } from "http";
 import dotenv3 from "dotenv";
-import path4 from "path";
-import fs4 from "fs";
+import path3 from "path";
+import fs3 from "fs";
 import { fileURLToPath as fileURLToPath2 } from "url";
 import { onRequest } from "firebase-functions/v2/https";
 
@@ -2035,8 +2035,6 @@ import jwt3 from "jsonwebtoken";
 
 // backend/services/emailService.ts
 import nodemailer from "nodemailer";
-import fs2 from "fs";
-import path2 from "path";
 var EMAIL_USER = process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_USER || "rjtamim154@gmail.com";
 var EMAIL_PASS = process.env.EMAIL_PASS || "";
 var createTransporter = () => {
@@ -2051,26 +2049,11 @@ var createTransporter = () => {
 var STORE_NAME = process.env.STORE_NAME || "Tamim Global";
 var STORE_URL = process.env.STORE_URL || "https://tamimglobal.com";
 var FROM_EMAIL = EMAIL_USER ? `"${STORE_NAME}" <${EMAIL_USER}>` : "";
-var getLogoBase64 = () => {
-  try {
-    const candidates = [
-      path2.join(process.cwd(), "public", "email-logo.png"),
-      path2.join(process.cwd(), "public", "site-logo.png"),
-      path2.join(process.cwd(), "public", "favicon.png")
-    ];
-    for (const logoPath of candidates) {
-      if (fs2.existsSync(logoPath)) {
-        const buffer = fs2.readFileSync(logoPath);
-        return `data:image/png;base64,${buffer.toString("base64")}`;
-      }
-    }
-  } catch (e) {
-    console.error("[EmailService] Could not read logo file:", e);
-  }
+var getLogoUrl = () => {
   return `${STORE_URL}/email-logo.png`;
 };
 var emailTemplate = (content) => {
-  const logoSrc = getLogoBase64();
+  const logoSrc = getLogoUrl();
   return `
 <!DOCTYPE html>
 <html>
@@ -2083,7 +2066,7 @@ var emailTemplate = (content) => {
     .email-wrapper { width: 100%; background-color: #0b0f17; padding: 32px 12px; box-sizing: border-box; }
     .email-container { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.35); border: 1px solid #1e293b; }
     .email-header { background: linear-gradient(180deg, #090d16 0%, #171c28 100%); padding: 36px 24px 28px; text-align: center; border-bottom: 3px solid #e11d48; }
-    .header-logo { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; border: 3px solid #e11d48; box-shadow: 0 0 25px rgba(225, 29, 72, 0.45); display: inline-block; background: #000000; }
+    .header-logo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #e11d48; box-shadow: 0 0 25px rgba(225, 29, 72, 0.45); display: inline-block; background: #000000; }
     .brand-title { color: #ffffff; font-size: 1.35rem; margin: 14px 0 0; letter-spacing: 3px; font-weight: 900; text-transform: uppercase; font-family: Arial, sans-serif; }
     .brand-subtitle { color: #f43f5e; font-size: 0.72rem; letter-spacing: 3px; text-transform: uppercase; margin-top: 4px; font-weight: 800; }
     .email-body { padding: 32px 28px; background: #ffffff; color: #1e293b; }
@@ -2099,7 +2082,7 @@ var emailTemplate = (content) => {
   <div class="email-wrapper">
     <div class="email-container">
       <div class="email-header">
-        <img class="header-logo" src="${logoSrc}" alt="${STORE_NAME}" />
+        <img class="header-logo" src="${logoSrc}" width="80" height="80" alt="${STORE_NAME}" style="display:inline-block;width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid #e11d48;" />
         <div class="brand-title">${STORE_NAME}</div>
         <div class="brand-subtitle">PREMIUM E-COMMERCE</div>
       </div>
@@ -5425,18 +5408,18 @@ router12.get("/google-feed.xml", sendGoogleShoppingFeed);
 var seo_default = router12;
 
 // backend/middleware/seoInjector.ts
-import fs3 from "fs";
-import path3 from "path";
+import fs2 from "fs";
+import path2 from "path";
 var serveDynamicSPA = (distPath2) => {
   return (req, res, next) => {
     if (req.path.startsWith("/api") || req.path.startsWith("/assets")) {
       return next();
     }
-    const indexPath = path3.resolve(distPath2, "index.html");
-    if (!fs3.existsSync(indexPath)) {
+    const indexPath = path2.resolve(distPath2, "index.html");
+    if (!fs2.existsSync(indexPath)) {
       return next();
     }
-    let html = fs3.readFileSync(indexPath, "utf-8");
+    let html = fs2.readFileSync(indexPath, "utf-8");
     if (req.path.startsWith("/product/")) {
       const productParam = req.path.split("/product/")[1]?.split("/")[0]?.trim();
       if (productParam) {
@@ -6358,7 +6341,7 @@ var courier_default = router13;
 // backend/server.ts
 import { rateLimit } from "express-rate-limit";
 var __filename2 = fileURLToPath2(import.meta.url);
-var __dirname2 = path4.dirname(__filename2);
+var __dirname2 = path3.dirname(__filename2);
 dotenv3.config();
 var app = express();
 app.set("trust proxy", 1);
@@ -6447,15 +6430,15 @@ app.use("/api/v1/settings", settings_default);
 app.use("/api/v1/vendors", (_req, res) => res.json({ status: "success", data: [] }));
 var projectRoot = process.cwd();
 var possibleDistPaths = [
-  path4.resolve(projectRoot, "dist"),
-  path4.resolve(__dirname2, "../../dist"),
-  path4.resolve(__dirname2, "../dist"),
-  path4.resolve(__dirname2, "dist")
+  path3.resolve(projectRoot, "dist"),
+  path3.resolve(__dirname2, "../../dist"),
+  path3.resolve(__dirname2, "../dist"),
+  path3.resolve(__dirname2, "dist")
 ];
-var distPath = possibleDistPaths.find((p) => fs4.existsSync(path4.resolve(p, "index.html"))) || possibleDistPaths[0];
+var distPath = possibleDistPaths.find((p) => fs3.existsSync(path3.resolve(p, "index.html"))) || possibleDistPaths[0];
 app.use("/assets", (req, res, next) => {
-  const filePath = path4.join(distPath, "assets", req.path);
-  if (fs4.existsSync(filePath) && fs4.statSync(filePath).isFile()) {
+  const filePath = path3.join(distPath, "assets", req.path);
+  if (fs3.existsSync(filePath) && fs3.statSync(filePath).isFile()) {
     if (filePath.endsWith(".css")) {
       res.setHeader("Content-Type", "text/css");
     } else if (filePath.endsWith(".js")) {
