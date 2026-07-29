@@ -10,14 +10,14 @@ interface FloatingLiveChatWidgetProps {
 
 export const FloatingLiveChatWidget: React.FC<FloatingLiveChatWidgetProps> = ({
   whatsappNumber = '8801321832605',
-  messengerUsername = 'sportscorex',
+  messengerUsername = 'tamimglobal',
   phoneNumber = '+8801321832605',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const cleanWhatsapp = (whatsappNumber || '8801321832605').replace(/[^\d]/g, '');
   const whatsappUrl = `https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('Hello Tamim Global! I have a question regarding your products.')}`;
-  const rawMessenger = messengerUsername || 'sportscorex';
+  const rawMessenger = messengerUsername || 'tamimglobal';
   const messengerUrl = rawMessenger.startsWith('http')
     ? rawMessenger
     : `https://m.me/${rawMessenger.replace(/^@/, '')}`;
