@@ -142,6 +142,9 @@ export const serveDynamicSPA = (distPath: string) => {
     <meta name="description" content="${escapeHtml(description)}" />
     ${gscToken ? `<meta name="google-site-verification" content="${gscToken}" />` : ''}
     <link rel="canonical" href="${pageUrl}" />
+    <link rel="icon" type="image/png" sizes="192x192" href="https://tamimglobal.com/favicon.png" />
+    <link rel="shortcut icon" href="https://tamimglobal.com/favicon.png" />
+    <link rel="apple-touch-icon" href="https://tamimglobal.com/favicon.png" />
     <link rel="alternate" hreflang="bn-BD" href="${pageUrl}" />
     <link rel="alternate" hreflang="en-BD" href="${pageUrl}" />
     <link rel="alternate" hreflang="x-default" href="${pageUrl}" />

@@ -15,10 +15,13 @@ export const FloatingLiveChatWidget: React.FC<FloatingLiveChatWidgetProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  const cleanWhatsapp = whatsappNumber.replace(/[^\d]/g, '');
+  const cleanWhatsapp = (whatsappNumber || '8801321832605').replace(/[^\d]/g, '');
   const whatsappUrl = `https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent('Hello Tamim Global! I have a question regarding your products.')}`;
-  const messengerUrl = `https://m.me/${messengerUsername}`;
-  const phoneUrl = `tel:${phoneNumber.replace(/\s+/g, '')}`;
+  const rawMessenger = messengerUsername || 'sportscorex';
+  const messengerUrl = rawMessenger.startsWith('http')
+    ? rawMessenger
+    : `https://m.me/${rawMessenger.replace(/^@/, '')}`;
+  const phoneUrl = `tel:${(phoneNumber || '+8801321832605').replace(/\s+/g, '')}`;
 
   return (
     <div className="tg-floating-chat-container">
@@ -62,7 +65,7 @@ export const FloatingLiveChatWidget: React.FC<FloatingLiveChatWidgetProps> = ({
               </div>
               <div className="tg-option-content">
                 <span className="tg-option-label">WhatsApp সাপোর্ট</span>
-                <span className="tg-option-desc">সরাসরি হোয়াটসঅ্যাপে চ্যাট করুন</span>
+                <span className="tg-option-desc">{whatsappNumber || '01321832605'} · ইনস্ট্যান্ট চ্যাট</span>
               </div>
               <Send size={16} className="tg-option-arrow" />
             </a>
@@ -96,7 +99,7 @@ export const FloatingLiveChatWidget: React.FC<FloatingLiveChatWidgetProps> = ({
               </div>
               <div className="tg-option-content">
                 <span className="tg-option-label">সরাসরি কল দিন</span>
-                <span className="tg-option-desc">+880 1321-832605</span>
+                <span className="tg-option-desc">{phoneNumber || '+880 1321-832605'}</span>
               </div>
               <Send size={16} className="tg-option-arrow" />
             </a>

@@ -265,6 +265,9 @@ export const SEOMeta: React.FC<SEOMetaProps> = ({
       {gscToken && <meta name="google-site-verification" content={gscToken} />}
       {noindex && <meta name="robots" content="noindex, nofollow" />}
       <link rel="canonical" href={url} />
+      <link rel="icon" type="image/png" sizes="192x192" href={`${domain}/favicon.png`} />
+      <link rel="shortcut icon" href={`${domain}/favicon.png`} />
+      <link rel="apple-touch-icon" href={`${domain}/favicon.png`} />
 
       {/* Multi-language Hreflang Tags (Bengali & English SEO for Bangladesh) */}
       <link rel="alternate" hrefLang="bn-BD" href={url} />
