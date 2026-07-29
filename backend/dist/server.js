@@ -5434,7 +5434,12 @@ var serveDynamicSPA = (distPath2) => {
             const price = product.price || 0;
             const rawDesc = product.description ? product.description.replace(/<[^>]*>?/gm, "").trim() : "";
             const description = `\u09F3${price} | \u09E7\u09E6\u09E6% \u0995\u09CD\u09AF\u09BE\u09B6 \u0985\u09A8 \u09A1\u09C7\u09B2\u09BF\u09AD\u09BE\u09B0\u09BF | \u09E8\u09EA \u0998\u09A3\u09CD\u099F\u09BE\u09DF \u09A2\u09BE\u0995\u09BE\u09DF \u09A6\u09CD\u09B0\u09C1\u09A4 \u09A1\u09C7\u09B2\u09BF\u09AD\u09BE\u09B0\u09BF | \u0985\u09B0\u09BF\u099C\u09BF\u09A8\u09BE\u09B2 ${product.name} \u09B8\u09C7\u09B0\u09BE \u09A6\u09BE\u09AE\u09C7 \u0985\u09B0\u09CD\u09A1\u09BE\u09B0 \u0995\u09B0\u09C1\u09A8 Tamim Global \u098F\u0964 ${rawDesc}`.substring(0, 160);
-            const image = product.image || "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1200&q=80";
+            let image = product.image || "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1200&q=80";
+            if (image.startsWith("/")) {
+              image = `https://tamimglobal.com${image}`;
+            } else if (!image.startsWith("http")) {
+              image = `https://tamimglobal.com/${image}`;
+            }
             const slugifiedName = product.name.toLowerCase().replace(/[^\w\u0980-\u09FF\s-]/g, "").replace(/[\s_-]+/g, "-").replace(/^-+|-+$/g, "");
             const pageUrl = `https://tamimglobal.com/product/tamim-global-${slugifiedName ? `${slugifiedName}-` : ""}${product.id}`;
             const productSchema = {
@@ -5542,11 +5547,17 @@ var serveDynamicSPA = (distPath2) => {
     <link rel="alternate" hreflang="bn-BD" href="${pageUrl}" />
     <link rel="alternate" hreflang="en-BD" href="${pageUrl}" />
     <link rel="alternate" hreflang="x-default" href="${pageUrl}" />
+    <meta property="og:site_name" content="Tamim Global" />
     <meta property="og:type" content="og:product" />
     <meta property="og:url" content="${pageUrl}" />
     <meta property="og:title" content="${escapeHtml(title)}" />
     <meta property="og:description" content="${escapeHtml(description)}" />
     <meta property="og:image" content="${image}" />
+    <meta property="og:image:secure_url" content="${image}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="${escapeHtml(product.name)}" />
+    <meta property="og:locale" content="bn_BD" />
     <meta property="product:price:amount" content="${price}" />
     <meta property="product:price:currency" content="BDT" />
     <meta name="twitter:card" content="summary_large_image" />

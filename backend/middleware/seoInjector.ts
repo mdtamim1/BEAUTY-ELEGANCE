@@ -33,7 +33,13 @@ export const serveDynamicSPA = (distPath: string) => {
             const price = product.price || 0;
             const rawDesc = product.description ? product.description.replace(/<[^>]*>?/gm, '').trim() : '';
             const description = `৳${price} | ১০০% ক্যাশ অন ডেলিভারি | ২৪ ঘণ্টায় ঢাকায় দ্রুত ডেলিভারি | অরিজিনাল ${product.name} সেরা দামে অর্ডার করুন Tamim Global এ। ${rawDesc}`.substring(0, 160);
-            const image = product.image || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1200&q=80';
+            let image = product.image || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1200&q=80';
+            if (image.startsWith('/')) {
+              image = `https://tamimglobal.com${image}`;
+            } else if (!image.startsWith('http')) {
+              image = `https://tamimglobal.com/${image}`;
+            }
+
             const slugifiedName = product.name
               .toLowerCase()
               .replace(/[^\w\u0980-\u09FF\s-]/g, '')
@@ -148,11 +154,17 @@ export const serveDynamicSPA = (distPath: string) => {
     <link rel="alternate" hreflang="bn-BD" href="${pageUrl}" />
     <link rel="alternate" hreflang="en-BD" href="${pageUrl}" />
     <link rel="alternate" hreflang="x-default" href="${pageUrl}" />
+    <meta property="og:site_name" content="Tamim Global" />
     <meta property="og:type" content="og:product" />
     <meta property="og:url" content="${pageUrl}" />
     <meta property="og:title" content="${escapeHtml(title)}" />
     <meta property="og:description" content="${escapeHtml(description)}" />
     <meta property="og:image" content="${image}" />
+    <meta property="og:image:secure_url" content="${image}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="${escapeHtml(product.name)}" />
+    <meta property="og:locale" content="bn_BD" />
     <meta property="product:price:amount" content="${price}" />
     <meta property="product:price:currency" content="BDT" />
     <meta name="twitter:card" content="summary_large_image" />
